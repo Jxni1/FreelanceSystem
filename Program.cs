@@ -1,14 +1,17 @@
+using Microsoft.EntityFrameworkCore;
+using LabCourse2.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer("Server=127.0.0.1,1433;Database=UserDb;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;"));
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
