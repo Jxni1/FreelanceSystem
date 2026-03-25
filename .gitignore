@@ -1,0 +1,81 @@
+## Build results
+bin/
+obj/
+out/
+publish/
+
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio files
+.vs/
+*.VC.db
+*.VC.VC.opendb
+
+## Rider
+.idea/
+
+## Logs
+*.log
+
+## OS generated files
+.DS_Store
+Thumbs.db
+
+## .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+!**/packages/repositories.config
+*.nuget.props
+*.nuget.targets
+
+## Test results
+TestResults/
+*.trx
+
+## Coverage
+coverage/
+*.coverage
+*.coveragexml
+
+## Dotnet tools
+.dotnet/
+.toolstargets/
+
+## Local app settings
+appsettings.Development.json
+
+## Environment variables
+.env
+
+## Publish output
+*.zip
+
+## Temporary files
+*.tmp
+*.temp
+
+## IIS Express
+.iisexpress/
+
+## Azure
+azure-pipelines-*.yml
+
+## Web publish
+PublishProfiles/
+
+## Node (if used in fullstack projects)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
