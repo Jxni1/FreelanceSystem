@@ -1,3 +1,7 @@
 <Solution>
-  <Project Path="LabCourse2.csproj" />
+  <Folder Name="/Solution Items/" />
+  <Project Path="LabCourse2.API/LabCourse2.API.csproj" />
+  <Project Path="LabCourse2.Application/LabCourse2.Application.csproj" />
+  <Project Path="LabCourse2.Domain/LabCourse2.Domain.csproj" />
+  <Project Path="LabCourse2.Infrastructure/LabCourse2.Infrastructure.csproj" />
 </Solution>
