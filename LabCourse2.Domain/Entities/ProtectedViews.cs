@@ -16,8 +16,8 @@ namespace LabCourse2.Domain.Entities
         // public Guid ProjectID { get; set; }
         // public Project Project { get; set; } = null!;
 
-        // FK - User
-        //public Guid UserID { get; set; }
-        //public User User { get; set; } = null!;
+        
+        public Guid UserID { get; set; }
+        public User User { get; set; } = null!;
     }
 }

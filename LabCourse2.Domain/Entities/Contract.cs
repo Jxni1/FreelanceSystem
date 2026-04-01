@@ -22,7 +22,10 @@ namespace LabCourse2.Domain.Entities
         public Guid FreelancerID { get; set; }
         public FreelancerProfile Freelancer { get; set; } = null!;
 
-       
+        public ICollection<Milestone> Milestones { get; set; } = new List<Milestone>();
+
+        public ICollection<Review> Reviews { get; set; } = new List<Review>();
+
         // public Guid ProjectID { get; set; }
         // public Project Project { get; set; } = null!;
     }
