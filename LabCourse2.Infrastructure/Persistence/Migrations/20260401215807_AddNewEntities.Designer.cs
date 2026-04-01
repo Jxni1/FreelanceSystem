@@ -4,6 +4,7 @@ using LabCourse2.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LabCourse2.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260401215807_AddNewEntities")]
+    partial class AddNewEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -270,15 +273,10 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("UserID")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("Viewed_at")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Protected_ViewsID");
-
-                    b.HasIndex("UserID");
 
                     b.ToTable("Protected_Views");
                 });
@@ -310,51 +308,6 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserID");
 
                     b.ToTable("RefreshTokens");
-                });
-
-            modelBuilder.Entity("LabCourse2.Domain.Entities.Report", b =>
-                {
-                    b.Property<Guid>("ReportsID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("Created_at")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Created_by")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Entity")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("EntityID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("Updated_at")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Updated_by")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("ReportsID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("Reports");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Review", b =>
@@ -602,32 +555,10 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("Contract");
                 });
 
-            modelBuilder.Entity("LabCourse2.Domain.Entities.Protected_Views", b =>
-                {
-                    b.HasOne("LabCourse2.Domain.Entities.User", "User")
-                        .WithMany("ProtectedViews")
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("LabCourse2.Domain.Entities.RefreshToken", b =>
                 {
                     b.HasOne("LabCourse2.Domain.Entities.User", "User")
                         .WithMany("RefreshTokens")
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("LabCourse2.Domain.Entities.Report", b =>
-                {
-                    b.HasOne("LabCourse2.Domain.Entities.User", "User")
-                        .WithMany("Reports")
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -748,11 +679,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
 
                     b.Navigation("FreelancerProfile");
 
-                    b.Navigation("ProtectedViews");
-
                     b.Navigation("RefreshTokens");
-
-                    b.Navigation("Reports");
 
                     b.Navigation("UserRoles");
                 });

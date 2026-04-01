@@ -21,6 +21,11 @@ namespace LabCourse2.Domain.Entities
 
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
+        public ICollection<Protected_Views> ProtectedViews { get; set; } = new List<Protected_Views>();
+
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+
+        public ICollection<Report> Reports { get; set; } = new List<Report>();
+
     }
 }
