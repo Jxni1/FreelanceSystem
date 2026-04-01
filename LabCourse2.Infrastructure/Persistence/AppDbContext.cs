@@ -1,4 +1,4 @@
-﻿using LabCourse2.Domain.Entities; 
+using LabCourse2.Domain.Entities; 
 using Microsoft.EntityFrameworkCore;
 
 namespace LabCourse2.Infrastructure.Persistence 
@@ -18,6 +18,16 @@ namespace LabCourse2.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Role>(e =>
+            {
+                e.HasKey(r => r.RoleID);
+            });
+
+            modelBuilder.Entity<Permission>(e =>
+            {
+                e.HasKey(p => p.PermissionsID);
+            });
+
             modelBuilder.Entity<User>(e =>
             {
                 e.HasKey(u => u.UserID);

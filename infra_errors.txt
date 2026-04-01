@@ -1,0 +1,11 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+  LabCourse2.Domain -> C:\Users\Admin\source\repos\LabCourse2\LabCourse2.Domain\bin\Debug\net10.0\LabCourse2.Domain.dll
+  LabCourse2.Application -> C:\Users\Admin\source\repos\LabCourse2\LabCourse2.Application\bin\Debug\net10.0\LabCourse2.Application.dll
+  LabCourse2.Infrastructure -> C:\Users\Admin\source\repos\LabCourse2\LabCourse2.Infrastructure\bin\Debug\net10.0\LabCourse2.Infrastructure.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.29

@@ -8,7 +8,6 @@
     <Folder Include="DTOs\Auth\" />
     <Folder Include="DTOs\User\" />
     <Folder Include="Interfaces\" />
-    <Folder Include="Services\" />
   </ItemGroup>
 
   <ItemGroup>
