@@ -16,6 +16,10 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<UserRole> UserRoles => Set<UserRole>();
         public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
+        public DbSet<Protected_Views> Protected_Views => Set<Protected_Views>();
+
+        public DbSet<Contract> Contracts => Set<Contract>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Role>(e =>
@@ -43,6 +47,23 @@ namespace LabCourse2.Infrastructure.Persistence
                  .HasForeignKey<FreelancerProfile>(f => f.UserID)
                  .OnDelete(DeleteBehavior.Cascade);
             });
+            modelBuilder.Entity<Contract>(e =>
+            {
+                e.HasKey(c => c.ContractID);
+
+                
+                e.HasOne(c => c.Client)
+                 .WithMany(cp => cp.Contracts)
+                 .HasForeignKey(c => c.ClientID)
+                 .OnDelete(DeleteBehavior.Cascade); 
+
+                e.HasOne(c => c.Freelancer)
+                 .WithMany(fp => fp.Contracts)
+                 .HasForeignKey(c => c.FreelancerID)
+                 .OnDelete(DeleteBehavior.NoAction); 
+            });
+
+
 
             modelBuilder.Entity<ClientProfile>(e =>
             {
@@ -74,6 +95,20 @@ namespace LabCourse2.Infrastructure.Persistence
                  .HasForeignKey(ur => ur.RoleID)
                  .OnDelete(DeleteBehavior.Cascade);
             });
+
+            modelBuilder.Entity<Protected_Views>(e =>
+            {
+                //e.HasKey(pv => pv.Protected_ViewsID);
+                //// e.HasOne(pv => pv.Project)
+                ////  .WithMany(p => p.Protected_Views)
+                ////  .HasForeignKey(pv => pv.ProjectID)
+                ////  .OnDelete(DeleteBehavior.Cascade);
+                //e.HasOne(pv => pv.User)
+                // .WithMany(u => u.Protected_Views)
+                // .HasForeignKey(pv => pv.UserID)
+                // .OnDelete(DeleteBehavior.Cascade);
+            });
+
 
             modelBuilder.Entity<RolePermission>(e =>
             {

@@ -13,5 +13,8 @@ namespace LabCourse2.Domain.Entities
 
         public Guid UserID { get; set; }
         public User User { get; set; } = null!;
+
+        
+        public ICollection<Contract> Contracts { get; set; } = new List<Contract>();
     }
 }
