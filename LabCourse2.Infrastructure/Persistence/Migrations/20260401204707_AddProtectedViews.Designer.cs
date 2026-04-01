@@ -4,6 +4,7 @@ using LabCourse2.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LabCourse2.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260401204707_AddProtectedViews")]
+    partial class AddProtectedViews
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -48,47 +51,6 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ClientProfiles");
-                });
-
-            modelBuilder.Entity("LabCourse2.Domain.Entities.Contract", b =>
-                {
-                    b.Property<Guid>("ContractID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Agreed_Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid>("ClientID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("End_Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("FreelancerID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("Start_Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("ContractID");
-
-                    b.HasIndex("ClientID");
-
-                    b.HasIndex("FreelancerID");
-
-                    b.ToTable("Contracts");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.FreelancerProfile", b =>
@@ -318,25 +280,6 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("LabCourse2.Domain.Entities.Contract", b =>
-                {
-                    b.HasOne("LabCourse2.Domain.Entities.ClientProfile", "Client")
-                        .WithMany("Contracts")
-                        .HasForeignKey("ClientID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LabCourse2.Domain.Entities.FreelancerProfile", "Freelancer")
-                        .WithMany("Contracts")
-                        .HasForeignKey("FreelancerID")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Client");
-
-                    b.Navigation("Freelancer");
-                });
-
             modelBuilder.Entity("LabCourse2.Domain.Entities.FreelancerProfile", b =>
                 {
                     b.HasOne("LabCourse2.Domain.Entities.User", "User")
@@ -395,16 +338,6 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("LabCourse2.Domain.Entities.ClientProfile", b =>
-                {
-                    b.Navigation("Contracts");
-                });
-
-            modelBuilder.Entity("LabCourse2.Domain.Entities.FreelancerProfile", b =>
-                {
-                    b.Navigation("Contracts");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Permission", b =>
