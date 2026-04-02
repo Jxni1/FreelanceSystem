@@ -35,6 +35,13 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<Skills> Skills => Set<Skills>();
 
 
+        public DbSet<Project> Projects => Set<Project>();
+        public DbSet<Proposal> Proposals => Set<Proposal>();
+        public DbSet<Category> Categories => Set<Category>();
+        public DbSet<Skill> Skills => Set<Skill>();
+        public DbSet<ProjectSkills> ProjectSkills => Set<ProjectSkills>();
+        public DbSet<ProjectCategoryMap> ProjectCategoryMaps => Set<ProjectCategoryMap>();
+        public DbSet<FreelancerSkills> FreelancerSkills => Set<FreelancerSkills>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -229,6 +236,79 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<Skills>(e =>
             {
                 e.HasKey(s => s.SkillsID);
+            modelBuilder.Entity<Category>(e =>
+            {
+                e.HasKey(c => c.CategoryID);
+            });
+
+            modelBuilder.Entity<Skill>(e =>
+            {
+                e.HasKey(s => s.SkillID);
+            });
+
+            modelBuilder.Entity<Project>(e =>
+            {
+                e.HasKey(p => p.ProjectID);
+                e.HasOne(p => p.Client)
+                 .WithMany()
+                 .HasForeignKey(p => p.ClientID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(p => p.Category)
+                 .WithMany()
+                 .HasForeignKey(p => p.CategoryID)
+                 .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            modelBuilder.Entity<Proposal>(e =>
+            {
+                e.HasKey(p => p.ProposalId);
+                e.HasOne(p => p.Freelancer)
+                 .WithMany()
+                 .HasForeignKey(p => p.FreelancerId)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(p => p.Project)
+                 .WithMany()
+                 .HasForeignKey(p => p.ProjectId)
+                 .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            modelBuilder.Entity<ProjectSkills>(e =>
+            {
+                e.HasKey(ps => ps.ProjectSkillsID);
+                e.HasOne(ps => ps.Project)
+                 .WithMany()
+                 .HasForeignKey(ps => ps.ProjectID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(ps => ps.Skill)
+                 .WithMany()
+                 .HasForeignKey(ps => ps.SkillID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ProjectCategoryMap>(e =>
+            {
+                e.HasKey(pcm => pcm.ProjectCategoryMapID);
+                e.HasOne(pcm => pcm.Project)
+                 .WithMany()
+                 .HasForeignKey(pcm => pcm.ProjectID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(pcm => pcm.Category)
+                 .WithMany()
+                 .HasForeignKey(pcm => pcm.CategoryID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<FreelancerSkills>(e =>
+            {
+                e.HasKey(fs => fs.FreelancerSkillsID);
+                e.HasOne(fs => fs.Freelancer)
+                 .WithMany()
+                 .HasForeignKey(fs => fs.FreelancerID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(fs => fs.Skill)
+                 .WithMany()
+                 .HasForeignKey(fs => fs.SkillID)
+                 .OnDelete(DeleteBehavior.NoAction);
             });
         }
     }
