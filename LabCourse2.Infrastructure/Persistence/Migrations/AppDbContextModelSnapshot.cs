@@ -63,6 +63,62 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.ToTable("Audit_Logs");
                 });
 
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Category", b =>
+                {
+                    b.Property<Guid>("CategoryID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Photo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("CategoryID");
+
+                    b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Client", b =>
+                {
+                    b.Property<Guid>("ClientID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("Budget")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Company_Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Created_At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Industry")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Updated_At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ClientID");
+
+                    b.HasIndex("UserID")
+                        .IsUnique();
+
+                    b.ToTable("Client");
+                });
+
             modelBuilder.Entity("LabCourse2.Domain.Entities.ClientProfile", b =>
                 {
                     b.Property<Guid>("ClientID")
@@ -220,6 +276,42 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.ToTable("Files");
                 });
 
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Freelancer", b =>
+                {
+                    b.Property<Guid>("FreelancerID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Availability")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Bio")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Created_At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("Hourly_Rate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Updated_At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("FreelancerID");
+
+                    b.HasIndex("UserID")
+                        .IsUnique();
+
+                    b.ToTable("Freelancer");
+                });
+
             modelBuilder.Entity("LabCourse2.Domain.Entities.FreelancerProfile", b =>
                 {
                     b.Property<Guid>("FreelancerID")
@@ -243,6 +335,31 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("FreelancerProfiles");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.FreelancerSkills", b =>
+                {
+                    b.Property<Guid>("FreelancerSkillsID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FreelancerID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SkillID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("FreelancerSkillsID");
+
+                    b.HasIndex("FreelancerID");
+
+                    b.HasIndex("SkillID");
+
+                    b.ToTable("FreelancerSkills");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Milestone", b =>
@@ -335,6 +452,131 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasKey("PermissionsID");
 
                     b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Project", b =>
+                {
+                    b.Property<Guid>("ProjectID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Budget")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("CategoryID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClientID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ProjectID");
+
+                    b.HasIndex("CategoryID");
+
+                    b.HasIndex("ClientID");
+
+                    b.ToTable("Projects");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.ProjectCategoryMap", b =>
+                {
+                    b.Property<Guid>("ProjectCategoryMapID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CategoryID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProjectID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ProjectCategoryMapID");
+
+                    b.HasIndex("CategoryID");
+
+                    b.HasIndex("ProjectID");
+
+                    b.ToTable("ProjectCategoryMaps");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.ProjectSkills", b =>
+                {
+                    b.Property<Guid>("ProjectSkillsID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProjectID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SkillID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ProjectSkillsID");
+
+                    b.HasIndex("ProjectID");
+
+                    b.HasIndex("SkillID");
+
+                    b.ToTable("ProjectSkills");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Proposal", b =>
+                {
+                    b.Property<Guid>("ProposalId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("BidAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("DeliveryDays")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("FreelancerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ProposalId");
+
+                    b.HasIndex("FreelancerId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("Proposals");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Protected_Views", b =>
@@ -559,6 +801,27 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.ToTable("Settings");
                 });
 
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Skill", b =>
+                {
+                    b.Property<Guid>("SkillID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("Created_At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("SkillID");
+
+                    b.ToTable("SkillsNew");
+                });
+
             modelBuilder.Entity("LabCourse2.Domain.Entities.Skills", b =>
                 {
                     b.Property<Guid>("SkillsID")
@@ -658,6 +921,17 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Client", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("LabCourse2.Domain.Entities.Client", "UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LabCourse2.Domain.Entities.ClientProfile", b =>
                 {
                     b.HasOne("LabCourse2.Domain.Entities.User", "User")
@@ -726,6 +1000,17 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("Freelancer");
                 });
 
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Freelancer", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("LabCourse2.Domain.Entities.Freelancer", "UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LabCourse2.Domain.Entities.FreelancerProfile", b =>
                 {
                     b.HasOne("LabCourse2.Domain.Entities.User", "User")
@@ -735,6 +1020,25 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.FreelancerSkills", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.Freelancer", "Freelancer")
+                        .WithMany()
+                        .HasForeignKey("FreelancerID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabCourse2.Domain.Entities.Skill", "Skill")
+                        .WithMany()
+                        .HasForeignKey("SkillID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Freelancer");
+
+                    b.Navigation("Skill");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Milestone", b =>
@@ -757,6 +1061,82 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Project", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("LabCourse2.Domain.Entities.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.ProjectCategoryMap", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabCourse2.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.ProjectSkills", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabCourse2.Domain.Entities.Skill", "Skill")
+                        .WithMany()
+                        .HasForeignKey("SkillID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("Skill");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Proposal", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.Freelancer", "Freelancer")
+                        .WithMany()
+                        .HasForeignKey("FreelancerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LabCourse2.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Freelancer");
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Protected_Views", b =>
