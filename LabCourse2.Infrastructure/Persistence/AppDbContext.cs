@@ -42,6 +42,7 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<ProjectSkills> ProjectSkills => Set<ProjectSkills>();
         public DbSet<ProjectCategoryMap> ProjectCategoryMaps => Set<ProjectCategoryMap>();
         public DbSet<FreelancerSkills> FreelancerSkills => Set<FreelancerSkills>();
+        public DbSet<SavedProjects> SavedProjects => Set<SavedProjects>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -309,6 +310,20 @@ namespace LabCourse2.Infrastructure.Persistence
                      .WithMany()
                      .HasForeignKey(fs => fs.SkillID)
                      .OnDelete(DeleteBehavior.NoAction);
+                });
+
+                modelBuilder.Entity<SavedProjects>(e =>
+                {
+                    e.HasKey(sp => sp.SavedProjectID);
+                    e.HasOne(sp => sp.User)
+                    .WithMany()
+                    .HasForeignKey(sp => sp.UserID)
+                    .OnDelete(DeleteBehavior.Cascade);
+                    e.HasOne(sp => sp.Project)
+                    .WithMany()
+                    .HasForeignKey(sp => sp.ProjectID)
+                    .OnDelete(DeleteBehavior.NoAction);
+
                 });
             });
         }
