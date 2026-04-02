@@ -27,5 +27,7 @@ namespace LabCourse2.Domain.Entities
 
         public ICollection<Report> Reports { get; set; } = new List<Report>();
 
+        public ICollection<Audit_Logs> AuditLogs { get; set; } = new List<Audit_Logs>();
+
     }
 }

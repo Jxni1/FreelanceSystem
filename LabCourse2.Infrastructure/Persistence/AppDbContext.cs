@@ -1,4 +1,5 @@
-using LabCourse2.Domain.Entities; 
+using LabCourse2.Domain.Entities;
+using LabCourse2.Infrastructure.Persistence.Migrations;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabCourse2.Infrastructure.Persistence 
@@ -28,6 +29,10 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<Deliverables> Deliverables => Set<Deliverables>();
 
         public DbSet<Report> Reports => Set<Report>();
+
+        public DbSet<Audit_Logs> Audit_Logs => Set<Audit_Logs>();
+
+        public DbSet<Skills> Skills => Set<Skills>();
 
 
 
@@ -82,7 +87,11 @@ namespace LabCourse2.Infrastructure.Persistence
                 e.HasKey(f => f.FilesID);
             });
 
-         
+       
+
+          
+
+
             modelBuilder.Entity<Favorite_Freelancer>(e =>
             {
                 e.HasKey(ff => ff.Favorite_FreelancerID);
@@ -206,6 +215,20 @@ namespace LabCourse2.Infrastructure.Persistence
                  .WithMany(p => p.RolePermissions)
                  .HasForeignKey(rp => rp.PermissionsID)
                  .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Audit_Logs>(e =>
+            {
+                e.HasKey(al => al.Audit_LogsID);
+                e.HasOne(al => al.User)
+                 .WithMany(u => u.AuditLogs)
+                 .HasForeignKey(al => al.UserID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Skills>(e =>
+            {
+                e.HasKey(s => s.SkillsID);
             });
         }
     }
