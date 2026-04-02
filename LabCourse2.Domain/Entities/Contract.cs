@@ -26,7 +26,7 @@ namespace LabCourse2.Domain.Entities
 
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
 
-        // public Guid ProjectID { get; set; }
-        // public Project Project { get; set; } = null!;
+        //public Guid ProjectID { get; set; }
+        //public Project Project { get; set; } = null!;
     }
 }

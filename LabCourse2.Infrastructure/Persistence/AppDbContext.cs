@@ -2,7 +2,7 @@ using LabCourse2.Domain.Entities;
 using LabCourse2.Infrastructure.Persistence.Migrations;
 using Microsoft.EntityFrameworkCore;
 
-namespace LabCourse2.Infrastructure.Persistence 
+namespace LabCourse2.Infrastructure.Persistence
 {
     public class AppDbContext : DbContext
     {
@@ -38,7 +38,7 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<Project> Projects => Set<Project>();
         public DbSet<Proposal> Proposals => Set<Proposal>();
         public DbSet<Category> Categories => Set<Category>();
-        public DbSet<Skill> Skills => Set<Skill>();
+
         public DbSet<ProjectSkills> ProjectSkills => Set<ProjectSkills>();
         public DbSet<ProjectCategoryMap> ProjectCategoryMaps => Set<ProjectCategoryMap>();
         public DbSet<FreelancerSkills> FreelancerSkills => Set<FreelancerSkills>();
@@ -88,15 +88,15 @@ namespace LabCourse2.Infrastructure.Persistence
                  .OnDelete(DeleteBehavior.NoAction);
             });
 
-           
+
             modelBuilder.Entity<Files>(e =>
             {
                 e.HasKey(f => f.FilesID);
             });
 
-       
 
-          
+
+
 
 
             modelBuilder.Entity<Favorite_Freelancer>(e =>
@@ -112,7 +112,7 @@ namespace LabCourse2.Infrastructure.Persistence
                  .OnDelete(DeleteBehavior.NoAction);
             });
 
-            
+
             modelBuilder.Entity<Deliverables>(e =>
             {
                 e.HasKey(d => d.DeliverablesID);
@@ -149,16 +149,16 @@ namespace LabCourse2.Infrastructure.Persistence
             {
                 e.HasKey(c => c.ContractID);
 
-                
+
                 e.HasOne(c => c.Client)
                  .WithMany(cp => cp.Contracts)
                  .HasForeignKey(c => c.ClientID)
-                 .OnDelete(DeleteBehavior.Cascade); 
+                 .OnDelete(DeleteBehavior.Cascade);
 
                 e.HasOne(c => c.Freelancer)
                  .WithMany(fp => fp.Contracts)
                  .HasForeignKey(c => c.FreelancerID)
-                 .OnDelete(DeleteBehavior.NoAction); 
+                 .OnDelete(DeleteBehavior.NoAction);
             });
 
 
@@ -194,35 +194,35 @@ namespace LabCourse2.Infrastructure.Persistence
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
-          
-             
-                modelBuilder.Entity<Protected_Views>(e =>
-                {
-                    e.HasKey(pv => pv.Protected_ViewsID);
-                    e.HasOne(pv => pv.User)
-                     .WithMany(u => u.ProtectedViews) 
-                     .HasForeignKey(pv => pv.UserID)
-                     .OnDelete(DeleteBehavior.Cascade);
-                    //e.HasKey(pv => pv.Protected_ViewsID);
-                    //// e.HasOne(pv => pv.Project)
-                    ////  .WithMany(p => p.Protected_Views)
-                    ////  .HasForeignKey(pv => pv.ProjectID)
-                    ////  .OnDelete(DeleteBehavior.Cascade);
-                });
 
 
-                modelBuilder.Entity<RolePermission>(e =>
+            modelBuilder.Entity<Protected_Views>(e =>
             {
-                e.HasKey(rp => rp.RolePermissionsID);
-                e.HasOne(rp => rp.Role)
-                 .WithMany(r => r.RolePermissions)
-                 .HasForeignKey(rp => rp.RoleID)
+                e.HasKey(pv => pv.Protected_ViewsID);
+                e.HasOne(pv => pv.User)
+                 .WithMany(u => u.ProtectedViews)
+                 .HasForeignKey(pv => pv.UserID)
                  .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(rp => rp.Permission)
-                 .WithMany(p => p.RolePermissions)
-                 .HasForeignKey(rp => rp.PermissionsID)
+                e.HasKey(pv => pv.Protected_ViewsID);
+                e.HasOne(pv => pv.Project)
+                 .WithMany(p => p.ProtetectedViews)
+                 .HasForeignKey(pv => pv.ProjectID)
                  .OnDelete(DeleteBehavior.Cascade);
             });
+
+
+            modelBuilder.Entity<RolePermission>(e =>
+        {
+            e.HasKey(rp => rp.RolePermissionsID);
+            e.HasOne(rp => rp.Role)
+             .WithMany(r => r.RolePermissions)
+             .HasForeignKey(rp => rp.RoleID)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(rp => rp.Permission)
+             .WithMany(p => p.RolePermissions)
+             .HasForeignKey(rp => rp.PermissionsID)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
 
             modelBuilder.Entity<Audit_Logs>(e =>
             {
@@ -236,79 +236,80 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<Skills>(e =>
             {
                 e.HasKey(s => s.SkillsID);
-            modelBuilder.Entity<Category>(e =>
-            {
-                e.HasKey(c => c.CategoryID);
-            });
+                modelBuilder.Entity<Category>(e =>
+                {
+                    e.HasKey(c => c.CategoryID);
+                });
 
-            modelBuilder.Entity<Skill>(e =>
-            {
-                e.HasKey(s => s.SkillID);
-            });
+                modelBuilder.Entity<Skills>(e =>
+                {
+                    e.HasKey(s => s.SkillsID);
+                });
 
-            modelBuilder.Entity<Project>(e =>
-            {
-                e.HasKey(p => p.ProjectID);
-                e.HasOne(p => p.Client)
-                 .WithMany()
-                 .HasForeignKey(p => p.ClientID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(p => p.Category)
-                 .WithMany()
-                 .HasForeignKey(p => p.CategoryID)
-                 .OnDelete(DeleteBehavior.NoAction);
-            });
+                modelBuilder.Entity<Project>(e =>
+                {
+                    e.HasKey(p => p.ProjectID);
+                    e.HasOne(p => p.Client)
+                     .WithMany()
+                     .HasForeignKey(p => p.ClientID)
+                     .OnDelete(DeleteBehavior.Cascade);
+                    e.HasOne(p => p.Category)
+                     .WithMany()
+                     .HasForeignKey(p => p.CategoryID)
+                     .OnDelete(DeleteBehavior.NoAction);
+                });
 
-            modelBuilder.Entity<Proposal>(e =>
-            {
-                e.HasKey(p => p.ProposalId);
-                e.HasOne(p => p.Freelancer)
-                 .WithMany()
-                 .HasForeignKey(p => p.FreelancerId)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(p => p.Project)
-                 .WithMany()
-                 .HasForeignKey(p => p.ProjectId)
-                 .OnDelete(DeleteBehavior.NoAction);
-            });
+                modelBuilder.Entity<Proposal>(e =>
+                {
+                    e.HasKey(p => p.ProposalId);
+                    e.HasOne(p => p.Freelancer)
+                     .WithMany()
+                     .HasForeignKey(p => p.FreelancerId)
+                     .OnDelete(DeleteBehavior.Cascade);
+                    e.HasOne(p => p.Project)
+                     .WithMany()
+                     .HasForeignKey(p => p.ProjectId)
+                     .OnDelete(DeleteBehavior.NoAction);
+                });
 
-            modelBuilder.Entity<ProjectSkills>(e =>
-            {
-                e.HasKey(ps => ps.ProjectSkillsID);
-                e.HasOne(ps => ps.Project)
-                 .WithMany()
-                 .HasForeignKey(ps => ps.ProjectID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(ps => ps.Skill)
-                 .WithMany()
-                 .HasForeignKey(ps => ps.SkillID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
+                modelBuilder.Entity<ProjectSkills>(e =>
+                {
+                    e.HasKey(ps => ps.ProjectSkillsID);
+                    e.HasOne(ps => ps.Project)
+                     .WithMany()
+                     .HasForeignKey(ps => ps.ProjectID)
+                     .OnDelete(DeleteBehavior.Cascade);
+                    e.HasOne(ps => ps.Skill)
+                     .WithMany()
+                     .HasForeignKey(ps => ps.SkillID)
+                     .OnDelete(DeleteBehavior.Cascade);
+                });
 
-            modelBuilder.Entity<ProjectCategoryMap>(e =>
-            {
-                e.HasKey(pcm => pcm.ProjectCategoryMapID);
-                e.HasOne(pcm => pcm.Project)
-                 .WithMany()
-                 .HasForeignKey(pcm => pcm.ProjectID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(pcm => pcm.Category)
-                 .WithMany()
-                 .HasForeignKey(pcm => pcm.CategoryID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
+                modelBuilder.Entity<ProjectCategoryMap>(e =>
+                {
+                    e.HasKey(pcm => pcm.ProjectCategoryMapID);
+                    e.HasOne(pcm => pcm.Project)
+                     .WithMany()
+                     .HasForeignKey(pcm => pcm.ProjectID)
+                     .OnDelete(DeleteBehavior.Cascade);
+                    e.HasOne(pcm => pcm.Category)
+                     .WithMany()
+                     .HasForeignKey(pcm => pcm.CategoryID)
+                     .OnDelete(DeleteBehavior.Cascade);
+                });
 
-            modelBuilder.Entity<FreelancerSkills>(e =>
-            {
-                e.HasKey(fs => fs.FreelancerSkillsID);
-                e.HasOne(fs => fs.Freelancer)
-                 .WithMany()
-                 .HasForeignKey(fs => fs.FreelancerID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(fs => fs.Skill)
-                 .WithMany()
-                 .HasForeignKey(fs => fs.SkillID)
-                 .OnDelete(DeleteBehavior.NoAction);
+                modelBuilder.Entity<FreelancerSkills>(e =>
+                {
+                    e.HasKey(fs => fs.FreelancerSkillsID);
+                    e.HasOne(fs => fs.Freelancer)
+                     .WithMany()
+                     .HasForeignKey(fs => fs.FreelancerID)
+                     .OnDelete(DeleteBehavior.Cascade);
+                    e.HasOne(fs => fs.Skill)
+                     .WithMany()
+                     .HasForeignKey(fs => fs.SkillID)
+                     .OnDelete(DeleteBehavior.NoAction);
+                });
             });
         }
     }

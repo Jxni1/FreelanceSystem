@@ -17,7 +17,7 @@ namespace LabCourse2.Domain.Entities
         public string Status { get; set; } = "Pending";  
          
         public Guid FreelancerId { get; set; }
-        public virtual Freelancer Freelancer { get; set; } = null!;
+        public virtual FreelancerProfile Freelancer { get; set; } = null!;
          
         public Guid ProjectId { get; set; }
         public virtual Project Project { get; set; } = null!;

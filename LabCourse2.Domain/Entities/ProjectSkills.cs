@@ -12,6 +12,6 @@ namespace LabCourse2.Domain.Entities
         public virtual Project Project { get; set; } = null!;
 
         public Guid SkillID { get; set; }
-        public virtual Skill Skill { get; set; } = null!;
+        public virtual Skills Skill { get; set; } = null!;
     }
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Runtime.Remoting.Channels;
 using System.Text;
 
 namespace LabCourse2.Domain.Entities
@@ -25,10 +24,13 @@ namespace LabCourse2.Domain.Entities
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
          
         public Guid ClientID { get; set; }
-        public virtual Client Client { get; set; } = null!;
+        public virtual ClientProfile Client { get; set; } = null!;
          
         public Guid CategoryID { get; set; }
         public virtual Category Category { get; set; } = null!;
+
+        public ICollection<Protected_Views> ProtetectedViews { get; set; } = new List<Protected_Views>();
+
 
     }
 }

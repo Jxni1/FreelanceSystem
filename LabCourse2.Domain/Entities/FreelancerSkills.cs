@@ -11,10 +11,10 @@ namespace LabCourse2.Domain.Entities
         public string Level { get; set;} = string.Empty;
 
         public Guid FreelancerID { get; set; }
-        public virtual Freelancer Freelancer { get; set; } = null!;
+        public virtual FreelancerProfile Freelancer { get; set; } = null!;
 
         public Guid SkillID { get; set; }
-        public virtual Skill Skill { get; set; } = null!;
+        public virtual Skills Skill { get; set; } = null!;
 
     }
 }
