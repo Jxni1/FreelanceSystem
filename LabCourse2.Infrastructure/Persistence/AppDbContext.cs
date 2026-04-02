@@ -33,8 +33,8 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<Audit_Logs> Audit_Logs => Set<Audit_Logs>();
 
         public DbSet<Skills> Skills => Set<Skills>();
-
-
+        public DbSet<Settings> Settings => Set<Settings>();
+        public DbSet<Notifications> Notifications => Set<Notifications>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -123,6 +123,7 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<Milestone>(e =>
             {
                 e.HasKey(m => m.MilestoneID);
+                e.Property(m => m.Amount).HasPrecision(18, 2);
                 e.HasOne(m => m.Contract)
                  .WithMany(c => c.Milestones)
                  .HasForeignKey(m => m.ContractID)
@@ -133,6 +134,7 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<FreelancerProfile>(e =>
             {
                 e.HasKey(f => f.FreelancerID);
+                e.Property(f => f.Hourly_Rate).HasPrecision(18, 2);
                 e.HasOne(f => f.User)
                  .WithOne(u => u.FreelancerProfile)
                  .HasForeignKey<FreelancerProfile>(f => f.UserID)
@@ -141,8 +143,9 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<Contract>(e =>
             {
                 e.HasKey(c => c.ContractID);
+                e.Property(c => c.Agreed_Price).HasPrecision(18, 2);
+                e.Property(c => c.Price).HasPrecision(18, 2);
 
-                
                 e.HasOne(c => c.Client)
                  .WithMany(cp => cp.Contracts)
                  .HasForeignKey(c => c.ClientID)
@@ -159,6 +162,7 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<ClientProfile>(e =>
             {
                 e.HasKey(c => c.ClientID);
+                e.Property(c => c.Budget).HasPrecision(18, 2);
                 e.HasOne(c => c.User)
                  .WithOne(u => u.ClientProfile)
                  .HasForeignKey<ClientProfile>(c => c.UserID)
@@ -229,6 +233,22 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<Skills>(e =>
             {
                 e.HasKey(s => s.SkillsID);
+            });
+
+            modelBuilder.Entity<Settings>(e =>
+            {
+                e.HasKey(s => s.SettingsID);
+            });
+
+            modelBuilder.Entity<Notifications>(e =>
+            {
+                e.HasKey(n => n.NotificationsID);
+                e.HasOne(n => n.User)
+                 .WithMany(u => u.Notifications)
+                 .HasForeignKey(n => n.UserID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasIndex(n => n.Is_read);
+                e.HasIndex(n => n.Created_at);
             });
         }
     }
