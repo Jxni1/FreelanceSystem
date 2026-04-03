@@ -11,12 +11,6 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Notifications");
-
-            migrationBuilder.DropTable(
-                name: "Settings");
-
             migrationBuilder.AddColumn<Guid>(
                 name: "ProjectID",
                 table: "Protected_Views",
@@ -233,7 +227,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                 column: "ProjectID",
                 principalTable: "Projects",
                 principalColumn: "ProjectID",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.NoAction);
         }
 
         /// <inheritdoc />
