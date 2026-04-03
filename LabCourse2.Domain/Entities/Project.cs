@@ -31,6 +31,8 @@ namespace LabCourse2.Domain.Entities
 
         public ICollection<Protected_Views> ProtetectedViews { get; set; } = new List<Protected_Views>();
 
+        public ICollection<Contract> Contracts { get; set; } = new List<Contract>();
+
 
     }
 }

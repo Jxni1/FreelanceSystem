@@ -34,6 +34,8 @@ namespace LabCourse2.Infrastructure.Persistence
 
         public DbSet<Skills> Skills => Set<Skills>();
 
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Setting> Settings { get; set; }
 
         public DbSet<Project> Projects => Set<Project>();
         public DbSet<Proposal> Proposals => Set<Proposal>();
@@ -63,6 +65,19 @@ namespace LabCourse2.Infrastructure.Persistence
                 e.HasIndex(u => u.Username).IsUnique();
             });
 
+        
+           
+
+
+
+
+            modelBuilder.Entity<Setting>(e =>
+            {
+                e.HasKey(s => s.SettingID);
+            });
+
+            //FJOLLA-tabelat
+
             modelBuilder.Entity<Report>(e =>
             {
                 e.HasKey(r => r.ReportsID);
@@ -70,6 +85,20 @@ namespace LabCourse2.Infrastructure.Persistence
                  .WithMany(u => u.Reports)
                  .HasForeignKey(r => r.UserID)
                  .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+            modelBuilder.Entity<Favorite_Freelancer>(e =>
+            {
+                e.HasKey(ff => ff.Favorite_FreelancerID);
+                e.HasOne(ff => ff.Client)
+                 .WithMany(c => c.FavoriteFreelancers)
+                 .HasForeignKey(ff => ff.ClientID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(ff => ff.Freelancer)
+                 .WithMany(f => f.FavoriteFreelancers)
+                 .HasForeignKey(ff => ff.FreelancerID)
+                 .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<Review>(e =>
@@ -88,32 +117,6 @@ namespace LabCourse2.Infrastructure.Persistence
                  .HasForeignKey(r => r.ClientID)
                  .OnDelete(DeleteBehavior.NoAction);
             });
-
-
-            modelBuilder.Entity<Files>(e =>
-            {
-                e.HasKey(f => f.FilesID);
-            });
-
-
-
-
-
-
-            modelBuilder.Entity<Favorite_Freelancer>(e =>
-            {
-                e.HasKey(ff => ff.Favorite_FreelancerID);
-                e.HasOne(ff => ff.Client)
-                 .WithMany(c => c.FavoriteFreelancers)
-                 .HasForeignKey(ff => ff.ClientID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(ff => ff.Freelancer)
-                 .WithMany(f => f.FavoriteFreelancers)
-                 .HasForeignKey(ff => ff.FreelancerID)
-                 .OnDelete(DeleteBehavior.NoAction);
-            });
-
-
             modelBuilder.Entity<Deliverables>(e =>
             {
                 e.HasKey(d => d.DeliverablesID);
@@ -128,22 +131,18 @@ namespace LabCourse2.Infrastructure.Persistence
             });
 
 
+            modelBuilder.Entity<Files>(e =>
+            {
+                e.HasKey(f => f.FilesID);
+            });
+
+
             modelBuilder.Entity<Milestone>(e =>
             {
                 e.HasKey(m => m.MilestoneID);
                 e.HasOne(m => m.Contract)
                  .WithMany(c => c.Milestones)
                  .HasForeignKey(m => m.ContractID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
-
-
-            modelBuilder.Entity<FreelancerProfile>(e =>
-            {
-                e.HasKey(f => f.FreelancerID);
-                e.HasOne(f => f.User)
-                 .WithOne(u => u.FreelancerProfile)
-                 .HasForeignKey<FreelancerProfile>(f => f.UserID)
                  .OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<Contract>(e =>
@@ -160,7 +159,39 @@ namespace LabCourse2.Infrastructure.Persistence
                  .WithMany(fp => fp.Contracts)
                  .HasForeignKey(c => c.FreelancerID)
                  .OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(c => c.Project)
+    .WithMany(p => p.Contracts)
+    .HasForeignKey(c => c.ProjectID)
+    .OnDelete(DeleteBehavior.NoAction);
+           
+        });
+
+            modelBuilder.Entity<Protected_Views>(e =>
+            {
+                e.HasKey(pv => pv.Protected_ViewsID);
+                e.HasOne(pv => pv.User)
+                 .WithMany(u => u.ProtectedViews)
+                 .HasForeignKey(pv => pv.UserID)
+                 .OnDelete(DeleteBehavior.NoAction);
+                e.HasKey(pv => pv.Protected_ViewsID);
+                e.HasOne(pv => pv.Project)
+                 .WithMany(p => p.ProtetectedViews)
+                 .HasForeignKey(pv => pv.ProjectID)
+                 .OnDelete(DeleteBehavior.NoAction);
             });
+
+
+            //-
+
+            modelBuilder.Entity<FreelancerProfile>(e =>
+            {
+                e.HasKey(f => f.FreelancerID);
+                e.HasOne(f => f.User)
+                 .WithOne(u => u.FreelancerProfile)
+                 .HasForeignKey<FreelancerProfile>(f => f.UserID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+            
 
 
 
@@ -197,19 +228,7 @@ namespace LabCourse2.Infrastructure.Persistence
 
 
 
-            modelBuilder.Entity<Protected_Views>(e =>
-            {
-                e.HasKey(pv => pv.Protected_ViewsID);
-                e.HasOne(pv => pv.User)
-                 .WithMany(u => u.ProtectedViews)
-                 .HasForeignKey(pv => pv.UserID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasKey(pv => pv.Protected_ViewsID);
-                e.HasOne(pv => pv.Project)
-                 .WithMany(p => p.ProtetectedViews)
-                 .HasForeignKey(pv => pv.ProjectID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
+         
 
 
             modelBuilder.Entity<RolePermission>(e =>
@@ -286,6 +305,19 @@ namespace LabCourse2.Infrastructure.Persistence
                      .OnDelete(DeleteBehavior.Cascade);
                 });
 
+                modelBuilder.Entity<Notification>(e =>
+                {
+                    e.HasKey(n => n.NotificationID);
+                    e.HasOne(n => n.User)
+                     .WithMany(u => u.Notifications)
+                     .HasForeignKey(n => n.UserID)
+                     .OnDelete(DeleteBehavior.Cascade);
+                });
+
+                modelBuilder.Entity<Setting>(e =>
+                {
+                    e.HasKey(s => s.SettingID);
+                });
                 modelBuilder.Entity<ProjectCategoryMap>(e =>
                 {
                     e.HasKey(pcm => pcm.ProjectCategoryMapID);
