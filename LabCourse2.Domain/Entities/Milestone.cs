@@ -37,5 +37,6 @@ namespace LabCourse2.Domain.Entities
         public Contract Contract { get; set; } = null!;
 
         public ICollection<Deliverables> Deliverables { get; set; } = new List<Deliverables>();
+        public ICollection<Transactions> Transactions { get; set; } = new List<Transactions>();
     }
 }
