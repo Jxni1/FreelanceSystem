@@ -30,5 +30,8 @@ namespace LabCourse2.Domain.Entities
 
         public ICollection<Milestone> Milestones { get; set; } = new List<Milestone>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
+
+        public ICollection<Payment> Payment { get; set; } = new List<Payment>();
+
     }
 }
