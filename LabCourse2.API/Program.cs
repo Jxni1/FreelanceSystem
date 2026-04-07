@@ -1,5 +1,6 @@
 using System.Text;
 using FluentValidation;
+using LabCourse2.API.Middleware;
 using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Validators;
 using LabCourse2.Infrastructure.Persistence;
@@ -24,20 +25,20 @@ var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer           = true,
-        ValidateAudience         = true,
-        ValidateLifetime         = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer              = jwtSettings["Issuer"],
-        ValidAudience            = jwtSettings["Audience"],
-        IssuerSigningKey         = new SymmetricSecurityKey(key),
-        ClockSkew                = TimeSpan.Zero
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ClockSkew = TimeSpan.Zero   
     };
 });
 
@@ -67,7 +68,9 @@ if (app.Environment.IsDevelopment())
 app.UseCors("FrontendPolicy");
 app.UseHttpsRedirection();
 app.UseAuthentication();
+
+app.UseActiveUserCheck();
+
 app.UseAuthorization();
 app.MapControllers();
-
 app.Run();
