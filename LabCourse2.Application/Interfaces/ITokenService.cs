@@ -4,7 +4,9 @@ namespace LabCourse2.Application.Interfaces
 {
     public interface ITokenService
     {
-        string GenerateAccessToken(User user, string role);
+
+        string GenerateAccessToken(User user, IEnumerable<string> roles, string profileType);
+
         string GenerateRefreshToken();
     }
 }

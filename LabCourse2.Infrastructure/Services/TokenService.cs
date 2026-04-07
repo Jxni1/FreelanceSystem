@@ -18,28 +18,31 @@ namespace LabCourse2.Infrastructure.Services
             _config = config;
         }
 
-        public string GenerateAccessToken(User user, string role)
+        public string GenerateAccessToken(User user, IEnumerable<string> roles, string profileType)
         {
             var jwtSettings = _config.GetSection("JwtSettings");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserID.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
-                new Claim(ClaimTypes.Role, role),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                new(JwtRegisteredClaimNames.Sub,        user.UserID.ToString()),
+                new(JwtRegisteredClaimNames.Email,      user.Email),
+                new(JwtRegisteredClaimNames.UniqueName, user.Username),
+                new(JwtRegisteredClaimNames.Jti,        Guid.NewGuid().ToString()),
+                new("profile_type", profileType)
             };
 
-            var expiry = int.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "60");
+            foreach (var role in roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
+
+            var expiryMinutes = int.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "15");
 
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expiry),
+                expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
                 signingCredentials: creds
             );
 
@@ -48,8 +51,7 @@ namespace LabCourse2.Infrastructure.Services
 
         public string GenerateRefreshToken()
         {
-            var bytes = RandomNumberGenerator.GetBytes(64);
-            return Convert.ToBase64String(bytes);
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         }
     }
 }

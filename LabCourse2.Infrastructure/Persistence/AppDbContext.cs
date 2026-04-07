@@ -46,7 +46,13 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<FreelancerSkills> FreelancerSkills => Set<FreelancerSkills>();
         public DbSet<SavedProjects> SavedProjects => Set<SavedProjects>();
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<Transactions> Transactions => Set<Transactions>();
+
+
+       
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Role>(e =>
             {
@@ -65,8 +71,34 @@ namespace LabCourse2.Infrastructure.Persistence
                 e.HasIndex(u => u.Username).IsUnique();
             });
 
-        
-           
+
+            modelBuilder.Entity<Payment>(e =>
+            {
+                e.HasKey(p => p.PaymentID);
+
+                e.HasIndex(p => p.ContractID);
+
+                e.Property(p => p.Payment_method).IsRequired().HasMaxLength(50);
+                e.Property(p => p.Status).IsRequired().HasMaxLength(20);
+            });
+
+            modelBuilder.Entity<Transactions>(e =>
+            {
+                e.HasKey(t => t.TransactionsID);
+
+                e.HasIndex(t => t.Reference).IsUnique();
+
+                e.HasIndex(t => t.PaymentID);
+                e.HasIndex(t => t.MilestoneID);
+
+                e.Property(t => t.Status).IsRequired().HasMaxLength(20);
+                e.Property(t => t.Reference).IsRequired().HasMaxLength(100);
+
+                e.HasOne(t => t.Payment)
+                 .WithMany(p => p.Transactions)
+                 .HasForeignKey(t => t.PaymentID)
+                 .OnDelete(DeleteBehavior.NoAction);
+            });
 
 
 
@@ -313,7 +345,7 @@ namespace LabCourse2.Infrastructure.Persistence
                      .HasForeignKey(n => n.UserID)
                      .OnDelete(DeleteBehavior.Cascade);
                 });
-
+                
                 modelBuilder.Entity<Setting>(e =>
                 {
                     e.HasKey(s => s.SettingID);
