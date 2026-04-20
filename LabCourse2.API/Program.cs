@@ -1,13 +1,20 @@
-using System.Text;
 using FluentValidation;
 using LabCourse2.API.Middleware;
+using LabCourse2.Application.Common;
+using LabCourse2.Application.DTOs.Projects;
 using LabCourse2.Application.Interfaces;
+using LabCourse2.Application.Interfaces.Projects;
+using LabCourse2.Application.Interfaces.Users;
+using LabCourse2.Application.Services.Projects;
+using LabCourse2.Application.Services.User;
 using LabCourse2.Application.Validators;
+using LabCourse2.Application.Validators.Projects;
 using LabCourse2.Infrastructure.Persistence;
 using LabCourse2.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +64,20 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+builder.Services.AddScoped<IAppDbContext>(sp =>
+    sp.GetRequiredService<AppDbContext>());
+
+builder.Services.AddScoped<IProjectService, ProjectService>();
+
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<IUserService>(sp => sp.GetRequiredService<UserService>());
+builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<UserService>());
+
+builder.Services.AddScoped<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateProjectRequest>, UpdateProjectRequestValidator>();
+
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 

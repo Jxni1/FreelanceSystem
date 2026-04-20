@@ -29,8 +29,4 @@
     <ProjectReference Include="..\LabCourse2.Infrastructure\LabCourse2.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
 </Project>

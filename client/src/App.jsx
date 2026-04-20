@@ -11,6 +11,9 @@ import { ROLES } from './constants/roles';
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
 const AdminPanelPage = lazy(() => import('./pages/admin/AdminPanelPage'));
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
+const ProjectsListPage = lazy(() => import('./pages/projects/ProjectsListPage'));
+const ProjectDetailsPage = lazy(() => import('./pages/projects/ProjectDetailsPage'));
+const ProjectFormPage = lazy(() => import('./pages/projects/ProjectFormPage'));
 
 const GlobalSuspenseLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -35,6 +38,10 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/projects" element={<ProjectsListPage />} />
+              <Route path="/projects/new" element={<ProjectFormPage />} />
+              <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+              <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
             </Route>
 
             <Route element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}>

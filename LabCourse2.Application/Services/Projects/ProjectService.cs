@@ -1,0 +1,159 @@
+﻿using LabCourse2.Application.Common;
+using LabCourse2.Application.DTOs.Projects;
+using LabCourse2.Application.Interfaces.Projects;
+using LabCourse2.Application.Mappings;
+using LabCourse2.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace LabCourse2.Application.Services.Projects
+{
+    public class ProjectService : IProjectService
+    {
+        private readonly IAppDbContext _context;
+        private readonly ICurrentUserService _currentUser;
+
+        public ProjectService(IAppDbContext context, ICurrentUserService currentUser)
+        {
+            _context = context;
+            _currentUser = currentUser;
+        }
+
+
+        private async Task<ClientProfile?> GetClientProfileAsync() =>
+            await _context.ClientProfiles
+                .FirstOrDefaultAsync(c => c.UserID == _currentUser.UserId);
+
+
+        public async Task<Result<PagedResult<ProjectResponse>>> GetAllAsync(ProjectQueryParams query)
+        {
+            var q = _context.Projects
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+                q = q.Where(p => p.Title.Contains(query.Search));
+
+            if (query.CategoryID.HasValue)
+                q = q.Where(p => p.CategoryID == query.CategoryID);
+
+            if (!string.IsNullOrWhiteSpace(query.Status))
+                q = q.Where(p => p.Status == query.Status);
+
+            if (!string.IsNullOrWhiteSpace(query.Visibility))
+                q = q.Where(p => p.Visibility == query.Visibility);
+
+            var totalCount = await q.CountAsync();
+
+            var items = await q
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .Select(p => p.ToResponse())
+                .ToListAsync();
+
+            return Result<PagedResult<ProjectResponse>>.Success(new PagedResult<ProjectResponse>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = query.Page,
+                PageSize = query.PageSize
+            });
+        }
+
+        public async Task<Result<ProjectResponse>> GetByIdAsync(Guid id)
+        {
+            var project = await _context.Projects
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ProjectID == id);
+
+            if (project is null)
+                return Result<ProjectResponse>.NotFound($"Project with ID {id} was not found.");
+
+            return Result<ProjectResponse>.Success(project.ToResponse());
+        }
+
+        public async Task<Result<ProjectResponse>> CreateAsync(CreateProjectRequest request)
+        {
+            var client = await GetClientProfileAsync();
+
+            if (client is null)
+                return Result<ProjectResponse>.Forbidden("Only clients can create projects.");
+
+            var categoryExists = await _context.Categories
+                .AnyAsync(c => c.CategoryID == request.CategoryID);
+
+            if (!categoryExists)
+                return Result<ProjectResponse>.NotFound("Category not found.");
+
+            var project = request.ToEntity(client.ClientID);
+
+            await _context.Projects.AddAsync(project);
+            await _context.SaveChangesAsync();
+
+            var created = await _context.Projects
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
+
+            return Result<ProjectResponse>.Created(created!.ToResponse());
+        }
+
+        public async Task<Result<ProjectResponse>> UpdateAsync(Guid id, UpdateProjectRequest request)
+        {
+            var client = await GetClientProfileAsync();
+
+            if (client is null)
+                return Result<ProjectResponse>.Forbidden("Only clients can update projects.");
+
+            var project = await _context.Projects
+                .Include(p => p.Category)
+                .FirstOrDefaultAsync(p => p.ProjectID == id);
+
+            if (project is null)
+                return Result<ProjectResponse>.NotFound($"Project with ID {id} was not found.");
+
+            if (project.ClientID != client.ClientID)
+                return Result<ProjectResponse>.Forbidden("You do not own this project.");
+
+            var categoryExists = await _context.Categories
+                .AnyAsync(c => c.CategoryID == request.CategoryID);
+
+            if (!categoryExists)
+                return Result<ProjectResponse>.NotFound("Category not found.");
+
+            project.ApplyUpdate(request);
+            await _context.SaveChangesAsync();
+
+            var updated = await _context.Projects
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
+
+            return Result<ProjectResponse>.Success(updated!.ToResponse());
+        }
+
+        public async Task<Result<bool>> DeleteAsync(Guid id)
+        {
+            var client = await GetClientProfileAsync();
+
+            if (client is null)
+                return Result<bool>.Forbidden("Only clients can delete projects.");
+
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.ProjectID == id);
+
+            if (project is null)
+                return Result<bool>.NotFound($"Project with ID {id} was not found.");
+
+            if (project.ClientID != client.ClientID)
+                return Result<bool>.Forbidden("You do not own this project.");
+
+            _context.Projects.Remove(project);
+            await _context.SaveChangesAsync();
+
+            return Result<bool>.Success(true);
+        }
+    }
+}

@@ -1,11 +1,11 @@
 using LabCourse2.Domain.Entities;
-using LabCourse2.Infrastructure.Persistence.Migrations;
+using LabCourse2.Application.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabCourse2.Infrastructure.Persistence
 {
-    public class AppDbContext : DbContext
-    {
+    public class AppDbContext : DbContext, IAppDbContext {
+
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<User> Users => Set<User>();
@@ -16,204 +16,38 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<Permission> Permissions => Set<Permission>();
         public DbSet<UserRole> UserRoles => Set<UserRole>();
         public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
-
         public DbSet<Protected_Views> Protected_Views => Set<Protected_Views>();
-
         public DbSet<Contract> Contracts => Set<Contract>();
-
         public DbSet<Milestone> Milestones => Set<Milestone>();
-
         public DbSet<Review> Reviews => Set<Review>();
         public DbSet<Files> Files => Set<Files>();
         public DbSet<Favorite_Freelancer> Favorite_Freelancers => Set<Favorite_Freelancer>();
         public DbSet<Deliverables> Deliverables => Set<Deliverables>();
-
         public DbSet<Report> Reports => Set<Report>();
-
         public DbSet<Audit_Logs> Audit_Logs => Set<Audit_Logs>();
-
         public DbSet<Skills> Skills => Set<Skills>();
-
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Setting> Settings { get; set; }
-
         public DbSet<Project> Projects => Set<Project>();
         public DbSet<Proposal> Proposals => Set<Proposal>();
         public DbSet<Category> Categories => Set<Category>();
-
         public DbSet<ProjectSkills> ProjectSkills => Set<ProjectSkills>();
         public DbSet<ProjectCategoryMap> ProjectCategoryMaps => Set<ProjectCategoryMap>();
         public DbSet<FreelancerSkills> FreelancerSkills => Set<FreelancerSkills>();
         public DbSet<SavedProjects> SavedProjects => Set<SavedProjects>();
-
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<Transactions> Transactions => Set<Transactions>();
 
-
-       
-
-protected override void OnModelCreating(ModelBuilder modelBuilder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Role>(e =>
-            {
-                e.HasKey(r => r.RoleID);
-            });
-
-            modelBuilder.Entity<Permission>(e =>
-            {
-                e.HasKey(p => p.PermissionsID);
-            });
-
+            modelBuilder.Entity<Role>(e => e.HasKey(r => r.RoleID));
+            modelBuilder.Entity<Permission>(e => e.HasKey(p => p.PermissionsID));
             modelBuilder.Entity<User>(e =>
             {
                 e.HasKey(u => u.UserID);
                 e.HasIndex(u => u.Email).IsUnique();
                 e.HasIndex(u => u.Username).IsUnique();
             });
-
-
-            modelBuilder.Entity<Payment>(e =>
-            {
-                e.HasKey(p => p.PaymentID);
-
-                e.HasIndex(p => p.ContractID);
-
-                e.Property(p => p.Payment_method).IsRequired().HasMaxLength(50);
-                e.Property(p => p.Status).IsRequired().HasMaxLength(20);
-            });
-
-            modelBuilder.Entity<Transactions>(e =>
-            {
-                e.HasKey(t => t.TransactionsID);
-
-                e.HasIndex(t => t.Reference).IsUnique();
-
-                e.HasIndex(t => t.PaymentID);
-                e.HasIndex(t => t.MilestoneID);
-
-                e.Property(t => t.Status).IsRequired().HasMaxLength(20);
-                e.Property(t => t.Reference).IsRequired().HasMaxLength(100);
-
-                e.HasOne(t => t.Payment)
-                 .WithMany(p => p.Transactions)
-                 .HasForeignKey(t => t.PaymentID)
-                 .OnDelete(DeleteBehavior.NoAction);
-            });
-
-
-
-
-            modelBuilder.Entity<Setting>(e =>
-            {
-                e.HasKey(s => s.SettingID);
-            });
-
-            //FJOLLA-tabelat
-
-            modelBuilder.Entity<Report>(e =>
-            {
-                e.HasKey(r => r.ReportsID);
-                e.HasOne(r => r.User)
-                 .WithMany(u => u.Reports)
-                 .HasForeignKey(r => r.UserID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
-
-
-            modelBuilder.Entity<Favorite_Freelancer>(e =>
-            {
-                e.HasKey(ff => ff.Favorite_FreelancerID);
-                e.HasOne(ff => ff.Client)
-                 .WithMany(c => c.FavoriteFreelancers)
-                 .HasForeignKey(ff => ff.ClientID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(ff => ff.Freelancer)
-                 .WithMany(f => f.FavoriteFreelancers)
-                 .HasForeignKey(ff => ff.FreelancerID)
-                 .OnDelete(DeleteBehavior.NoAction);
-            });
-
-            modelBuilder.Entity<Review>(e =>
-            {
-                e.HasKey(r => r.ReviewsID);
-                e.HasOne(r => r.Contract)
-                 .WithMany(c => c.Reviews)
-                 .HasForeignKey(r => r.ContractID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(r => r.Freelancer)
-                 .WithMany(f => f.Reviews)
-                 .HasForeignKey(r => r.FreelancerID)
-                 .OnDelete(DeleteBehavior.NoAction);
-                e.HasOne(r => r.Client)
-                 .WithMany(c => c.Reviews)
-                 .HasForeignKey(r => r.ClientID)
-                 .OnDelete(DeleteBehavior.NoAction);
-            });
-            modelBuilder.Entity<Deliverables>(e =>
-            {
-                e.HasKey(d => d.DeliverablesID);
-                e.HasOne(d => d.Milestone)
-                 .WithMany(m => m.Deliverables)
-                 .HasForeignKey(d => d.MilestoneID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(d => d.File)
-                 .WithMany()
-                 .HasForeignKey(d => d.FileID)
-                 .OnDelete(DeleteBehavior.NoAction);
-            });
-
-
-            modelBuilder.Entity<Files>(e =>
-            {
-                e.HasKey(f => f.FilesID);
-            });
-
-
-            modelBuilder.Entity<Milestone>(e =>
-            {
-                e.HasKey(m => m.MilestoneID);
-                e.HasOne(m => m.Contract)
-                 .WithMany(c => c.Milestones)
-                 .HasForeignKey(m => m.ContractID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
-            modelBuilder.Entity<Contract>(e =>
-            {
-                e.HasKey(c => c.ContractID);
-
-
-                e.HasOne(c => c.Client)
-                 .WithMany(cp => cp.Contracts)
-                 .HasForeignKey(c => c.ClientID)
-                 .OnDelete(DeleteBehavior.Cascade);
-
-                e.HasOne(c => c.Freelancer)
-                 .WithMany(fp => fp.Contracts)
-                 .HasForeignKey(c => c.FreelancerID)
-                 .OnDelete(DeleteBehavior.NoAction);
-                e.HasOne(c => c.Project)
-    .WithMany(p => p.Contracts)
-    .HasForeignKey(c => c.ProjectID)
-    .OnDelete(DeleteBehavior.NoAction);
-           
-        });
-
-            modelBuilder.Entity<Protected_Views>(e =>
-            {
-                e.HasKey(pv => pv.Protected_ViewsID);
-                e.HasOne(pv => pv.User)
-                 .WithMany(u => u.ProtectedViews)
-                 .HasForeignKey(pv => pv.UserID)
-                 .OnDelete(DeleteBehavior.NoAction);
-                e.HasKey(pv => pv.Protected_ViewsID);
-                e.HasOne(pv => pv.Project)
-                 .WithMany(p => p.ProtetectedViews)
-                 .HasForeignKey(pv => pv.ProjectID)
-                 .OnDelete(DeleteBehavior.NoAction);
-            });
-
-
-            //-
 
             modelBuilder.Entity<FreelancerProfile>(e =>
             {
@@ -223,9 +57,6 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
                  .HasForeignKey<FreelancerProfile>(f => f.UserID)
                  .OnDelete(DeleteBehavior.Cascade);
             });
-            
-
-
 
             modelBuilder.Entity<ClientProfile>(e =>
             {
@@ -233,15 +64,6 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
                 e.HasOne(c => c.User)
                  .WithOne(u => u.ClientProfile)
                  .HasForeignKey<ClientProfile>(c => c.UserID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            modelBuilder.Entity<RefreshToken>(e =>
-            {
-                e.HasKey(r => r.TokenID);
-                e.HasOne(r => r.User)
-                 .WithMany(u => u.RefreshTokens)
-                 .HasForeignKey(r => r.UserID)
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -258,23 +80,217 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
-
-
-         
-
-
             modelBuilder.Entity<RolePermission>(e =>
-        {
-            e.HasKey(rp => rp.RolePermissionsID);
-            e.HasOne(rp => rp.Role)
-             .WithMany(r => r.RolePermissions)
-             .HasForeignKey(rp => rp.RoleID)
-             .OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(rp => rp.Permission)
-             .WithMany(p => p.RolePermissions)
-             .HasForeignKey(rp => rp.PermissionsID)
-             .OnDelete(DeleteBehavior.Cascade);
-        });
+            {
+                e.HasKey(rp => rp.RolePermissionsID);
+                e.HasOne(rp => rp.Role)
+                 .WithMany(r => r.RolePermissions)
+                 .HasForeignKey(rp => rp.RoleID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(rp => rp.Permission)
+                 .WithMany(p => p.RolePermissions)
+                 .HasForeignKey(rp => rp.PermissionsID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<RefreshToken>(e =>
+            {
+                e.HasKey(r => r.TokenID);
+                e.HasOne(r => r.User)
+                 .WithMany(u => u.RefreshTokens)
+                 .HasForeignKey(r => r.UserID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Category>(e => e.HasKey(c => c.CategoryID));
+            modelBuilder.Entity<Skills>(e => e.HasKey(s => s.SkillsID));
+
+            modelBuilder.Entity<Project>(e =>
+            {
+                e.HasKey(p => p.ProjectID);
+                e.HasOne(p => p.Client)
+                 .WithMany()
+                 .HasForeignKey(p => p.ClientID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(p => p.Category)
+                 .WithMany()
+                 .HasForeignKey(p => p.CategoryID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Proposal>(e =>
+            {
+                e.HasKey(p => p.ProposalId);
+                e.HasOne(p => p.Freelancer)
+                 .WithMany()
+                 .HasForeignKey(p => p.FreelancerId)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(p => p.Project)
+                 .WithMany()
+                 .HasForeignKey(p => p.ProjectId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<ProjectSkills>(e =>
+            {
+                e.HasKey(ps => ps.ProjectSkillsID);
+                e.HasOne(ps => ps.Project)
+                 .WithMany()
+                 .HasForeignKey(ps => ps.ProjectID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(ps => ps.Skill)
+                 .WithMany()
+                 .HasForeignKey(ps => ps.SkillID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ProjectCategoryMap>(e =>
+            {
+                e.HasKey(pcm => pcm.ProjectCategoryMapID);
+                e.HasOne(pcm => pcm.Project)
+                 .WithMany()
+                 .HasForeignKey(pcm => pcm.ProjectID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(pcm => pcm.Category)
+                 .WithMany()
+                 .HasForeignKey(pcm => pcm.CategoryID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<FreelancerSkills>(e =>
+            {
+                e.HasKey(fs => fs.FreelancerSkillsID);
+                e.HasOne(fs => fs.Freelancer)
+                 .WithMany()
+                 .HasForeignKey(fs => fs.FreelancerID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(fs => fs.Skill)
+                 .WithMany()
+                 .HasForeignKey(fs => fs.SkillID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SavedProjects>(e =>
+            {
+                e.HasKey(sp => sp.SavedProjectID);
+                e.HasOne(sp => sp.User)
+                 .WithMany()
+                 .HasForeignKey(sp => sp.UserID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(sp => sp.Project)
+                 .WithMany()
+                 .HasForeignKey(sp => sp.ProjectID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Contract>(e =>
+            {
+                e.HasKey(c => c.ContractID);
+                e.HasOne(c => c.Client)
+                 .WithMany(cp => cp.Contracts)
+                 .HasForeignKey(c => c.ClientID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(c => c.Freelancer)
+                 .WithMany(fp => fp.Contracts)
+                 .HasForeignKey(c => c.FreelancerID)
+                 .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(c => c.Project)
+                 .WithMany(p => p.Contracts)
+                 .HasForeignKey(c => c.ProjectID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Milestone>(e =>
+            {
+                e.HasKey(m => m.MilestoneID);
+                e.HasOne(m => m.Contract)
+                 .WithMany(c => c.Milestones)
+                 .HasForeignKey(m => m.ContractID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Payment>(e =>
+            {
+                e.HasKey(p => p.PaymentID);
+                e.HasIndex(p => p.ContractID);
+                e.Property(p => p.Payment_method).IsRequired().HasMaxLength(50);
+                e.Property(p => p.Status).IsRequired().HasMaxLength(20);
+                e.HasOne<Contract>()
+                 .WithMany(c => c.Payment)
+                 .HasForeignKey(p => p.ContractID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Transactions>(e =>
+            {
+                e.HasKey(t => t.TransactionsID);
+                e.HasIndex(t => t.Reference).IsUnique();
+                e.HasIndex(t => t.PaymentID);
+                e.HasIndex(t => t.MilestoneID);
+                e.Property(t => t.Status).IsRequired().HasMaxLength(20);
+                e.Property(t => t.Reference).IsRequired().HasMaxLength(100);
+                e.HasOne(t => t.Payment)
+                 .WithMany(p => p.Transactions)
+                 .HasForeignKey(t => t.PaymentID)
+                 .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(t => t.Milestone)
+                 .WithMany(m => m.Transactions)
+                 .HasForeignKey(t => t.MilestoneID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Review>(e =>
+            {
+                e.HasKey(r => r.ReviewsID);
+                e.HasOne(r => r.Contract)
+                 .WithMany(c => c.Reviews)
+                 .HasForeignKey(r => r.ContractID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(r => r.Freelancer)
+                 .WithMany(f => f.Reviews)
+                 .HasForeignKey(r => r.FreelancerID)
+                 .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(r => r.Client)
+                 .WithMany(c => c.Reviews)
+                 .HasForeignKey(r => r.ClientID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Deliverables>(e =>
+            {
+                e.HasKey(d => d.DeliverablesID);
+                e.HasOne(d => d.Milestone)
+                 .WithMany(m => m.Deliverables)
+                 .HasForeignKey(d => d.MilestoneID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(d => d.File)
+                 .WithMany()
+                 .HasForeignKey(d => d.FileID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Files>(e => e.HasKey(f => f.FilesID));
+            modelBuilder.Entity<Favorite_Freelancer>(e =>
+            {
+                e.HasKey(ff => ff.Favorite_FreelancerID);
+                e.HasOne(ff => ff.Client)
+                 .WithMany(c => c.FavoriteFreelancers)
+                 .HasForeignKey(ff => ff.ClientID)
+                 .OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(ff => ff.Freelancer)
+                 .WithMany(f => f.FavoriteFreelancers)
+                 .HasForeignKey(ff => ff.FreelancerID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Report>(e =>
+            {
+                e.HasKey(r => r.ReportsID);
+                e.HasOne(r => r.User)
+                 .WithMany(u => u.Reports)
+                 .HasForeignKey(r => r.UserID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
 
             modelBuilder.Entity<Audit_Logs>(e =>
             {
@@ -285,111 +301,36 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
-            modelBuilder.Entity<Skills>(e =>
+            modelBuilder.Entity<Notification>(e =>
             {
-                e.HasKey(s => s.SkillsID);
-                modelBuilder.Entity<Category>(e =>
-                {
-                    e.HasKey(c => c.CategoryID);
-                });
-
-                modelBuilder.Entity<Skills>(e =>
-                {
-                    e.HasKey(s => s.SkillsID);
-                });
-
-                modelBuilder.Entity<Project>(e =>
-                {
-                    e.HasKey(p => p.ProjectID);
-                    e.HasOne(p => p.Client)
-                     .WithMany()
-                     .HasForeignKey(p => p.ClientID)
-                     .OnDelete(DeleteBehavior.Cascade);
-                    e.HasOne(p => p.Category)
-                     .WithMany()
-                     .HasForeignKey(p => p.CategoryID)
-                     .OnDelete(DeleteBehavior.NoAction);
-                });
-
-                modelBuilder.Entity<Proposal>(e =>
-                {
-                    e.HasKey(p => p.ProposalId);
-                    e.HasOne(p => p.Freelancer)
-                     .WithMany()
-                     .HasForeignKey(p => p.FreelancerId)
-                     .OnDelete(DeleteBehavior.Cascade);
-                    e.HasOne(p => p.Project)
-                     .WithMany()
-                     .HasForeignKey(p => p.ProjectId)
-                     .OnDelete(DeleteBehavior.NoAction);
-                });
-
-                modelBuilder.Entity<ProjectSkills>(e =>
-                {
-                    e.HasKey(ps => ps.ProjectSkillsID);
-                    e.HasOne(ps => ps.Project)
-                     .WithMany()
-                     .HasForeignKey(ps => ps.ProjectID)
-                     .OnDelete(DeleteBehavior.Cascade);
-                    e.HasOne(ps => ps.Skill)
-                     .WithMany()
-                     .HasForeignKey(ps => ps.SkillID)
-                     .OnDelete(DeleteBehavior.Cascade);
-                });
-
-                modelBuilder.Entity<Notification>(e =>
-                {
-                    e.HasKey(n => n.NotificationID);
-                    e.HasOne(n => n.User)
-                     .WithMany(u => u.Notifications)
-                     .HasForeignKey(n => n.UserID)
-                     .OnDelete(DeleteBehavior.Cascade);
-                });
-                
-                modelBuilder.Entity<Setting>(e =>
-                {
-                    e.HasKey(s => s.SettingID);
-                });
-                modelBuilder.Entity<ProjectCategoryMap>(e =>
-                {
-                    e.HasKey(pcm => pcm.ProjectCategoryMapID);
-                    e.HasOne(pcm => pcm.Project)
-                     .WithMany()
-                     .HasForeignKey(pcm => pcm.ProjectID)
-                     .OnDelete(DeleteBehavior.Cascade);
-                    e.HasOne(pcm => pcm.Category)
-                     .WithMany()
-                     .HasForeignKey(pcm => pcm.CategoryID)
-                     .OnDelete(DeleteBehavior.Cascade);
-                });
-
-                modelBuilder.Entity<FreelancerSkills>(e =>
-                {
-                    e.HasKey(fs => fs.FreelancerSkillsID);
-                    e.HasOne(fs => fs.Freelancer)
-                     .WithMany()
-                     .HasForeignKey(fs => fs.FreelancerID)
-                     .OnDelete(DeleteBehavior.Cascade);
-                    e.HasOne(fs => fs.Skill)
-                     .WithMany()
-                     .HasForeignKey(fs => fs.SkillID)
-                     .OnDelete(DeleteBehavior.NoAction);
-                });
-
-                modelBuilder.Entity<SavedProjects>(e =>
-                {
-                    e.HasKey(sp => sp.SavedProjectID);
-                    e.HasOne(sp => sp.User)
-                    .WithMany()
-                    .HasForeignKey(sp => sp.UserID)
-                    .OnDelete(DeleteBehavior.Cascade);
-                    e.HasOne(sp => sp.Project)
-                    .WithMany()
-                    .HasForeignKey(sp => sp.ProjectID)
-                    .OnDelete(DeleteBehavior.NoAction);
-
-                });
+                e.HasKey(n => n.NotificationID);
+                e.HasOne(n => n.User)
+                 .WithMany(u => u.Notifications)
+                 .HasForeignKey(n => n.UserID)
+                 .OnDelete(DeleteBehavior.Cascade);
             });
+
+            modelBuilder.Entity<Setting>(e => e.HasKey(s => s.SettingID));
+
+            modelBuilder.Entity<Protected_Views>(e =>
+            {
+                e.HasKey(pv => pv.Protected_ViewsID);
+                e.HasOne(pv => pv.User)
+                 .WithMany(u => u.ProtectedViews)
+                 .HasForeignKey(pv => pv.UserID)
+                 .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(pv => pv.Project)
+                 .WithMany(p => p.ProtetectedViews)
+                 .HasForeignKey(pv => pv.ProjectID)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<FreelancerProfile>().Property(f => f.Hourly_Rate).HasPrecision(18, 2);
+            modelBuilder.Entity<ClientProfile>().Property(c => c.Budget).HasPrecision(18, 2);
+            modelBuilder.Entity<Project>().Property(p => p.Budget).HasPrecision(18, 2);
+            modelBuilder.Entity<Proposal>().Property(p => p.BidAmount).HasPrecision(18, 2);
+            modelBuilder.Entity<Contract>().Property(c => c.Price).HasPrecision(18, 2);
+            modelBuilder.Entity<Contract>().Property(c => c.Agreed_Price).HasPrecision(18, 2);
         }
     }
 }
