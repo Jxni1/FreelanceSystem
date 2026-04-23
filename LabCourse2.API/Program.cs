@@ -3,8 +3,10 @@ using LabCourse2.API.Middleware;
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Projects;
 using LabCourse2.Application.Interfaces;
+using LabCourse2.Application.Interfaces.Contracts;
 using LabCourse2.Application.Interfaces.Projects;
 using LabCourse2.Application.Interfaces.Users;
+using LabCourse2.Application.Services.Contracts;
 using LabCourse2.Application.Services.Projects;
 using LabCourse2.Application.Services.User;
 using LabCourse2.Application.Validators;
@@ -76,6 +78,8 @@ builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<User
 
 builder.Services.AddScoped<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateProjectRequest>, UpdateProjectRequestValidator>();
+
+builder.Services.AddScoped<IContractService, ContractService>();
 
 builder.Services.AddHttpContextAccessor();
 

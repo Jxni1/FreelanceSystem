@@ -15,6 +15,10 @@ const ProjectsListPage = lazy(() => import('./pages/projects/ProjectsListPage'))
 const ProjectDetailsPage = lazy(() => import('./pages/projects/ProjectDetailsPage'));
 const ProjectFormPage = lazy(() => import('./pages/projects/ProjectFormPage'));
 
+const ContractsListPage = lazy(() => import('./pages/contracts/ContractsListPage'));
+const ContractDetailsPage = lazy(() => import('./pages/contracts/ContractDetailPage'));
+const ContractFormPage = lazy(() => import('./pages/contracts/ContractFormPage'));
+
 const GlobalSuspenseLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
     <div className="flex flex-col items-center gap-4">
@@ -42,6 +46,13 @@ export default function App() {
               <Route path="/projects/new" element={<ProjectFormPage />} />
               <Route path="/projects/:id" element={<ProjectDetailsPage />} />
               <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
+       <Route path="/admin/contracts" element={<ContractsListPage />} />
+
+<Route path="/admin/contracts/new" element={<ContractFormPage />} />
+
+<Route path="/admin/contracts/:id" element={<ContractDetailsPage />} />
+
+<Route path="/admin/contracts/:id/edit" element={<ContractFormPage />} />
             </Route>
 
             <Route element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}>
