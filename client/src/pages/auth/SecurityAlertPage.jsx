@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 export function SecurityAlertPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
       <div className="w-full max-w-lg bg-white border border-rose-100 rounded-2xl p-12 shadow-sm text-center">
         <div className="inline-flex items-center justify-center w-20 h-20 bg-rose-50 text-rose-600 rounded-full mb-8 ring-8 ring-rose-50/50">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

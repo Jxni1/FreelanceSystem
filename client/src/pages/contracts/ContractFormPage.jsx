@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useContracts } from '../../hooks/useContracts';
+import { SmartBackButton } from '../../components/SmartBackButton';
 
 export default function ContractFormPage() {
   const { id } = useParams();
@@ -84,15 +85,13 @@ export default function ContractFormPage() {
   const labelClass = "block text-sm font-semibold text-slate-700 mb-1.5";
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <Link
-        to={isEditMode ? `/admin/contracts/${id}` : '/admin/contracts'}
-        className="inline-block mb-6 text-slate-500 hover:text-purple-600 font-medium transition-colors"
-      >
-        &larr; {isEditMode ? 'Back to Contract' : 'Back to Contracts'}
-      </Link>
+    <div className="p-8 max-w-3xl mx-auto text-slate-100">
+      <SmartBackButton
+        fallbackTo={isEditMode ? `/admin/contracts/${id}` : '/admin/contracts'}
+        label={isEditMode ? 'Back to Contract' : 'Back to Contracts'}
+      />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="h-4 bg-gradient-to-r from-purple-500 to-indigo-400" />
 
         <div className="p-8">

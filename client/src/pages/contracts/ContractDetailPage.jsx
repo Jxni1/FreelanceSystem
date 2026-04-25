@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useContracts } from '../../hooks/useContracts';
+import { SmartBackButton } from '../../components/SmartBackButton';
 
 const STATUS_STYLES = {
   Active: 'bg-teal-50 text-teal-700 border-teal-200',
@@ -47,15 +48,10 @@ export default function ContractDetailsPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <Link
-        to="/admin/contracts"
-        className="inline-block mb-6 text-slate-500 hover:text-purple-600 font-medium transition-colors"
-      >
-        &larr; Back to Contracts
-      </Link>
+    <div className="p-8 max-w-4xl mx-auto text-slate-100">
+      <SmartBackButton fallbackTo="/admin/contracts" label="Back to Contracts" />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="h-4 bg-gradient-to-r from-purple-500 to-indigo-400" />
 
         <div className="p-8 md:p-10">
