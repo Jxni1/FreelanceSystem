@@ -12,19 +12,33 @@ export function useContracts() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const normalizeContractsPayload = (data, params = {}) => {
+    const items = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.items)
+        ? data.items
+        : [];
+
+    return {
+      items,
+      totalCount: data?.totalCount ?? items.length,
+      page: data?.page ?? params.page ?? 1,
+      pageSize: data?.pageSize ?? params.pageSize ?? 10,
+    };
+  };
+
   const fetchContracts = useCallback(async (params = {}) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await contractService.getAll(params);
-      setContracts({
-        ...data,
-        page: params.page || 1,
-        pageSize: params.pageSize || 10
-      });
+      const normalizedData = normalizeContractsPayload(data, params);
+      setContracts(normalizedData);
+      return data;
     } catch (err) {
       console.error('Failed to fetch contracts', err);
       setError(err?.response?.data?.message || err?.response?.data || 'Failed to load contracts.');
+      throw err;
     } finally {
       setIsLoading(false);
     }

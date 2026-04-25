@@ -7,12 +7,27 @@ export function useProjects() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const normalizeProjectsPayload = (data, params = {}) => {
+    const items = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.items)
+        ? data.items
+        : [];
+
+    return {
+      items,
+      totalCount: data?.totalCount ?? items.length,
+      page: data?.page ?? params.page ?? 1,
+      pageSize: data?.pageSize ?? params.pageSize ?? 10,
+    };
+  };
+
   const fetchProjects = useCallback(async (params = {}) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await projectService.getAll(params);
-      setProjects(data);
+      setProjects(normalizeProjectsPayload(data, params));
     } catch (err) {
       console.error('Failed to fetch projects', err);
       setError(err?.response?.data || 'Failed to load projects.');

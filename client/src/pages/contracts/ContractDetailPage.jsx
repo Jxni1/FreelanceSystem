@@ -85,6 +85,12 @@ export default function ContractDetailsPage() {
               >
                 Edit
               </Link>
+              <Link
+                to={`/contracts/${contract.contractID}/workflow`}
+                className="flex-1 md:flex-none px-6 py-2.5 bg-purple-600 text-white hover:bg-purple-700 font-medium rounded-lg transition-colors text-center"
+              >
+                Workflow
+              </Link>
 
               <button
                 onClick={handleDelete}

@@ -139,6 +139,12 @@ export default function ContractsListPage() {
                           >
                             Edit
                           </Link>
+                          <Link
+                            to={`/admin/contracts/${contract.contractID}/workflow`}
+                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            Workflow
+                          </Link>
                           <button
                             onClick={() => handleDelete(contract.contractID)}
                             className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition-colors"
