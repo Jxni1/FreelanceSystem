@@ -15,6 +15,9 @@ const ProjectsListPage = lazy(() => import('./pages/projects/ProjectsListPage'))
 const ProjectDetailsPage = lazy(() => import('./pages/projects/ProjectDetailsPage'));
 const ProjectFormPage = lazy(() => import('./pages/projects/ProjectFormPage'));
 
+const SkillsListPage = lazy(() => import('./pages/admin/skills/SkillsListPage'));
+const SkillFormPage = lazy(() => import('./pages/admin/skills/SkillFormPage'));
+
 
 const ContractsListPage = lazy(() => import('./pages/contracts/ContractsListPage'));
 const ContractDetailsPage = lazy(() => import('./pages/contracts/ContractDetailPage'));
@@ -56,6 +59,8 @@ export default function App() {
                 <Route path="/admin/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/projects/:id/workflow" element={<ProjectWorkflowPage />} />
+                <Route path="/admin/contracts/:id/edit" element={<ContractFormPage />} />
+                <Route path="/admin/skills" element={<SkillsListPage />} />
                 <Route element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}>
                   <Route path="/admin" element={<AdminPanelPage />} />
                 </Route>
