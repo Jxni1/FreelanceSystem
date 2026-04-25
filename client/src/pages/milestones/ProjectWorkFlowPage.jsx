@@ -4,6 +4,7 @@ import { useContracts } from '../../hooks/useContracts';
 import { useMilestones } from '../../hooks/useMilestones';
 import { useAuthorization } from '../../hooks/useAuthorization';
 import { deliverableService } from '../../lib/deliverableService';
+import { SmartBackButton } from '../../components/SmartBackButton';
 
 export default function ProjectWorkflowPage() {
   const location = useLocation();
@@ -283,16 +284,14 @@ export default function ProjectWorkflowPage() {
   const contractComplete = normalizedMilestones.length > 0 && completedMilestones === normalizedMilestones.length;
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <Link
-        to={contract?.projectID ? `/projects/${contract.projectID}` : '/projects'}
-        className="text-slate-500"
-      >
-        ← Back to Project
-      </Link>
+    <div className="p-8 max-w-5xl mx-auto text-slate-100">
+      <SmartBackButton
+        fallbackTo={contract?.projectID ? `/projects/${contract.projectID}` : '/projects'}
+        label="Back to Project"
+      />
 
-      <div className="bg-white border rounded-2xl p-6 mt-4">
-        <h1 className="text-2xl font-bold">{contract?.projectTitle || 'Project Workflow'}</h1>
+      <div className="bg-white border rounded-2xl p-6 mt-4 text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900">{contract?.projectTitle || 'Project Workflow'}</h1>
         <p className="text-slate-500">Contract, milestones, deliverables, and payment release flow</p>
         {contract?.contractID && (
           <p className="text-xs text-slate-400 mt-2 font-mono">Contract: {contract.contractID}</p>
@@ -306,15 +305,15 @@ export default function ProjectWorkflowPage() {
       )}
 
       {isClient && contractId && (
-        <div className="mt-6 border rounded-2xl p-5 bg-white">
-          <h2 className="font-bold text-lg mb-3">Client: Define Milestones</h2>
+        <div className="mt-6 border rounded-2xl p-5 bg-white text-slate-900">
+          <h2 className="font-bold text-lg mb-3 text-slate-900">Client: Define Milestones</h2>
           <form onSubmit={handleCreateMilestone} className="grid md:grid-cols-4 gap-3">
             <input
               type="text"
               placeholder="Milestone title"
               value={newMilestone.title}
               onChange={(e) => setNewMilestone((prev) => ({ ...prev, title: e.target.value }))}
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="border rounded-lg px-3 py-2 text-sm bg-white text-slate-900"
               required
             />
             <input
@@ -324,14 +323,14 @@ export default function ProjectWorkflowPage() {
               step="0.01"
               value={newMilestone.amount}
               onChange={(e) => setNewMilestone((prev) => ({ ...prev, amount: e.target.value }))}
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="border rounded-lg px-3 py-2 text-sm bg-white text-slate-900"
               required
             />
             <input
               type="date"
               value={newMilestone.dueDate}
               onChange={(e) => setNewMilestone((prev) => ({ ...prev, dueDate: e.target.value }))}
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="border rounded-lg px-3 py-2 text-sm bg-white text-slate-900"
               required
             />
             <button
@@ -345,7 +344,7 @@ export default function ProjectWorkflowPage() {
               placeholder="Description / deliverable expectations"
               value={newMilestone.description}
               onChange={(e) => setNewMilestone((prev) => ({ ...prev, description: e.target.value }))}
-              className="border rounded-lg px-3 py-2 text-sm md:col-span-4"
+              className="border rounded-lg px-3 py-2 text-sm md:col-span-4 bg-white text-slate-900"
               rows={2}
             />
           </form>
@@ -355,21 +354,21 @@ export default function ProjectWorkflowPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <div className="bg-teal-50 p-4 rounded-xl">
           <p className="text-sm text-teal-700">Completed Milestones</p>
-          <p className="text-xl font-bold">{completedMilestones}/{normalizedMilestones.length}</p>
+          <p className="text-xl text-teal-700 font-bold">{completedMilestones}/{normalizedMilestones.length}</p>
         </div>
         <div className="bg-indigo-50 p-4 rounded-xl">
           <p className="text-sm text-indigo-600">Milestones</p>
-          <p className="text-xl font-bold">{normalizedMilestones.length}</p>
+          <p className="text-xl text-indigo-600 font-bold">{normalizedMilestones.length}</p>
         </div>
 
         <div className="bg-purple-50 p-4 rounded-xl">
           <p className="text-sm text-purple-600">Deliverables</p>
-          <p className="text-xl font-bold">{totalApprovedDeliverables}/{totalDeliverables}</p>
+          <p className="text-xl text-purple-600 font-bold">{totalApprovedDeliverables}/{totalDeliverables}</p>
         </div>
 
         <div className="bg-amber-50 p-4 rounded-xl">
           <p className="text-sm text-amber-700">Contract Status</p>
-          <p className="text-xl font-bold">{contractComplete ? 'Completed' : (contract?.status || 'Active')}</p>
+          <p className="text-xl text-amber-700 font-bold">{contractComplete ? 'Completed' : (contract?.status || 'Active')}</p>
         </div>
       </div>
 
@@ -386,7 +385,7 @@ export default function ProjectWorkflowPage() {
 
         <div className="space-y-3">
           {normalizedMilestones.map((milestone) => (
-            <div key={milestone.milestoneID} className="border p-4 rounded-lg bg-white">
+            <div key={milestone.milestoneID} className="border p-4 rounded-lg bg-white text-slate-900">
               <div className="flex items-center justify-between mb-1">
                 <div className="font-semibold">{milestone.title}</div>
                 <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
@@ -421,12 +420,12 @@ export default function ProjectWorkflowPage() {
               )}
 
               {isClient && editingMilestoneId === milestone.milestoneID && (
-                <div className="mb-3 border rounded-lg p-3 bg-slate-50 grid md:grid-cols-4 gap-2">
+                <div className="mb-3 border rounded-lg p-3 bg-slate-50 text-slate-900 grid md:grid-cols-4 gap-2">
                   <input
                     type="text"
                     value={editMilestoneForm.title}
                     onChange={(e) => setEditMilestoneForm((prev) => ({ ...prev, title: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 text-sm"
+                    className="border rounded-lg px-3 py-2 text-sm bg-white text-slate-900"
                     placeholder="Title"
                   />
                   <input
@@ -435,14 +434,14 @@ export default function ProjectWorkflowPage() {
                     step="0.01"
                     value={editMilestoneForm.amount}
                     onChange={(e) => setEditMilestoneForm((prev) => ({ ...prev, amount: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 text-sm"
+                    className="border rounded-lg px-3 py-2 text-sm bg-white text-slate-900"
                     placeholder="Amount"
                   />
                   <input
                     type="date"
                     value={editMilestoneForm.dueDate}
                     onChange={(e) => setEditMilestoneForm((prev) => ({ ...prev, dueDate: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 text-sm"
+                    className="border rounded-lg px-3 py-2 text-sm bg-white text-slate-900"
                   />
                   <div className="flex gap-2">
                     <button
@@ -464,7 +463,7 @@ export default function ProjectWorkflowPage() {
                   <textarea
                     value={editMilestoneForm.description}
                     onChange={(e) => setEditMilestoneForm((prev) => ({ ...prev, description: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 text-sm md:col-span-4"
+                    className="border rounded-lg px-3 py-2 text-sm md:col-span-4 bg-white text-slate-900"
                     placeholder="Description"
                     rows={2}
                   />
@@ -480,7 +479,7 @@ export default function ProjectWorkflowPage() {
                   milestone.deliverables.map((deliverable) => (
                     <div
                       key={deliverable.deliverablesID}
-                      className="border rounded-md p-3 text-sm bg-slate-50 flex items-center justify-between gap-3"
+                      className="border rounded-md p-3 text-sm bg-slate-50 text-slate-900 flex items-center justify-between gap-3"
                     >
                       <div>
                         <div className="font-medium text-slate-700">{deliverable.fileName || deliverable.title || 'Submitted file'}</div>
@@ -519,7 +518,7 @@ export default function ProjectWorkflowPage() {
                           [milestone.milestoneID]: { fileID: e.target.value },
                         }))
                       }
-                      className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                      className="flex-1 border rounded-lg px-3 py-2 text-sm bg-white text-slate-900"
                     />
                     <button
                       type="button"
@@ -534,7 +533,7 @@ export default function ProjectWorkflowPage() {
               )}
 
               {isClient && milestone.deliverables.length > 0 && (
-                <div className="mt-3 border rounded-lg p-3 bg-slate-50">
+                <div className="mt-3 border rounded-lg p-3 bg-slate-50 text-slate-900">
                   <p className="text-xs text-slate-600 mb-2 font-medium">
                     Client: Review deliverables
                   </p>
@@ -601,8 +600,8 @@ export default function ProjectWorkflowPage() {
         </div>
       </div>
 
-      <div className="mt-8 border rounded-2xl p-6 bg-slate-50">
-        <h2 className="font-bold text-lg mb-2">Lifecycle Progress</h2>
+      <div className="mt-8 border rounded-2xl p-6 bg-slate-50 text-slate-900">
+        <h2 className="font-bold text-lg mb-2 text-slate-900">Lifecycle Progress</h2>
         <ol className="list-decimal pl-5 text-sm text-slate-600 space-y-1">
           <li>Client posts project and hires freelancer.</li>
           <li>Contract is created and milestones are defined.</li>

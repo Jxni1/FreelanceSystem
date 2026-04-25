@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
 import { useContracts } from '../../hooks/useContracts';
+import { SmartBackButton } from '../../components/SmartBackButton';
 
 export default function ProjectDetailsPage() {
   const { id } = useParams();
@@ -67,16 +68,11 @@ export default function ProjectDetailsPage() {
   ) ?? contracts?.items?.[0] ?? null;
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <Link
-        to="/projects"
-        className="inline-block mb-6 text-slate-500 hover:text-teal-600 font-medium transition-colors"
-      >
-        &larr; Back to Projects
-      </Link>
+    <div className="p-8 max-w-4xl mx-auto text-slate-100">
+      <SmartBackButton fallbackTo="/projects" label="Back to Projects" />
 
       {/* Main Project Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="h-4 bg-gradient-to-r from-teal-500 to-emerald-400" />
 
         <div className="p-8 md:p-10">
@@ -183,7 +179,7 @@ export default function ProjectDetailsPage() {
       </div>
 
       {/* Workflow Section (Fixed UI and Link) */}
-      <div className="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="mt-8 bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
 
         <div className="p-8">

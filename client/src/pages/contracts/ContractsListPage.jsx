@@ -35,12 +35,12 @@ export default function ContractsListPage() {
 
   return (
     
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto text-slate-100">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">My Contracts</h1>
-          <p className="text-slate-500 mt-1">View and manage your contracts</p>
+          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">My Contracts</h1>
+          <p className="text-slate-300 mt-1">View and manage your contracts</p>
         </div>
         <Link
           to="/admin/contracts/new"
@@ -52,7 +52,7 @@ export default function ContractsListPage() {
        
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
+      <div className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <select
             value={filters.status}
@@ -85,7 +85,7 @@ export default function ContractsListPage() {
 
       {/* Table */}
       {!isLoading && !error && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
