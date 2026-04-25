@@ -1,18 +1,26 @@
 using FluentValidation;
 using LabCourse2.API.Middleware;
 using LabCourse2.Application.Common;
+using LabCourse2.Application.DTOs.Deliverables;
+using LabCourse2.Application.DTOs.Milestones;
 using LabCourse2.Application.DTOs.Projects;
 using LabCourse2.Application.DTOs.Skills;
 using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Contracts;
+using LabCourse2.Application.Interfaces.Deliverables;
+using LabCourse2.Application.Interfaces.Milestones;
 using LabCourse2.Application.Interfaces.Projects;
 using LabCourse2.Application.Interfaces.Users;
 using LabCourse2.Application.Interfaces.Skills;
 using LabCourse2.Application.Services.Contracts;
+using LabCourse2.Application.Services.Deliverables;
+using LabCourse2.Application.Services.Milestones;
 using LabCourse2.Application.Services.Projects;
 using LabCourse2.Application.Services.User;
 using LabCourse2.Application.Services.Skills;
 using LabCourse2.Application.Validators;
+using LabCourse2.Application.Validators.Deliverables;
+using LabCourse2.Application.Validators.Milestones;
 using LabCourse2.Application.Validators.Projects;
 using LabCourse2.Application.Validators.Skills;
 using LabCourse2.Infrastructure.Persistence;
@@ -89,6 +97,13 @@ builder.Services.AddScoped<IValidator<UpdateSkillRequest>, UpdateSkillRequestVal
 
 builder.Services.AddScoped<IContractService, ContractService>();
 
+builder.Services.AddScoped<IMilestoneService, MilestoneService>();
+builder.Services.AddScoped<IValidator<CreateMilestoneRequest>, CreateMilestoneRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateMilestoneRequest>, UpdateMilestoneRequestValidator>();
+
+builder.Services.AddScoped<IDeliverableService, DeliverableService>();
+builder.Services.AddScoped<IValidator<CreateDeliverableRequest>, CreateDeliverableRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateDeliverableRequest>, UpdateDeliverableRequestValidator>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();

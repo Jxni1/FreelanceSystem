@@ -5,16 +5,16 @@ export default function DashboardPage() {
   const { logout } = useAuth();
 
   return (
-    <div className="p-10 max-w-7xl mx-auto">
-      <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h2>
-      <p className="text-slate-500 mt-2">
+    <div className="p-10 max-w-7xl mx-auto text-slate-100">
+      <h2 className="text-3xl font-bold text-slate-100 tracking-tight">Dashboard</h2>
+      <p className="text-slate-300 mt-2">
         Welcome to your workspace. All systems are operational.
       </p>
 
       <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* Projects */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="bg-white text-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="text-4xl mb-4">📦</div>
           <h3 className="text-xl font-bold text-slate-900 mb-2">Projects</h3>
           <p className="text-slate-500 mb-6 text-sm">
@@ -29,7 +29,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Contracts (FIXED ROUTE) */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="bg-white text-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="text-4xl mb-4">📄</div>
           <h3 className="text-xl font-bold text-slate-900 mb-2">Contracts</h3>
           <p className="text-slate-500 mb-6 text-sm">
@@ -44,7 +44,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Profile */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="bg-white text-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="text-4xl mb-4">👤</div>
           <h3 className="text-xl font-bold text-slate-900 mb-2">Profile</h3>
           <p className="text-slate-500 mb-6 text-sm">
@@ -75,7 +75,7 @@ export default function DashboardPage() {
 
       </div>
 
-      <div className="mt-12 pt-8 border-t border-slate-200">
+      <div className="mt-12 pt-8 border-t border-slate-700">
         <button
           onClick={logout}
           className="px-6 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl"

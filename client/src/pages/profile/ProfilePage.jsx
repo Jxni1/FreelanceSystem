@@ -31,9 +31,9 @@ export default function ProfilePage() {
   if (!profile) return null;
 
   return (
-    <div className="max-w-3xl mx-auto p-6 lg:p-10">
+    <div className="max-w-3xl mx-auto p-6 lg:p-10 text-slate-100">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
+        <h1 className="text-3xl font-bold text-slate-100">Profile</h1>
         <div className="flex items-center gap-3">
           <button 
             onClick={refresh}
@@ -50,7 +50,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+      <div className="bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
         <div className="p-6 sm:p-8 flex items-start gap-6">
           <div className="hidden sm:flex items-center justify-center w-20 h-20 bg-teal-100 text-teal-700 rounded-full text-2xl font-bold shrink-0">
             {profile.name[0]}{profile.surname[0]}
@@ -76,7 +76,7 @@ export default function ProfilePage() {
       </div>
 
       {profile.freelancerProfile && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+        <div className="bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
           <div className="border-b border-slate-100 bg-slate-50 p-6">
             <h3 className="text-lg font-bold text-teal-700">Freelancer Details</h3>
           </div>
@@ -96,7 +96,7 @@ export default function ProfilePage() {
       )}
 
       {profile.clientProfile && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+        <div className="bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
           <div className="border-b border-slate-100 bg-slate-50 p-6">
             <h3 className="text-lg font-bold text-teal-700">Client Details</h3>
           </div>

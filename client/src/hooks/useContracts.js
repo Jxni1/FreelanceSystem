@@ -12,19 +12,47 @@ export function useContracts() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const normalizeContract = (item = {}) => ({
+    ...item,
+    contractID: item.contractID ?? item.contractId ?? item.ContractID,
+    clientName: item.clientName ?? item.client_name ?? item.ClientName,
+    freelancerName: item.freelancerName ?? item.freelancer_name ?? item.FreelancerName,
+    projectID: item.projectID ?? item.projectId ?? item.ProjectID,
+    projectTitle: item.projectTitle ?? item.project_title ?? item.ProjectTitle,
+    agreedPrice: item.agreedPrice ?? item.agreed_Price ?? item.Agreed_Price ?? item.agreed_price,
+    price: item.price ?? item.Price,
+    start_Date: item.start_Date ?? item.startDate ?? item.Start_Date,
+    end_Date: item.end_Date ?? item.endDate ?? item.End_Date,
+  });
+
+  const normalizeContractsPayload = (data, params = {}) => {
+    const rawItems = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.items)
+        ? data.items
+        : [];
+    const items = rawItems.map(normalizeContract);
+
+    return {
+      items,
+      totalCount: data?.totalCount ?? items.length,
+      page: data?.page ?? params.page ?? 1,
+      pageSize: data?.pageSize ?? params.pageSize ?? 10,
+    };
+  };
+
   const fetchContracts = useCallback(async (params = {}) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await contractService.getAll(params);
-      setContracts({
-        ...data,
-        page: params.page || 1,
-        pageSize: params.pageSize || 10
-      });
+      const normalizedData = normalizeContractsPayload(data, params);
+      setContracts(normalizedData);
+      return data;
     } catch (err) {
       console.error('Failed to fetch contracts', err);
       setError(err?.response?.data?.message || err?.response?.data || 'Failed to load contracts.');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -35,7 +63,7 @@ export function useContracts() {
     setError(null);
     try {
       const data = await contractService.getById(id);
-      setContract(data);
+      setContract(normalizeContract(data));
     } catch (err) {
       console.error('Failed to fetch contract', err);
       setError(err?.response?.data?.message || err?.response?.data || 'Failed to load contract.');

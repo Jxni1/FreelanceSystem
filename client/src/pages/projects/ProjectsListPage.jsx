@@ -25,11 +25,11 @@ export default function ProjectsListPage() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto text-slate-100">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Projects</h1>
-          <p className="text-slate-500 mt-1">Manage your projects, budgets, and status.</p>
+          <h1 className="text-3xl font-bold text-slate-100 tracking-tight">Projects</h1>
+          <p className="text-slate-300 mt-1">Manage your projects, budgets, and status.</p>
         </div>
         <Link
           to="/projects/new"
@@ -39,7 +39,7 @@ export default function ProjectsListPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white text-slate-900 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
           <form onSubmit={handleSearchSubmit} className="relative w-full max-w-sm">
             <input
