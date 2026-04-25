@@ -11,11 +11,14 @@ namespace LabCourse2.Application.DTOs.Deliverables
         public string MilestoneTitle { get; init; } = string.Empty;
         public string MilestoneStatus { get; init; } = string.Empty;
 
-      
+       
         public Guid FileID { get; init; }
-        public string FileName { get; init; } = string.Empty;
-        public string FileUrl { get; init; } = string.Empty;
+        public string FileName { get; init; } = string.Empty;   
+        public string FileUrl { get; init; } = string.Empty;    
+        public long FileSize { get; init; }                     
+        public string UploadedBy { get; init; } = string.Empty;  
 
+        
         public bool IsApproved { get; init; }
         public bool IsPendingReview { get; init; }
     }
