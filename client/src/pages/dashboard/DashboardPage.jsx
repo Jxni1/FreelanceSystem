@@ -58,6 +58,21 @@ export default function DashboardPage() {
           </Link>
         </div>
 
+        {/* Skills */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+          <div className="text-4xl mb-4">🎯</div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Skills</h3>
+          <p className="text-slate-500 mb-6 text-sm">
+            Manage platform skills and expertise areas.
+          </p>
+          <Link
+            to="/admin/skills"
+            className="inline-block w-full text-center px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold rounded-lg"
+          >
+            Go to Skills
+          </Link>
+        </div>
+
       </div>
 
       <div className="mt-12 pt-8 border-t border-slate-200">

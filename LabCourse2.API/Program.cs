@@ -2,15 +2,19 @@ using FluentValidation;
 using LabCourse2.API.Middleware;
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Projects;
+using LabCourse2.Application.DTOs.Skills;
 using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Contracts;
 using LabCourse2.Application.Interfaces.Projects;
 using LabCourse2.Application.Interfaces.Users;
+using LabCourse2.Application.Interfaces.Skills;
 using LabCourse2.Application.Services.Contracts;
 using LabCourse2.Application.Services.Projects;
 using LabCourse2.Application.Services.User;
+using LabCourse2.Application.Services.Skills;
 using LabCourse2.Application.Validators;
 using LabCourse2.Application.Validators.Projects;
+using LabCourse2.Application.Validators.Skills;
 using LabCourse2.Infrastructure.Persistence;
 using LabCourse2.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -78,6 +82,10 @@ builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<User
 
 builder.Services.AddScoped<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateProjectRequest>, UpdateProjectRequestValidator>();
+
+builder.Services.AddScoped<ISkillService, SkillService>();
+builder.Services.AddScoped<IValidator<CreateSkillRequest>, CreateSkillRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateSkillRequest>, UpdateSkillRequestValidator>();
 
 builder.Services.AddScoped<IContractService, ContractService>();
 
