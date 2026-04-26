@@ -97,6 +97,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Budget")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Industry")
@@ -121,6 +122,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Agreed_Price")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("ClientID")
@@ -137,7 +139,11 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ProjectID")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("Start_Date")
                         .HasColumnType("datetime2");
@@ -151,6 +157,8 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasIndex("ClientID");
 
                     b.HasIndex("FreelancerID");
+
+                    b.HasIndex("ProjectID");
 
                     b.ToTable("Contracts");
                 });
@@ -251,6 +259,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Hourly_Rate")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("UserID")
@@ -323,6 +332,69 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.ToTable("Milestones");
                 });
 
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("NotificationID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("NotificationID");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Payment", b =>
+                {
+                    b.Property<Guid>("PaymentID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ContractID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("Payment_Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Payment_method")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("PaymentID");
+
+                    b.HasIndex("ContractID");
+
+                    b.ToTable("Payments");
+                });
+
             modelBuilder.Entity("LabCourse2.Domain.Entities.Permission", b =>
                 {
                     b.Property<Guid>("PermissionsID")
@@ -349,6 +421,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Budget")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("CategoryID")
@@ -437,6 +510,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("BidAmount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("DeliveryDays")
@@ -506,17 +580,29 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CreatedFromIp")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("Created_At")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("Expires_At")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ReplacedByTokenId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("Revoked_At")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Token_Hash")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserAgent")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("UserID")
@@ -689,6 +775,40 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.ToTable("SavedProjects");
                 });
 
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Setting", b =>
+                {
+                    b.Property<Guid>("SettingID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("SettingID");
+
+                    b.ToTable("Settings");
+                });
+
             modelBuilder.Entity("LabCourse2.Domain.Entities.Skills", b =>
                 {
                     b.Property<Guid>("SkillsID")
@@ -702,6 +822,40 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasKey("SkillsID");
 
                     b.ToTable("Skills");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Transactions", b =>
+                {
+                    b.Property<Guid>("TransactionsID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MilestoneID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PaymentID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("TransactionsID");
+
+                    b.HasIndex("MilestoneID");
+
+                    b.HasIndex("PaymentID");
+
+                    b.HasIndex("Reference")
+                        .IsUnique();
+
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.User", b =>
@@ -810,12 +964,20 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.FreelancerProfile", "Freelancer")
                         .WithMany("Contracts")
                         .HasForeignKey("FreelancerID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LabCourse2.Domain.Entities.Project", "Project")
+                        .WithMany("Contracts")
+                        .HasForeignKey("ProjectID")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Client");
 
                     b.Navigation("Freelancer");
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Deliverables", b =>
@@ -823,7 +985,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.Files", "File")
                         .WithMany()
                         .HasForeignKey("FileID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("LabCourse2.Domain.Entities.Milestone", "Milestone")
@@ -848,7 +1010,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.FreelancerProfile", "Freelancer")
                         .WithMany("FavoriteFreelancers")
                         .HasForeignKey("FreelancerID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Client");
@@ -878,7 +1040,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.Skills", "Skill")
                         .WithMany()
                         .HasForeignKey("SkillID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Freelancer");
@@ -897,12 +1059,32 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("Contract");
                 });
 
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Payment", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.Contract", null)
+                        .WithMany("Payment")
+                        .HasForeignKey("ContractID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LabCourse2.Domain.Entities.Project", b =>
                 {
                     b.HasOne("LabCourse2.Domain.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("LabCourse2.Domain.Entities.ClientProfile", "Client")
@@ -965,7 +1147,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.Project", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Freelancer");
@@ -978,13 +1160,13 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.Project", "Project")
                         .WithMany("ProtetectedViews")
                         .HasForeignKey("ProjectID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("LabCourse2.Domain.Entities.User", "User")
                         .WithMany("ProtectedViews")
                         .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Project");
@@ -1019,7 +1201,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.ClientProfile", "Client")
                         .WithMany("Reviews")
                         .HasForeignKey("ClientID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("LabCourse2.Domain.Entities.Contract", "Contract")
@@ -1031,7 +1213,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.FreelancerProfile", "Freelancer")
                         .WithMany("Reviews")
                         .HasForeignKey("FreelancerID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Client");
@@ -1065,7 +1247,7 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasOne("LabCourse2.Domain.Entities.Project", "Project")
                         .WithMany()
                         .HasForeignKey("ProjectID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("LabCourse2.Domain.Entities.User", "User")
@@ -1077,6 +1259,25 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("Project");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Transactions", b =>
+                {
+                    b.HasOne("LabCourse2.Domain.Entities.Milestone", "Milestone")
+                        .WithMany("Transactions")
+                        .HasForeignKey("MilestoneID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LabCourse2.Domain.Entities.Payment", "Payment")
+                        .WithMany("Transactions")
+                        .HasForeignKey("PaymentID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Milestone");
+
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.UserRole", b =>
@@ -1111,6 +1312,8 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Milestones");
 
+                    b.Navigation("Payment");
+
                     b.Navigation("Reviews");
                 });
 
@@ -1126,6 +1329,13 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("LabCourse2.Domain.Entities.Milestone", b =>
                 {
                     b.Navigation("Deliverables");
+
+                    b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("LabCourse2.Domain.Entities.Payment", b =>
+                {
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Permission", b =>
@@ -1135,6 +1345,8 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Project", b =>
                 {
+                    b.Navigation("Contracts");
+
                     b.Navigation("ProtetectedViews");
                 });
 
@@ -1152,6 +1364,8 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("ClientProfile");
 
                     b.Navigation("FreelancerProfile");
+
+                    b.Navigation("Notifications");
 
                     b.Navigation("ProtectedViews");
 

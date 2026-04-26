@@ -1,0 +1,61 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using LabCourse2.Domain.Entities;
+
+namespace LabCourse2.Infrastructure.Persistence.Configurations
+{
+    public class MilestoneConfiguration : IEntityTypeConfiguration<Milestone>
+    {
+        public void Configure(EntityTypeBuilder<Milestone> builder)
+        {
+            builder.HasKey(m => m.MilestoneID);
+
+            builder.Property(m => m.Title)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            builder.Property(m => m.Description)
+                .IsRequired()
+                .HasMaxLength(2000);
+
+            builder.Property(m => m.Amount)
+                .IsRequired()
+                .HasPrecision(18, 2);
+
+            builder.Property(m => m.DueDate)
+                .IsRequired();
+
+            builder.Property(m => m.status)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            builder.Property(m => m.ContractID)
+                .IsRequired();
+
+            builder.HasOne(m => m.Contract)
+                .WithMany(c => c.Milestones)
+                .HasForeignKey(m => m.ContractID);
+
+          
+            builder.HasIndex(m => m.ContractID);
+
+            builder.HasIndex(m => m.status);
+
+            builder.HasIndex(m => m.DueDate);
+
+           
+            builder.HasIndex(m => new { m.ContractID, m.DueDate });
+
+           
+
+            builder.HasCheckConstraint("CK_Milestone_Amount", "[Amount] >= 0");
+
+            builder.HasCheckConstraint(
+                "CK_Milestone_Status",
+                "[status] IN ('pending','in_progress','completed','cancelled')"
+            );
+
+            builder.ToTable("Milestones");
+        }
+    }
+}

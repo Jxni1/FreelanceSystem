@@ -1,12 +1,34 @@
-using System.Text;
 using FluentValidation;
+using LabCourse2.API.Middleware;
+using LabCourse2.Application.Common;
+using LabCourse2.Application.DTOs.Deliverables;
+using LabCourse2.Application.DTOs.Milestones;
+using LabCourse2.Application.DTOs.Projects;
+using LabCourse2.Application.DTOs.Skills;
 using LabCourse2.Application.Interfaces;
+using LabCourse2.Application.Interfaces.Contracts;
+using LabCourse2.Application.Interfaces.Deliverables;
+using LabCourse2.Application.Interfaces.Milestones;
+using LabCourse2.Application.Interfaces.Projects;
+using LabCourse2.Application.Interfaces.Users;
+using LabCourse2.Application.Interfaces.Skills;
+using LabCourse2.Application.Services.Contracts;
+using LabCourse2.Application.Services.Deliverables;
+using LabCourse2.Application.Services.Milestones;
+using LabCourse2.Application.Services.Projects;
+using LabCourse2.Application.Services.User;
+using LabCourse2.Application.Services.Skills;
 using LabCourse2.Application.Validators;
+using LabCourse2.Application.Validators.Deliverables;
+using LabCourse2.Application.Validators.Milestones;
+using LabCourse2.Application.Validators.Projects;
+using LabCourse2.Application.Validators.Skills;
 using LabCourse2.Infrastructure.Persistence;
 using LabCourse2.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,20 +46,20 @@ var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer           = true,
-        ValidateAudience         = true,
-        ValidateLifetime         = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer              = jwtSettings["Issuer"],
-        ValidAudience            = jwtSettings["Audience"],
-        IssuerSigningKey         = new SymmetricSecurityKey(key),
-        ClockSkew                = TimeSpan.Zero
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ClockSkew = TimeSpan.Zero   
     };
 });
 
@@ -57,6 +79,33 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+builder.Services.AddScoped<IAppDbContext>(sp =>
+    sp.GetRequiredService<AppDbContext>());
+
+builder.Services.AddScoped<IProjectService, ProjectService>();
+
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<IUserService>(sp => sp.GetRequiredService<UserService>());
+builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<UserService>());
+
+builder.Services.AddScoped<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateProjectRequest>, UpdateProjectRequestValidator>();
+
+builder.Services.AddScoped<ISkillService, SkillService>();
+builder.Services.AddScoped<IValidator<CreateSkillRequest>, CreateSkillRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateSkillRequest>, UpdateSkillRequestValidator>();
+
+builder.Services.AddScoped<IContractService, ContractService>();
+
+builder.Services.AddScoped<IMilestoneService, MilestoneService>();
+builder.Services.AddScoped<IValidator<CreateMilestoneRequest>, CreateMilestoneRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateMilestoneRequest>, UpdateMilestoneRequestValidator>();
+
+builder.Services.AddScoped<IDeliverableService, DeliverableService>();
+builder.Services.AddScoped<IValidator<CreateDeliverableRequest>, CreateDeliverableRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateDeliverableRequest>, UpdateDeliverableRequestValidator>();
+builder.Services.AddHttpContextAccessor();
+
 var app = builder.Build();
 
 await DbSeeder.SeedAsync(app.Services);
@@ -67,7 +116,9 @@ if (app.Environment.IsDevelopment())
 app.UseCors("FrontendPolicy");
 app.UseHttpsRedirection();
 app.UseAuthentication();
+
+app.UseActiveUserCheck();
+
 app.UseAuthorization();
 app.MapControllers();
-
 app.Run();

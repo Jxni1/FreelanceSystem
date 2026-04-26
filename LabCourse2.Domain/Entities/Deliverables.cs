@@ -1,10 +1,13 @@
 ﻿using System;
+
 namespace LabCourse2.Domain.Entities
 {
     public class Deliverables
     {
         public Guid DeliverablesID { get; set; }
-        public DateTime Submitted_at { get; set; } = DateTime.UtcNow;
+
+        public DateTime Submitted_at { get; set; }
+
         public DateTime? Approved_at { get; set; }
 
         public Guid MilestoneID { get; set; }
@@ -13,7 +16,8 @@ namespace LabCourse2.Domain.Entities
         public Guid FileID { get; set; }
         public Files File { get; set; } = null!;
 
-        // public Guid PaymentID { get; set; }
-        // public Payment Payment { get; set; } = null!;
+        // FK - Payment 
+        //public Guid PaymentID { get; set; }
+        //public Payment Payment { get; set; } = null!;
     }
 }

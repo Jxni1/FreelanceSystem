@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-
 
 namespace LabCourse2.Domain.Entities
 {
     public class Milestone
     {
-
-        public Guid MilestoneID {  get; set; }
+        public Guid MilestoneID { get; set; }
 
         public string Title { get; set; } = null!;
 
@@ -18,12 +15,12 @@ namespace LabCourse2.Domain.Entities
 
         public DateTime DueDate { get; set; }
 
-        public string status { get; set; }
+        public string status { get; set; } = null!;
 
         public Guid ContractID { get; set; }
         public Contract Contract { get; set; } = null!;
+
         public ICollection<Deliverables> Deliverables { get; set; } = new List<Deliverables>();
-
+        public ICollection<Transactions> Transactions { get; set; } = new List<Transactions>();
     }
-
 }

@@ -1,16 +1,15 @@
-using FluentValidation;
-using LabCourse2.Application.DTOs.Common;
+﻿using FluentValidation;
 using LabCourse2.Application.DTOs.Projects;
-using LabCourse2.Application.Interfaces;
+using LabCourse2.Application.Interfaces.Projects;
+using LabCourse2.Application.DTOs.Projects;
+using LabCourse2.Application.Interfaces.Projects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LabCourse2.API.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    [Authorize] //  JWT Authentication required for all endpoints
-    public class ProjectsController : ControllerBase
+    [Authorize]
+    public class ProjectsController : BaseApiController
     {
         private readonly IProjectService _projectService;
         private readonly IValidator<CreateProjectRequest> _createValidator;
@@ -26,135 +25,49 @@ namespace LabCourse2.API.Controllers
             _updateValidator = updateValidator;
         }
 
-        /// <summary>
-        /// Get all projects (Requires JWT)
-        /// </summary>
         [HttpGet]
-        [ProducesResponseType(typeof(Result<IEnumerable<ProjectResponse>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<Result<IEnumerable<ProjectResponse>>>> GetAllProjects(CancellationToken cancellationToken)
+        [AllowAnonymous]   
+        public async Task<IActionResult> GetAll([FromQuery] ProjectQueryParams query)
         {
-            var result = await _projectService.GetAllAsync(cancellationToken);
-            
-            if (!result.Success)
-                return BadRequest(result);
-
-            return Ok(result);
+            var result = await _projectService.GetAllAsync(query);
+            return ToActionResult(result);
         }
 
-        /// <summary>
-        /// Get project by ID (Requires JWT)
-        /// </summary>
         [HttpGet("{id:guid}")]
-        [ProducesResponseType(typeof(Result<ProjectResponse>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(Result<ProjectResponse>), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<Result<ProjectResponse>>> GetProjectById(Guid id, CancellationToken cancellationToken)
+        [AllowAnonymous]
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var result = await _projectService.GetByIdAsync(id, cancellationToken);
-            
-            if (!result.Success)
-                return NotFound(result);
-
-            return Ok(result);
+            var result = await _projectService.GetByIdAsync(id);
+            return ToActionResult(result);
         }
 
-        /// <summary>
-        /// Get projects by client ID (Requires JWT)
-        /// </summary>
-        [HttpGet("client/{clientId:guid}")]
-        [ProducesResponseType(typeof(Result<IEnumerable<ProjectResponse>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<Result<IEnumerable<ProjectResponse>>>> GetProjectsByClientId(Guid clientId, CancellationToken cancellationToken)
-        {
-            var result = await _projectService.GetByClientIdAsync(clientId, cancellationToken);
-            
-            if (!result.Success)
-                return BadRequest(result);
-
-            return Ok(result);
-        }
-
-        /// <summary>
-        /// Get projects by category ID (Requires JWT)
-        /// </summary>
-        [HttpGet("category/{categoryId:guid}")]
-        [ProducesResponseType(typeof(Result<IEnumerable<ProjectResponse>>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<Result<IEnumerable<ProjectResponse>>>> GetProjectsByCategoryId(Guid categoryId, CancellationToken cancellationToken)
-        {
-            var result = await _projectService.GetByCategoryIdAsync(categoryId, cancellationToken);
-            
-            if (!result.Success)
-                return BadRequest(result);
-
-            return Ok(result);
-        }
-
-        /// <summary>
-        /// Create a new project (Requires JWT)
-        /// </summary>
         [HttpPost]
-        [ProducesResponseType(typeof(Result<ProjectResponse>), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(Result<ProjectResponse>), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<Result<ProjectResponse>>> CreateProject([FromBody] CreateProjectRequest request, CancellationToken cancellationToken)
+        public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
         {
-            var validationResult = await _createValidator.ValidateAsync(request, cancellationToken);
-            if (!validationResult.IsValid)
-            {
-                var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-                return BadRequest(Result<ProjectResponse>.FailureResult(errors));
-            }
+            var validation = await _createValidator.ValidateAsync(request);
+            if (!validation.IsValid)
+                return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
 
-            var result = await _projectService.CreateAsync(request, cancellationToken);
-            
-            if (!result.Success)
-                return BadRequest(result);
-
-            return CreatedAtAction(nameof(GetProjectById), new { id = result.Data!.ProjectID }, result);
+            var result = await _projectService.CreateAsync(request);
+            return ToActionResult(result);
         }
 
-        /// <summary>
-        /// Update an existing project (Requires JWT)
-        /// </summary>
         [HttpPut("{id:guid}")]
-        [ProducesResponseType(typeof(Result<ProjectResponse>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(Result<ProjectResponse>), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(Result<ProjectResponse>), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<Result<ProjectResponse>>> UpdateProject(Guid id, [FromBody] UpdateProjectRequest request, CancellationToken cancellationToken)
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request)
         {
-            var validationResult = await _updateValidator.ValidateAsync(request, cancellationToken);
-            if (!validationResult.IsValid)
-            {
-                var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-                return BadRequest(Result<ProjectResponse>.FailureResult(errors));
-            }
+            var validation = await _updateValidator.ValidateAsync(request);
+            if (!validation.IsValid)
+                return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
 
-            var result = await _projectService.UpdateAsync(id, request, cancellationToken);
-            
-            if (!result.Success)
-                return NotFound(result);
-
-            return Ok(result);
+            var result = await _projectService.UpdateAsync(id, request);
+            return ToActionResult(result);
         }
 
-        /// <summary>
-        /// Delete a project (Requires JWT)
-        /// </summary>
         [HttpDelete("{id:guid}")]
-        [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<Result<bool>>> DeleteProject(Guid id, CancellationToken cancellationToken)
+        public async Task<IActionResult> Delete(Guid id)
         {
-            var result = await _projectService.DeleteAsync(id, cancellationToken);
-            
-            if (!result.Success)
-                return NotFound(result);
-
-            return Ok(result);
+            var result = await _projectService.DeleteAsync(id);
+            return ToActionResult(result);
         }
     }
 }
