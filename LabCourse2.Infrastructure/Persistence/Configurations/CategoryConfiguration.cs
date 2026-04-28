@@ -16,6 +16,12 @@ namespace LabCourse2.Infrastructure.Persistence.Cofigurations
 
             builder.HasIndex(c => c.Name)
                 .IsUnique();
+
+            builder.Property(c => c.Description)
+                .HasMaxLength(500);
+
+            builder.Property(c => c.Photo)
+                .HasMaxLength(500);
         }
     }
 }

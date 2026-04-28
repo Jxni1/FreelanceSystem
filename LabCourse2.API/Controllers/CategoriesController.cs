@@ -1,63 +1,70 @@
-using LabCourse2.Domain.Entities;
-using LabCourse2.Infrastructure.Persistence;
+using FluentValidation;
+using LabCourse2.Application.DTOs.Categories;
+using LabCourse2.Application.Interfaces.Categories;
+using LabCourse2.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LabCourse2.API.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CategoriesController : ControllerBase
+    [Authorize(Roles = RoleConstants.Admin)]
+    public class CategoriesController : BaseApiController
     {
-        private readonly AppDbContext _db;
+        private readonly ICategoryService _categoryService;
+        private readonly IValidator<CreateCategoryRequest> _createValidator;
+        private readonly IValidator<UpdateCategoryRequest> _updateValidator;
 
-        public CategoriesController(AppDbContext db)
+        public CategoriesController(
+            ICategoryService categoryService,
+            IValidator<CreateCategoryRequest> createValidator,
+            IValidator<UpdateCategoryRequest> updateValidator)
         {
-            _db = db;
+            _categoryService = categoryService;
+            _createValidator = createValidator;
+            _updateValidator = updateValidator;
         }
 
-        /// <summary>
-        /// Get all categories (No auth required)
-        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAllCategories(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetAll([FromQuery] CategoryQueryParams query)
         {
-            var categories = await _db.Categories
-                .Select(c => new { c.CategoryID, c.Name, c.Description })
-                .ToListAsync(cancellationToken);
-
-            return Ok(categories);
+            var result = await _categoryService.GetAllAsync(query);
+            return ToActionResult(result);
         }
 
-        /// <summary>
-        /// Create a category (Requires JWT)
-        /// </summary>
-        [HttpPost]
-        [Authorize]
-        public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryRequest request, CancellationToken cancellationToken)
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetById(Guid id)
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
-                return BadRequest(new { message = "Name is required." });
+            var result = await _categoryService.GetByIdAsync(id);
+            return ToActionResult(result);
+        }
 
-            var exists = await _db.Categories.AnyAsync(c => c.Name == request.Name.Trim(), cancellationToken);
-            if (exists)
-                return Conflict(new { message = "A category with that name already exists." });
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CreateCategoryRequest request)
+        {
+            var validation = await _createValidator.ValidateAsync(request);
+            if (!validation.IsValid)
+                return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
 
-            var category = new Category
-            {
-                CategoryID = Guid.NewGuid(),
-                Name = request.Name.Trim(),
-                Description = request.Description?.Trim() ?? string.Empty,
-                Photo = string.Empty,
-            };
+            var result = await _categoryService.CreateAsync(request);
+            return ToActionResult(result);
+        }
 
-            _db.Categories.Add(category);
-            await _db.SaveChangesAsync(cancellationToken);
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryRequest request)
+        {
+            var validation = await _updateValidator.ValidateAsync(request);
+            if (!validation.IsValid)
+                return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
 
-            return CreatedAtAction(nameof(GetAllCategories), new { category.CategoryID, category.Name, category.Description });
+            var result = await _categoryService.UpdateAsync(id, request);
+            return ToActionResult(result);
+        }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var result = await _categoryService.DeleteAsync(id);
+            return ToActionResult(result);
         }
     }
-
-    public record CreateCategoryRequest(string Name, string? Description);
 }
