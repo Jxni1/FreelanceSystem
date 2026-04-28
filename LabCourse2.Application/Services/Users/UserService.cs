@@ -56,6 +56,7 @@ namespace LabCourse2.Application.Services.User
                 Surname = user.Surname,
                 Username = user.Username,
                 Email = user.Email,
+                ProfilePhoto = user.Profile_Photo,
                 Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
 
                 FreelancerProfile = user.FreelancerProfile is null ? null : new FreelancerProfileDto
@@ -70,6 +71,26 @@ namespace LabCourse2.Application.Services.User
                     Budget = user.ClientProfile.Budget
                 }
             };
+        }
+
+        public async Task<Result<bool>> UpdateProfilePhotoAsync(string base64Photo)
+        {
+            try
+            {
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.UserID == UserId && u.Is_Active);
+                if (user is null)
+                    return Result<bool>.Failure("User not found");
+
+                user.Profile_Photo = base64Photo;
+                _db.Users.Update(user);
+                await _db.SaveChangesAsync();
+
+                return Result<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                return Result<bool>.Failure($"Error updating profile photo: {ex.Message}");
+            }
         }
     }
 }
