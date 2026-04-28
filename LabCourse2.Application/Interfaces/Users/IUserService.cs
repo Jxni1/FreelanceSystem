@@ -7,5 +7,6 @@ namespace LabCourse2.Application.Interfaces.Users
     {
         Task<UserProfileDto?> GetCurrentUserProfileAsync();
         Task<UserProfileDto?> GetUserByIdAsync(Guid userId);
+        Task<Result<bool>> UpdateProfilePhotoAsync(string base64Photo);
     }
 }

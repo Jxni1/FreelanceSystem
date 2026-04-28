@@ -23,6 +23,8 @@ const ContractsListPage = lazy(() => import('./pages/contracts/ContractsListPage
 const ContractDetailsPage = lazy(() => import('./pages/contracts/ContractDetailPage'));
 const ContractFormPage = lazy(() => import('./pages/contracts/ContractFormPage'));
 const ProjectWorkflowPage = lazy(() => import('./pages/milestones/ProjectWorkFlowPage'));
+const FreelancerDashboard = lazy(() => import('./pages/freelancer/FreelancerDashboard'));
+const ClientDashboard = lazy(() => import('./pages/client/ClientDashboard'));
 
 const GlobalSuspenseLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-950">
@@ -60,13 +62,26 @@ export default function App() {
                 <Route path="/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/projects/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/admin/contracts/:id/edit" element={<ContractFormPage />} />
-                <Route path="/admin/skills" element={<SkillsListPage />} />
                 <Route element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}>
                   <Route path="/admin" element={<AdminPanelPage />} />
                 </Route>
+                
               </Route>
             </Route>
 
+            <Route element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}>
+              <Route path="/admin/skills" element={<SkillsListPage />} />
+              <Route path="/admin/skills/new" element={<SkillFormPage />} />
+              <Route path="/admin/skills/:id/edit" element={<SkillFormPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute requiredRoles={[ROLES.FREELANCER]} />}>
+              <Route path="/freelancer/dashboard" element={<FreelancerDashboard />} />
+            </Route>
+
+            <Route element={<ProtectedRoute requiredRoles={[ROLES.CLIENT]} />}>
+              <Route path="/client/dashboard" element={<ClientDashboard />} />
+            </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>
