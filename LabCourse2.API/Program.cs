@@ -1,10 +1,11 @@
 using FluentValidation;
-using LabCourse2.API.Middleware;
+using LabCourse2.API.Middleware; 
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Deliverables;
 using LabCourse2.Application.DTOs.Milestones;
 using LabCourse2.Application.DTOs.Projects;
 using LabCourse2.Application.DTOs.Skills;
+using LabCourse2.Application.DTOs.Categories;
 using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Contracts;
 using LabCourse2.Application.Interfaces.Deliverables;
@@ -12,6 +13,8 @@ using LabCourse2.Application.Interfaces.Milestones;
 using LabCourse2.Application.Interfaces.Projects;
 using LabCourse2.Application.Interfaces.Users;
 using LabCourse2.Application.Interfaces.Skills;
+using LabCourse2.Application.Interfaces.Categories;
+using LabCourse2.Application.Services.Categories;
 using LabCourse2.Application.Services.Contracts;
 using LabCourse2.Application.Services.Deliverables;
 using LabCourse2.Application.Services.Milestones;
@@ -23,6 +26,7 @@ using LabCourse2.Application.Validators.Deliverables;
 using LabCourse2.Application.Validators.Milestones;
 using LabCourse2.Application.Validators.Projects;
 using LabCourse2.Application.Validators.Skills;
+using LabCourse2.Application.Validators.Categories;
 using LabCourse2.Infrastructure.Persistence;
 using LabCourse2.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -94,6 +98,10 @@ builder.Services.AddScoped<IValidator<UpdateProjectRequest>, UpdateProjectReques
 builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IValidator<CreateSkillRequest>, CreateSkillRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateSkillRequest>, UpdateSkillRequestValidator>();
+
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IValidator<CreateCategoryRequest>, CreateCategoryRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateCategoryRequest>, UpdateCategoryRequestValidator>();
 
 builder.Services.AddScoped<IContractService, ContractService>();
 

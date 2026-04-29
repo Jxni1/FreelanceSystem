@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { buildAuthUser } from '../lib/jwt';
 import { configureApiClient } from '../lib/apiClient';
 
@@ -92,8 +93,10 @@ export function AuthProvider({ children }) {
 
     if (data.success && data.accessToken) {
       const newUser = buildAuthUser(data.accessToken);
-      setUser(newUser);
-      setAccessToken(data.accessToken);
+      flushSync(() => {
+        setUser(newUser);
+        setAccessToken(data.accessToken);
+      });
       accessTokenRef.current = data.accessToken;
       configureApiClient(data.accessToken, refreshTokens);
       if (newUser) scheduleRefresh(newUser.tokenExpiry);

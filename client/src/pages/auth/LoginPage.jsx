@@ -13,7 +13,7 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
 
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/dashboard';
   const message = location.state?.message;
   const registered = location.state?.registered;
 
@@ -30,7 +30,7 @@ export function LoginPage() {
         } else if (hasRole(user, ROLES.CLIENT)) {
           redirectPath = '/client/dashboard';
         } else if (hasRole(user, ROLES.ADMIN)) {
-          redirectPath = '/admin';
+          redirectPath = '/admin/dashboard';
         } else {
           redirectPath = '/dashboard';
         }

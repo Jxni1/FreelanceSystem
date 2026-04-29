@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import { hasRole } from './lib/jwt';
 import { AuthProvider } from './context/AuthContext';
 import { AuthEventHandler } from './components/AuthEventHandler';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -15,8 +17,11 @@ const ProjectsListPage = lazy(() => import('./pages/projects/ProjectsListPage'))
 const ProjectDetailsPage = lazy(() => import('./pages/projects/ProjectDetailsPage'));
 const ProjectFormPage = lazy(() => import('./pages/projects/ProjectFormPage'));
 
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
 const SkillsListPage = lazy(() => import('./pages/admin/skills/SkillsListPage'));
 const SkillFormPage = lazy(() => import('./pages/admin/skills/SkillFormPage'));
+const CategoriesListPage = lazy(() => import('./pages/admin/categories/CategoriesListPage'));
+const CategoryFormPage = lazy(() => import('./pages/admin/categories/CategoryFormPage'));
 
 
 const ContractsListPage = lazy(() => import('./pages/contracts/ContractsListPage'));
@@ -48,7 +53,7 @@ export default function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/dashboard" element={<DashboardGateway />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/projects" element={<ProjectsListPage />} />
                 <Route path="/projects/new" element={<ProjectFormPage />} />
@@ -89,3 +94,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+

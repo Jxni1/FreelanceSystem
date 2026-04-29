@@ -1,70 +1,76 @@
-using FluentValidation;
-using LabCourse2.Application.DTOs.Categories;
-using LabCourse2.Application.Interfaces.Categories;
-using LabCourse2.Domain.Constants;
+using LabCourse2.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace LabCourse2.API.Controllers
 {
-    [Authorize(Roles = RoleConstants.Admin)]
-    public class CategoriesController : BaseApiController
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class ClientsController : ControllerBase
     {
-        private readonly ICategoryService _categoryService;
-        private readonly IValidator<CreateCategoryRequest> _createValidator;
-        private readonly IValidator<UpdateCategoryRequest> _updateValidator;
+        private readonly AppDbContext _db;
 
-        public CategoriesController(
-            ICategoryService categoryService,
-            IValidator<CreateCategoryRequest> createValidator,
-            IValidator<UpdateCategoryRequest> updateValidator)
+        public ClientsController(AppDbContext db)
         {
-            _categoryService = categoryService;
-            _createValidator = createValidator;
-            _updateValidator = updateValidator;
+            _db = db;
         }
 
+        /// <summary>
+        /// Get all client profiles (Requires JWT)
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] CategoryQueryParams query)
+        public async Task<IActionResult> GetAllClients(CancellationToken cancellationToken)
         {
-            var result = await _categoryService.GetAllAsync(query);
-            return ToActionResult(result);
+            var clients = await _db.ClientProfiles
+                .Include(c => c.User)
+                .Select(c => new
+                {
+                    c.ClientID,
+                    ClientName = c.User.Name + " " + c.User.Surname,
+                    c.User.Email,
+                    c.Bio,
+                    c.Industry,
+                    c.Budget
+                })
+                .ToListAsync(cancellationToken);
+
+            return Ok(clients);
         }
 
-        [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetById(Guid id)
+        /// <summary>
+        /// Get the current user's client profile (Requires JWT)
+        /// </summary>
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyClientProfile(CancellationToken cancellationToken)
         {
-            var result = await _categoryService.GetByIdAsync(id);
-            return ToActionResult(result);
-        }
+            // Try every possible claim name .NET might use for the user ID
+            var userIdStr = User.FindFirstValue("sub")
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.NameId);
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateCategoryRequest request)
-        {
-            var validation = await _createValidator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Unauthorized(new { message = "Cannot resolve user identity from token.", claims = User.Claims.Select(c => new { c.Type, c.Value }) });
 
-            var result = await _categoryService.CreateAsync(request);
-            return ToActionResult(result);
-        }
+            var client = await _db.ClientProfiles
+                .Include(c => c.User)
+                .Where(c => c.UserID == userId)
+                .Select(c => new
+                {
+                    c.ClientID,
+                    ClientName = c.User.Name + " " + c.User.Surname,
+                    c.User.Email
+                })
+                .FirstOrDefaultAsync(cancellationToken);
 
-        [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryRequest request)
-        {
-            var validation = await _updateValidator.ValidateAsync(request);
-            if (!validation.IsValid)
-                return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
+            if (client == null)
+                return NotFound(new { message = "No client profile found for the current user.", userID = userId });
 
-            var result = await _categoryService.UpdateAsync(id, request);
-            return ToActionResult(result);
-        }
-
-        [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var result = await _categoryService.DeleteAsync(id);
-            return ToActionResult(result);
+            return Ok(client);
         }
     }
 }
