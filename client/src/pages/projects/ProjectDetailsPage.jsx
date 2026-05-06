@@ -12,9 +12,11 @@ export default function ProjectDetailsPage() {
 
   useEffect(() => {
     let isMounted = true;
+
     const loadProjectContext = async () => {
       if (!id) return;
       await fetchProjectById(id);
+
       try {
         await fetchContracts({ projectID: id, page: 1, pageSize: 10 });
       } catch {
@@ -22,9 +24,7 @@ export default function ProjectDetailsPage() {
       }
     };
 
-    if (id) {
-      loadProjectContext();
-    }
+    if (id) loadProjectContext();
 
     return () => {
       isMounted = false;
@@ -40,8 +40,8 @@ export default function ProjectDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="p-12 text-center text-slate-500 min-h-[50vh] flex flex-col items-center justify-center">
-        <div className="inline-block w-10 h-10 border-4 border-slate-200 border-t-teal-600 rounded-full animate-spin mb-4" />
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-400">
+        <div className="inline-block w-10 h-10 border-4 border-slate-700 border-t-teal-500 rounded-full animate-spin mb-4" />
         <p>Loading project details...</p>
       </div>
     );
@@ -49,11 +49,11 @@ export default function ProjectDetailsPage() {
 
   if (error || !project) {
     return (
-      <div className="p-8 max-w-4xl mx-auto mt-8 bg-red-50 border border-red-200 rounded-xl text-red-700">
+      <div className="max-w-4xl mx-auto rounded-2xl border border-rose-800 bg-rose-950/30 p-6 text-rose-200">
         <h2 className="text-xl font-bold mb-2">Error</h2>
         <p>{typeof error === 'string' ? error : 'Project not found.'}</p>
         <div className="mt-6">
-          <Link to="/projects" className="text-red-700 font-semibold hover:underline">
+          <Link to="/projects" className="text-rose-300 font-semibold hover:text-rose-200">
             &larr; Back to Projects
           </Link>
         </div>
@@ -63,170 +63,176 @@ export default function ProjectDetailsPage() {
 
   const milestoneCount = project.milestones?.length ?? 0;
   const deliverableCount = project.deliverables?.length ?? 0;
-  const linkedContract = contracts?.items?.find(
-    (contract) => (contract.projectID || contract.projectId) === project.projectID,
-  ) ?? contracts?.items?.[0] ?? null;
+  const linkedContract =
+    contracts?.items?.find(
+      (contract) => (contract.projectID || contract.projectId) === project.projectID
+    ) ??
+    contracts?.items?.[0] ??
+    null;
+
+  const statusClasses =
+    project.status === 'Open'
+      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+      : project.status === 'InProgress'
+      ? 'bg-teal-500/10 text-teal-300 border-teal-500/30'
+      : project.status === 'Completed'
+      ? 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+      : 'bg-slate-800 text-slate-300 border-slate-700';
 
   return (
-    <div className="p-8 max-w-4xl mx-auto text-slate-100">
+    <div className="max-w-5xl mx-auto text-slate-100 space-y-6">
       <SmartBackButton fallbackTo="/projects" label="Back to Projects" />
 
-      {/* Main Project Card */}
-      <div className="bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="h-4 bg-gradient-to-r from-teal-500 to-emerald-400" />
+      <div className="rounded-2xl border border-slate-800 bg-slate-950 shadow-xl overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-teal-500 to-emerald-400" />
 
-        <div className="p-8 md:p-10">
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 pb-8 border-b border-slate-100">
+        {/* Header */}
+        <div className="p-6 md:p-8 border-b border-slate-800 bg-slate-900/60">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             <div>
-              <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <h1 className="text-3xl font-bold text-slate-100 tracking-tight">
                   {project.title}
                 </h1>
-                <span
-                  className={`px-3 py-1 text-sm font-semibold rounded-full border ${
-                    project.status === 'Open'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : project.status === 'InProgress'
-                      ? 'bg-teal-50 text-teal-700 border-teal-200'
-                      : project.status === 'Completed'
-                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : 'bg-slate-100 text-slate-700 border-slate-200'
-                  }`}
-                >
+
+                <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusClasses}`}>
                   {project.status || 'Open'}
                 </span>
-                <span className="px-3 py-1 text-sm font-semibold rounded-full border bg-purple-50 text-purple-700 border-purple-200">
+
+                <span className="px-3 py-1 text-xs font-semibold rounded-full border bg-purple-500/10 text-purple-300 border-purple-500/30">
                   {project.visibility || 'Private'}
                 </span>
               </div>
-              <p className="text-slate-500 text-sm">
+
+              <p className="text-sm text-slate-400">
                 Project ID:{' '}
-                <span className="font-mono text-slate-400">{project.projectID}</span>
+                <span className="font-mono text-slate-300">{project.projectID}</span>
               </p>
             </div>
 
-            <div className="flex gap-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
               <Link
                 to={`/projects/${project.projectID}/edit`}
-                className="flex-1 md:flex-none px-6 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium rounded-lg transition-colors text-center"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors"
               >
-                Edit Form
+                Edit Project
               </Link>
               <button
                 onClick={handleDelete}
-                className="flex-1 md:flex-none px-6 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-medium rounded-lg transition-colors text-center"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-rose-700 bg-rose-950/20 text-rose-300 hover:bg-rose-950/40 transition-colors"
               >
                 Delete
               </button>
             </div>
           </div>
-
-          {/* Body Content */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-2 space-y-8">
-              <section>
-                <h3 className="text-lg font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2">
-                  Description
-                </h3>
-                <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                  {project.description || 'No description provided.'}
-                </div>
-              </section>
-
-              <section>
-                <h3 className="text-lg font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2">
-                  Category
-                </h3>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium tracking-wide">
-                  <span>{project.categoryName || 'Uncategorized'}</span>
-                </div>
-              </section>
-            </div>
-
-            {/* Sidebar Stats */}
-            <div className="space-y-6">
-              <div className="p-6 bg-slate-50 rounded-xl border border-slate-100">
-                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                  Total Budget
-                </p>
-                <div className="text-4xl font-extrabold text-teal-600">
-                  ${project.budget?.toLocaleString() || '0'}
-                </div>
-              </div>
-
-              <div className="p-6 bg-slate-50 rounded-xl border border-slate-100 space-y-4 text-sm">
-                <div>
-                  <p className="font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                    Created At
-                  </p>
-                  <p className="text-slate-800 font-medium">
-                    {project.createdAt ? new Date(project.createdAt).toLocaleString() : 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                    Last Updated
-                  </p>
-                  <p className="text-slate-800 font-medium">
-                    {project.updatedAt ? new Date(project.updatedAt).toLocaleString() : 'N/A'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
 
-      {/* Workflow Section (Fixed UI and Link) */}
-      <div className="mt-8 bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
-
-        <div className="p-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 flex items-center justify-center w-14 h-14 bg-indigo-50 border border-indigo-100 rounded-xl">
-                <span className="text-2xl">⚡</span>
+        {/* Body */}
+        <div className="p-6 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main content */}
+          <div className="lg:col-span-2 space-y-6">
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400 mb-3">
+                Description
+              </h3>
+              <div className="text-slate-200 leading-relaxed whitespace-pre-wrap">
+                {project.description || 'No description provided.'}
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-900 mb-1">
-                  Project Workflow
-                </h3>
-                <p className="text-slate-500 text-sm leading-relaxed">
-                  Manage the lifecycle, milestones, and deliverables for this project.
-                </p>
+            </section>
 
-                <div className="flex flex-wrap items-center gap-3 mt-3">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full">
-                    {milestoneCount} Milestones
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-full">
-                    {deliverableCount} Deliverables
-                  </span>
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400 mb-3">
+                Category
+              </h3>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-200">
+                <span>{project.categoryName || 'Uncategorized'}</span>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                    ⚡
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-100 mb-1">
+                      Project Workflow
+                    </h3>
+                    <p className="text-sm text-slate-400">
+                      Manage milestones, deliverables, and the connected contract workflow.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3 mt-3">
+                      <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                        {milestoneCount} Milestones
+                      </span>
+                      <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                        {deliverableCount} Deliverables
+                      </span>
+                    </div>
+                  </div>
                 </div>
+
+                <div className="w-full md:w-auto">
+                  {linkedContract?.contractID ? (
+                    <Link
+                      to={`/contracts/${linkedContract.contractID}/workflow`}
+                      className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors"
+                    >
+                      <span>Open Workflow</span>
+                      <span>→</span>
+                    </Link>
+                  ) : (
+                    <Link
+                      to={`/projects/${project.projectID}/workflow`}
+                      className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold transition-colors"
+                    >
+                      <span>{contractLoading ? 'Preparing workflow...' : 'Open Workflow'}</span>
+                      <span>→</span>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 mb-2">
+                Total Budget
+              </p>
+              <div className="text-4xl font-bold text-teal-400">
+                ${project.budget?.toLocaleString() || '0'}
               </div>
             </div>
 
-            <div className="w-full md:w-auto">
-              {/* This link directs to the contract's workflow page */}
-              {linkedContract?.contractID ? (
-                <Link
-                  to={`/contracts/${linkedContract.contractID}/workflow`}
-                  className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 transform"
-                >
-                  <span>Open Workflow</span>
-                  <span className="text-lg">→</span>
-                </Link>
-              ) : (
-                <Link
-                  to={`/projects/${project.projectID}/workflow`}
-                  className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg"
-                >
-                  <span>{contractLoading ? 'Preparing workflow...' : 'Open Workflow'}</span>
-                  <span className="text-lg">→</span>
-                </Link>
-              )}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 mb-1">
+                  Created At
+                </p>
+                <p className="text-sm text-slate-200">
+                  {project.createdAt ? new Date(project.createdAt).toLocaleString() : 'N/A'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 mb-1">
+                  Last Updated
+                </p>
+                <p className="text-sm text-slate-200">
+                  {project.updatedAt ? new Date(project.updatedAt).toLocaleString() : 'N/A'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 mb-1">
+                  Visibility
+                </p>
+                <p className="text-sm text-slate-200">{project.visibility || 'N/A'}</p>
+              </div>
             </div>
           </div>
         </div>

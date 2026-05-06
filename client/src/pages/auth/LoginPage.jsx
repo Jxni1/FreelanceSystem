@@ -10,7 +10,7 @@ export function LoginPage() {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname;
   const message = location.state?.message;
   const registered = location.state?.registered;
 
@@ -25,8 +25,17 @@ export function LoginPage() {
 
     try {
       const result = await login(email, password);
+
       if (result.success) {
-        navigate(from, { replace: true });
+        const roles = result.user?.roles || [];
+
+        if (from) {
+          navigate(from, { replace: true });
+        } else if (roles.includes('Admin')) {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       } else {
         setError(result.error || 'Invalid email or password.');
       }
@@ -55,7 +64,7 @@ export function LoginPage() {
             {message}
           </div>
         )}
-        
+
         {registered && (
           <div className="mb-6 p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-sm text-emerald-700">
             Account created! You can now sign in.
@@ -65,26 +74,26 @@ export function LoginPage() {
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="email">Email address</label>
-            <input 
-              id="email" 
-              name="email" 
-              type="email" 
-              autoComplete="email" 
-              required 
-              placeholder="name@company.com" 
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              placeholder="name@company.com"
               className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all placeholder:text-slate-400"
             />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="password">Password</label>
-            <input 
-              id="password" 
-              name="password" 
-              type="password" 
-              autoComplete="current-password" 
-              required 
-              placeholder="••••••••" 
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              placeholder="••••••••"
               className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all placeholder:text-slate-400"
             />
           </div>
@@ -95,9 +104,9 @@ export function LoginPage() {
             </div>
           )}
 
-          <button 
-            id="login-submit" 
-            type="submit" 
+          <button
+            id="login-submit"
+            type="submit"
             disabled={isSubmitting}
             className="w-full flex items-center justify-center gap-2 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-300 text-white font-semibold rounded-lg shadow-md shadow-teal-600/10 hover:shadow-lg hover:shadow-teal-600/20 active:scale-[0.98] transition-all cursor-pointer"
           >

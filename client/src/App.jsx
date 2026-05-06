@@ -11,6 +11,9 @@ import { ROLES } from "./constants/roles";
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AdminPanelPage = lazy(() => import("./pages/admin/AdminPanelPage"));
 const ProfilePage = lazy(() => import("./pages/profile/ProfilePage"));
+
+import { AdminLayout } from "./pages/admin/AdminLayout";
+import EditProfilePage from "./pages/profile/EditProfile";
 const ProjectsListPage = lazy(() =>
   import("./pages/projects/ProjectsListPage")
 );
@@ -23,6 +26,11 @@ const SkillsListPage = lazy(() =>
   import("./pages/admin/skills/SkillsListPage")
 );
 const SkillFormPage = lazy(() => import("./pages/admin/skills/SkillFormPage"));
+
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
+
+
+
 
 const ContractsListPage = lazy(() =>
   import("./pages/contracts/ContractsListPage")
@@ -71,6 +79,7 @@ export default function App() {
               <Route element={<AppShell />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/profile/edit" element={<EditProfilePage />} />
                 <Route path="/projects" element={<ProjectsListPage />} />
                 <Route path="/projects/new" element={<ProjectFormPage />} />
                 <Route path="/projects/:id" element={<ProjectDetailsPage />} />
@@ -111,12 +120,22 @@ export default function App() {
                   element={<ContractFormPage />}
                 />
                 <Route path="/admin/skills" element={<SkillsListPage />} />
-                <Route
-                  element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}
-                >
-                  <Route path="/admin" element={<AdminPanelPage />} />
-                </Route>
+               <Route element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}>
+  <Route path="/admin" element={<AdminLayout />}>
+    <Route index element={<AdminPanelPage />} />
+    <Route path="users" element={<AdminUsersPage />} />
+    <Route path="projects" element={<ProjectsListPage />} />
+    <Route path="contracts" element={<ContractsListPage />} />
+    <Route path="contracts/new" element={<ContractFormPage />} />
+    <Route path="contracts/:id" element={<ContractDetailsPage />} />
+    <Route path="contracts/:id/edit" element={<ContractFormPage />} />
+    <Route path="contracts/:id/workflow" element={<ProjectWorkflowPage />} />
+    <Route path="reports" element={<div className="text-slate-100">Reports page coming soon.</div>} />
+  </Route>
+
+</Route>
               </Route>
+
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

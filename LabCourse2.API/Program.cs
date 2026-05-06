@@ -19,6 +19,7 @@ using LabCourse2.Application.Services.Projects;
 using LabCourse2.Application.Services.User;
 using LabCourse2.Application.Services.Skills;
 using LabCourse2.Application.Validators;
+using LabCourse2.Application.Validators.Users;
 using LabCourse2.Application.Validators.Deliverables;
 using LabCourse2.Application.Validators.Milestones;
 using LabCourse2.Application.Validators.Projects;
@@ -87,6 +88,8 @@ builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<IUserService>(sp => sp.GetRequiredService<UserService>());
 builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<UserService>());
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserRequestValidator>();
+
 
 builder.Services.AddScoped<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateProjectRequest>, UpdateProjectRequestValidator>();
