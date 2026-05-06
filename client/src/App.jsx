@@ -11,7 +11,9 @@ import { ROLES } from "./constants/roles";
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AdminPanelPage = lazy(() => import("./pages/admin/AdminPanelPage"));
 const ProfilePage = lazy(() => import("./pages/profile/ProfilePage"));
+
 import { AdminLayout } from "./pages/admin/AdminLayout";
+import EditProfilePage from "./pages/profile/EditProfile";
 const ProjectsListPage = lazy(() =>
   import("./pages/projects/ProjectsListPage")
 );
@@ -77,6 +79,7 @@ export default function App() {
               <Route element={<AppShell />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/profile/edit" element={<EditProfilePage />} />
                 <Route path="/projects" element={<ProjectsListPage />} />
                 <Route path="/projects/new" element={<ProjectFormPage />} />
                 <Route path="/projects/:id" element={<ProjectDetailsPage />} />
