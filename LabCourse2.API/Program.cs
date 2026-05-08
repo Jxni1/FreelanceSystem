@@ -24,6 +24,7 @@ using LabCourse2.Application.Services.Contracts;
 using LabCourse2.Application.Services.Deliverables;
 using LabCourse2.Application.Services.Files;
 using LabCourse2.Application.Services.Milestones;
+using LabCourse2.Application.Services.Reports;
 using LabCourse2.Application.Services.Payments;
 using LabCourse2.Application.Services.Projects;
 using LabCourse2.Application.Services.Proposals;
@@ -33,6 +34,7 @@ using LabCourse2.Application.Services.User;
 using LabCourse2.Application.Validators;
 using LabCourse2.Application.Validators.Deliverables;
 using LabCourse2.Application.Validators.Files;
+using LabCourse2.Application.Validators.Reports;
 using LabCourse2.Application.Validators.Milestones;
 using LabCourse2.Application.Validators.Projects;
 using LabCourse2.Application.Validators.Proposals;
@@ -44,9 +46,12 @@ using LabCourse2.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+
 using Microsoft.IdentityModel.Tokens;
 using System.IO;
 using System.Text;
+using LabCourse2.Application.DTOs.Reports;
+using LabCourse2.Application.Interfaces.Reports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -127,6 +132,11 @@ builder.Services.AddScoped<IValidator<SubmitMilestoneRequest>, SubmitMilestoneRe
 builder.Services.AddScoped<IDeliverableService, DeliverableService>();
 builder.Services.AddScoped<IValidator<CreateDeliverableRequest>, CreateDeliverableRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateDeliverableRequest>, UpdateDeliverableRequestValidator>();
+
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IValidator<CreateReportRequest>, CreateReportRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateReportStatusRequest>, UpdateReportStatusRequestValidator>();
+
 
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IValidator<UploadFileRequest>, UploadFileRequestValidator>();
