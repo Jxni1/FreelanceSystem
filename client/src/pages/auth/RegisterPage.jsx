@@ -63,7 +63,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
       <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl p-10 shadow-sm transition-all duration-300">
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-50 text-teal-600 rounded-xl mb-6 shadow-sm ring-1 ring-teal-100">
@@ -158,7 +158,7 @@ export function RegisterPage() {
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="experienceLevel">Experience level</label>
                   <select 
                     id="experienceLevel" name="experienceLevel" required defaultValue=""
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%238b8b9e%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-[position:right_12px_center]"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%238b8b9e%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-position-[right_12px_center]"
                   >
                     <option value="" disabled>Select level</option>
                     {EXPERIENCE_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
@@ -182,7 +182,7 @@ export function RegisterPage() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="bio">Bio</label>
                 <textarea 
                   id="bio" name="bio" placeholder="Tell freelancers about yourself…" maxLength={1000} required 
-                  className="w-full px-4 py-2.5 min-h-[100px] bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all resize-y"
+                  className="w-full px-4 py-2.5 min-h-25 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all resize-y"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

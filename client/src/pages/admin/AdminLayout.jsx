@@ -12,10 +12,10 @@ export function AdminLayout() {
   const { logout, user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-950 flex">
-      <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col">
-        <div className="px-6 py-5 border-b border-slate-800 flex items-center gap-3">
-          <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-teal-500/10 text-teal-400 ring-1 ring-teal-500/30 shadow-sm">
+    <div className="min-h-screen bg-slate-50 flex">
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm">
+        <div className="px-6 py-5 border-b border-slate-200 flex items-center gap-3">
+          <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-teal-50 text-teal-600 ring-1 ring-teal-200 shadow-sm">
             <svg width="20" height="20" viewBox="0 0 36 36" fill="none" aria-hidden="true">
               <path
                 d="M10 24L15 11L19 17L26 9"
@@ -27,7 +27,7 @@ export function AdminLayout() {
             </svg>
           </div>
           <div>
-            <h1 className="text-sm font-semibold tracking-tight text-slate-100">
+            <h1 className="text-sm font-semibold tracking-tight text-slate-900">
               Admin Dashboard
             </h1>
             <p className="text-xs text-slate-500">Freelance platform control panel</p>
@@ -43,8 +43,8 @@ export function AdminLayout() {
                 [
                   'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-teal-500/10 text-teal-300 border border-teal-500/40'
-                    : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100'
+                    ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 ].join(' ')
               }
             >
@@ -53,13 +53,13 @@ export function AdminLayout() {
           ))}
         </nav>
 
-        <div className="border-t border-slate-800 px-4 py-3 flex items-center justify-between">
+        <div className="border-t border-slate-200 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-semibold text-slate-200">
+            <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-xs font-semibold text-teal-700">
               {user?.name?.[0]?.toUpperCase() ?? 'A'}
             </div>
             <div className="text-xs">
-              <p className="font-semibold text-slate-100 truncate max-w-[110px]">
+              <p className="font-semibold text-slate-900 truncate max-w-27.5">
                 {user?.name} {user?.surname}
               </p>
               <p className="text-slate-500">Admin</p>
@@ -67,25 +67,25 @@ export function AdminLayout() {
           </div>
           <button
             onClick={logout}
-            className="text-xs text-slate-400 hover:text-rose-400 transition-colors"
+            className="text-xs text-slate-500 hover:text-rose-500 transition-colors"
           >
             Logout
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col bg-slate-900/40">
-        <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/60 backdrop-blur">
+      <div className="flex-1 flex flex-col bg-slate-50">
+        <header className="h-16 border-b border-slate-200 flex items-center justify-between px-6 bg-white shadow-sm">
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">Overview</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Overview</h2>
             <p className="text-xs text-slate-500">
               Monitor users, projects, contracts and reports in one place.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 text-xs text-slate-300 border border-slate-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              System status: <span className="font-semibold text-emerald-300">Operational</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 text-xs text-teal-700 border border-teal-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              System status: <span className="font-semibold">Operational</span>
             </div>
           </div>
         </header>

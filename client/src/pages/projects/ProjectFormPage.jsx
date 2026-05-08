@@ -99,30 +99,30 @@ export default function ProjectFormPage() {
 
   if (isEditMode && isLoading && !project) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-400">
-        <div className="inline-block w-10 h-10 border-4 border-slate-700 border-t-teal-500 rounded-full animate-spin mb-4" />
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-500">
+        <div className="inline-block w-10 h-10 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin mb-4" />
         <p>Loading project form...</p>
       </div>
     );
   }
 
   const inputClass =
-    'w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent';
+    'w-full px-4 py-3 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent';
   const labelClass =
-    'block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 mb-2';
+    'block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-2';
 
   return (
-    <div className="max-w-4xl mx-auto text-slate-100 space-y-6">
+    <div className="max-w-4xl mx-auto text-slate-900 space-y-6">
       <SmartBackButton fallbackTo={isEditMode ? `/projects/${id}` : '/projects'} label="Back" />
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-950 shadow-xl overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-teal-500 to-emerald-400" />
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="h-1 bg-linear-to-r from-teal-500 to-emerald-400" />
 
-        <div className="px-6 py-5 border-b border-slate-800 bg-slate-900/70">
-          <h1 className="text-2xl font-bold text-slate-100">
+        <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
+          <h1 className="text-2xl font-bold text-slate-900">
             {isEditMode ? 'Edit Project' : 'Create New Project'}
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             {isEditMode
               ? 'Update project details, visibility, status, and category.'
               : 'Create a new project for the platform using the required fields below.'}
@@ -131,13 +131,13 @@ export default function ProjectFormPage() {
 
         <div className="p-6 md:p-8">
           {(error || formError) && (
-            <div className="mb-6 rounded-xl border border-rose-800 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
+            <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               {formError || (typeof error === 'string' ? error : 'Failed to load data')}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-5">
               <div>
                 <label className={labelClass} htmlFor="title">
                   Project Title
@@ -248,7 +248,7 @@ export default function ProjectFormPage() {
               <button
                 type="button"
                 onClick={() => navigate(isEditMode ? `/projects/${id}` : '/projects')}
-                className="px-6 py-3 rounded-xl border border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 transition-colors"
+                className="px-6 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                 disabled={isSubmitting}
               >
                 Cancel
@@ -256,7 +256,7 @@ export default function ProjectFormPage() {
 
               <button
                 type="submit"
-                className="min-w-[160px] px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                className="min-w-40 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

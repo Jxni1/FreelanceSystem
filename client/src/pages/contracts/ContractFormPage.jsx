@@ -95,33 +95,33 @@ export default function ContractFormPage() {
 
   if (isLoading && isEditMode) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-400">
-        <div className="inline-block w-10 h-10 border-4 border-slate-700 border-t-purple-500 rounded-full animate-spin mb-4" />
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-500">
+        <div className="inline-block w-10 h-10 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin mb-4" />
         <p>Loading contract...</p>
       </div>
     );
   }
 
   const inputClass =
-    'w-full px-4 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent';
+    'w-full px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent';
   const labelClass =
-    'block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 mb-1.5';
+    'block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1.5';
 
   return (
-    <div className="max-w-3xl mx-auto text-slate-100 space-y-6">
+    <div className="max-w-3xl mx-auto text-slate-900 space-y-6">
       <SmartBackButton
         fallbackTo={isEditMode ? `/admin/contracts/${id}` : '/admin/contracts'}
         label={isEditMode ? 'Back to Contract' : 'Back to Contracts'}
       />
 
-      <div className="bg-slate-950 rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-purple-500 to-indigo-500" />
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="h-1 bg-linear-to-r from-teal-500 to-emerald-400" />
 
-        <div className="px-6 py-5 border-b border-slate-800 bg-slate-900/70">
-          <h1 className="text-2xl font-bold text-slate-100">
+        <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
+          <h1 className="text-2xl font-bold text-slate-900">
             {isEditMode ? 'Edit Contract' : 'Create New Contract'}
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             {isEditMode
               ? 'Update the contract details below.'
               : 'Fill in the details to create a new contract.'}
@@ -130,7 +130,7 @@ export default function ContractFormPage() {
 
         <div className="p-6 md:p-8">
           {formError && (
-            <div className="mb-6 p-4 bg-rose-950/40 border border-rose-800 rounded-xl text-rose-200 text-xs">
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">
               {formError}
             </div>
           )}
@@ -265,11 +265,11 @@ export default function ContractFormPage() {
               </>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800/50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:bg-teal-300 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
               >
                 {isSubmitting
                   ? isEditMode
@@ -281,7 +281,7 @@ export default function ContractFormPage() {
               </button>
               <Link
                 to={isEditMode ? `/admin/contracts/${id}` : '/admin/contracts'}
-                className="px-6 py-3 rounded-xl border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 text-sm font-semibold text-center transition-colors"
+                className="px-6 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold text-center transition-colors"
               >
                 Cancel
               </Link>

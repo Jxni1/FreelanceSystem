@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useContracts } from '../../hooks/useContracts';
+import { useAuthorization } from '../../hooks/useAuthorization';
 
 const STATUS_STYLES = {
-  Active: 'bg-teal-500/10 text-teal-300 border-teal-500/40',
-  Pending: 'bg-amber-500/10 text-amber-300 border-amber-500/40',
-  Completed: 'bg-blue-500/10 text-blue-300 border-blue-500/40',
-  Cancelled: 'bg-rose-500/10 text-rose-300 border-rose-500/40',
+  Active: 'bg-teal-50 text-teal-700 border-teal-200',
+  Pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  Completed: 'bg-blue-50 text-blue-700 border-blue-200',
+  Cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
 export default function ContractsListPage() {
   const { contracts, isLoading, error, fetchContracts, deleteContract } = useContracts();
+  const { isAdmin } = useAuthorization();
   const [filters, setFilters] = useState({ page: 1, pageSize: 10, status: '' });
 
   useEffect(() => {
@@ -38,35 +40,35 @@ export default function ContractsListPage() {
   );
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto text-slate-100 space-y-6">
-      {/* Header */}
+    <div className="p-6 md:p-8 max-w-7xl mx-auto text-slate-900 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-100 tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
             Contract Management
           </h1>
-          <p className="text-xs md:text-sm text-slate-400 mt-1">
+          <p className="text-xs md:text-sm text-slate-500 mt-1">
             View, create, and manage all contracts across the platform.
           </p>
         </div>
-        <Link
-          to="/admin/contracts/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white shadow-sm transition-colors"
-        >
-          <span className="text-base leading-none">+</span>
-          <span>New Contract</span>
-        </Link>
+        {isAdmin && (
+          <Link
+            to="/admin/contracts/new"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white shadow-sm transition-colors"
+          >
+            <span className="text-base leading-none">+</span>
+            <span>New Contract</span>
+          </Link>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 shadow-sm mb-4">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm mb-4">
         <div className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <select
             value={filters.status}
             onChange={(e) =>
               setFilters((f) => ({ ...f, status: e.target.value, page: 1 }))
             }
-            className="px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent max-w-xs"
+            className="px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent max-w-xs"
           >
             <option value="">All statuses</option>
             <option value="Pending">Pending</option>
@@ -77,30 +79,27 @@ export default function ContractsListPage() {
         </div>
       </div>
 
-      {/* Loading */}
       {isLoading && (
-        <div className="py-10 text-center text-slate-400">
-          <div className="inline-block w-9 h-9 border-4 border-slate-700 border-t-purple-500 rounded-full animate-spin mb-4" />
+        <div className="py-10 text-center text-slate-500">
+          <div className="inline-block w-9 h-9 border-4 border-slate-200 border-t-purple-500 rounded-full animate-spin mb-4" />
           <p className="text-sm">Loading contracts...</p>
         </div>
       )}
 
-      {/* Error */}
       {error && !isLoading && (
-        <div className="p-4 rounded-xl border border-rose-800 bg-rose-950/40 text-xs text-rose-200">
+        <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-700">
           {typeof error === 'string'
             ? error
             : error.message || 'Failed to load contracts.'}
         </div>
       )}
 
-      {/* Table */}
       {!isLoading && !error && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-950 shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-950/80 border-b border-slate-800">
-                <tr className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                   <th className="px-5 py-3 text-left">Description</th>
                   <th className="px-5 py-3 text-left">Client</th>
                   <th className="px-5 py-3 text-left">Freelancer</th>
@@ -110,12 +109,12 @@ export default function ContractsListPage() {
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {contracts.items?.length === 0 ? (
                   <tr>
                     <td
                       colSpan={7}
-                      className="px-6 py-10 text-center text-slate-400 text-sm"
+                      className="px-6 py-10 text-center text-slate-500 text-sm"
                     >
                       No contracts found matching your filters.
                     </td>
@@ -124,31 +123,31 @@ export default function ContractsListPage() {
                   contracts.items?.map((contract) => (
                     <tr
                       key={contract.contractID}
-                      className="hover:bg-slate-900/70 transition-colors"
+                      className="hover:bg-slate-50 transition-colors"
                     >
-                      <td className="px-5 py-3 max-w-[260px] text-slate-100 truncate">
+                      <td className="px-5 py-3 max-w-[260px] text-slate-900 truncate">
                         {contract.description}
                       </td>
-                      <td className="px-5 py-3 text-slate-300 font-medium">
+                      <td className="px-5 py-3 text-slate-700 font-medium">
                         {contract.clientName}
                       </td>
-                      <td className="px-5 py-3 text-slate-300">
+                      <td className="px-5 py-3 text-slate-700">
                         {contract.freelancerName}
                       </td>
-                      <td className="px-5 py-3 text-slate-100 font-semibold">
+                      <td className="px-5 py-3 text-slate-900 font-semibold">
                         ${contract.agreedPrice?.toLocaleString() || 'N/A'}
                       </td>
                       <td className="px-5 py-3">
                         <span
                           className={`px-3 py-1 text-[11px] font-semibold rounded-full border ${
                             STATUS_STYLES[contract.status] ||
-                            'bg-slate-800 text-slate-300 border-slate-700'
+                            'bg-slate-100 text-slate-600 border-slate-200'
                           }`}
                         >
                           {contract.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-400">
+                      <td className="px-5 py-3 text-slate-500">
                         {contract.start_Date
                           ? new Date(contract.start_Date).toLocaleDateString()
                           : 'N/A'}
@@ -157,25 +156,25 @@ export default function ContractsListPage() {
                         <div className="flex justify-end gap-2">
                           <Link
                             to={`/admin/contracts/${contract.contractID}`}
-                            className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-semibold text-slate-100 hover:bg-slate-800"
+                            className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                           >
                             View
                           </Link>
                           <Link
                             to={`/admin/contracts/${contract.contractID}/edit`}
-                            className="px-3 py-1.5 rounded-lg bg-purple-600/80 hover:bg-purple-600 text-xs font-semibold text-white"
+                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-semibold text-white"
                           >
                             Edit
                           </Link>
                           <Link
                             to={`/contracts/${contract.contractID}/workflow`}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-xs font-semibold text-white"
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white"
                           >
                             Workflow
                           </Link>
                           <button
                             onClick={() => handleDelete(contract.contractID)}
-                            className="px-3 py-1.5 rounded-lg bg-rose-900/60 hover:bg-rose-900 text-xs font-semibold text-rose-100"
+                            className="px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 hover:bg-rose-100 text-xs font-semibold text-rose-600"
                           >
                             Delete
                           </button>
@@ -188,20 +187,19 @@ export default function ContractsListPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           {contracts.totalCount > filters.pageSize && (
-            <div className="px-5 py-4 border-t border-slate-800 bg-slate-950/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+            <div className="px-5 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
               <p>
                 Showing{' '}
-                <span className="font-semibold text-slate-200">
+                <span className="font-semibold text-slate-700">
                   {(filters.page - 1) * filters.pageSize + 1}
                 </span>{' '}
                 to{' '}
-                <span className="font-semibold text-slate-200">
+                <span className="font-semibold text-slate-700">
                   {Math.min(filters.page * filters.pageSize, contracts.totalCount)}
                 </span>{' '}
                 of{' '}
-                <span className="font-semibold text-slate-200">
+                <span className="font-semibold text-slate-700">
                   {contracts.totalCount}
                 </span>{' '}
                 contracts
@@ -210,7 +208,7 @@ export default function ContractsListPage() {
                 <button
                   disabled={filters.page <= 1}
                   onClick={() => handlePageChange(filters.page - 1)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
@@ -220,7 +218,7 @@ export default function ContractsListPage() {
                 <button
                   disabled={filters.page >= totalPages}
                   onClick={() => handlePageChange(filters.page + 1)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

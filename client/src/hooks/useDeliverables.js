@@ -1,4 +1,3 @@
-// src/hooks/useDeliverables.js
 import { useState, useCallback } from 'react';
 import { deliverableService } from '../lib/deliverableService'; // was missing
 
