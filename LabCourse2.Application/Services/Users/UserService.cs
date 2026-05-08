@@ -64,6 +64,7 @@ namespace LabCourse2.Application.Services.User
                 Surname = user.Surname,
                 Username = user.Username,
                 Email = user.Email,
+                ProfilePhoto = user.Profile_Photo,
                 Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
 
                 FreelancerProfile = user.FreelancerProfile is null ? null : new FreelancerProfileDto
@@ -171,7 +172,6 @@ namespace LabCourse2.Application.Services.User
             if (string.IsNullOrWhiteSpace(request.Password))
                 return Result<bool>.Failure("Password is required.");
 
-            // Use same hashing as registration
             var passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.Password_Hash);
 
             if (!passwordValid)
@@ -328,7 +328,55 @@ namespace LabCourse2.Application.Services.User
         }
 
         // -------- ADMIN: CREATE USER (WITH PROFILE) --------
+        public async Task<Result<PagedResult<UserListItemDto>>> GetReportableUsersAsync(UserQueryParams query)
+        {
+            var q = _db.Users
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .AsNoTracking()
+                .Where(u => u.Is_Active)
+                .AsQueryable();
 
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var search = query.Search.Trim();
+
+                q = q.Where(u =>
+                    u.Name.Contains(search) ||
+                    u.Surname.Contains(search) ||
+                    u.Username.Contains(search) ||
+                    u.Email.Contains(search));
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Role))
+                q = q.Where(u => u.UserRoles.Any(ur => ur.Role.Name == query.Role));
+
+            var totalCount = await q.CountAsync();
+
+            var items = await q
+                .OrderBy(u => u.Username)
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .Select(u => new UserListItemDto
+                {
+                    UserId = u.UserID,
+                    Name = u.Name,
+                    Surname = u.Surname,
+                    Username = u.Username,
+                    Email = u.Email,
+                    IsActive = u.Is_Active,
+                    CreatedAt = u.Created_At,
+                    Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList()
+                })
+                .ToListAsync();
+
+            return Result<PagedResult<UserListItemDto>>.Success(new PagedResult<UserListItemDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = query.Page,
+                PageSize = query.PageSize
+            });
+        }
         public async Task<Result<UserListItemDto>> CreateUserByAdminAsync(CreateUserByAdminRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Name) ||

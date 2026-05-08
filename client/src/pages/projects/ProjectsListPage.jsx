@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
 import { useAuthorization } from '../../hooks/useAuthorization';
+import { apiClient } from '../../lib/apiClient';
 
 export default function ProjectsListPage() {
   const { projects, isLoading, error, fetchProjects, deleteProject } = useProjects();
   const { isClient } = useAuthorization();
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+
+  // reporting state
+  const [reportingProjectId, setReportingProjectId] = useState(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportError, setReportError] = useState(null);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     fetchProjects({ page, pageSize: 10, search: searchTerm });
@@ -38,6 +45,49 @@ export default function ProjectsListPage() {
         return 'bg-rose-50 text-rose-700 border-rose-200';
       default:
         return 'bg-slate-100 text-slate-600 border-slate-200';
+    }
+  };
+
+  const startReporting = (projectId) => {
+    setReportingProjectId(projectId);
+    setReportReason('');
+    setReportError(null);
+  };
+
+  const cancelReporting = () => {
+    setReportingProjectId(null);
+    setReportReason('');
+    setReportError(null);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportReason.trim()) {
+      setReportError('Please enter a reason for this report.');
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+      setReportError(null);
+
+      await apiClient.post('/api/reports', {
+        entity: 'Project',
+        entityID: reportingProjectId,
+        reason: reportReason.trim(),
+      });
+
+      cancelReporting();
+      alert('Report submitted successfully.');
+    } catch (err) {
+      const raw = err?.response?.data;
+      setReportError(
+        raw?.message ||
+          raw?.error ||
+          raw?.title ||
+          (typeof raw === 'string' ? raw : 'Failed to submit report.')
+      );
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -105,67 +155,122 @@ export default function ProjectsListPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 border-b border-slate-200">
-                  <th className="px-5 py-3">Title</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Budget</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {projects?.items?.map((project) => (
-                  <tr
-                    key={project.projectID}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="px-5 py-3 align-middle">
-                      <div className="font-semibold text-slate-900">
-                        {project.title}
-                      </div>
-                      <div className="text-xs text-slate-500 truncate max-w-xs">
-                        {project.description}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 align-middle">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusBadgeClass(
-                          project.status
-                        )}`}
-                      >
-                        {project.status || 'Open'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 align-middle font-medium text-slate-900">
-                      ${project.budget?.toLocaleString()}
-                    </td>
-                    <td className="px-5 py-3 align-middle text-right space-x-2">
-                      <Link
-                        to={`/projects/${project.projectID}`}
-                        className="text-xs font-semibold text-teal-600 hover:text-teal-700"
-                      >
-                        View
-                      </Link>
-                      <Link
-                        to={`/projects/${project.projectID}/edit`}
-                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(project.projectID)}
-                        className="text-xs font-semibold text-rose-600 hover:text-rose-700"
-                      >
-                        Delete
-                      </button>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 border-b border-slate-200">
+                    <th className="px-5 py-3">Title</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Budget</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {projects?.items?.map((project) => (
+                    <tr
+                      key={project.projectID}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="px-5 py-3 align-middle">
+                        <div className="font-semibold text-slate-900">
+                          {project.title}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate max-w-xs">
+                          {project.description}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 align-middle">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusBadgeClass(
+                            project.status
+                          )}`}
+                        >
+                          {project.status || 'Open'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 align-middle font-medium text-slate-900">
+                        ${project.budget?.toLocaleString()}
+                      </td>
+                      <td className="px-5 py-3 align-middle text-right space-x-2">
+                        <Link
+                          to={`/projects/${project.projectID}`}
+                          className="text-xs font-semibold text-teal-600 hover:text-teal-700"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          to={`/projects/${project.projectID}/edit`}
+                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(project.projectID)}
+                          className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startReporting(project.projectID)}
+                          className="text-xs font-semibold text-amber-600 hover:text-amber-700"
+                        >
+                          Report
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {reportingProjectId && (
+              <div className="border-t border-slate-200 bg-slate-50 px-5 py-4">
+                <div className="max-w-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-slate-800">
+                      Report project
+                    </p>
+                    <button
+                      type="button"
+                      onClick={cancelReporting}
+                      className="text-[11px] text-slate-500 hover:text-slate-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="Describe why this project should be reported..."
+                  />
+                  {reportError && (
+                    <p className="mt-1 text-[11px] text-rose-600">{reportError}</p>
+                  )}
+                  <div className="mt-3 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelReporting}
+                      className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 hover:bg-slate-100"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmitReport}
+                      disabled={isSubmittingReport}
+                      className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-xs font-semibold text-white disabled:bg-amber-300"
+                    >
+                      {isSubmittingReport ? 'Sending...' : 'Submit report'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {projects?.totalCount > 10 && (

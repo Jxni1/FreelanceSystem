@@ -98,6 +98,12 @@ namespace LabCourse2.API.Controllers
             var result = await _userService.AdminUpdateUserAsync(id, request);
             return ToActionResult(result);
         }
+        [HttpGet("reportable")]
+        public async Task<IActionResult> GetReportableUsers([FromQuery] UserQueryParams query)
+        {
+            var result = await _userService.GetReportableUsersAsync(query);
+            return ToActionResult(result);
+        }
 
         [HttpDelete("{id:guid}")]
         [Authorize(Roles = "Admin")]
