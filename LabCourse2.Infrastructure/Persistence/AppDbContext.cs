@@ -32,7 +32,7 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<Proposal> Proposals => Set<Proposal>();
         public DbSet<Category> Categories => Set<Category>();
         public DbSet<ProjectSkills> ProjectSkills => Set<ProjectSkills>();
-        public DbSet<ProjectCategoryMap> ProjectCategoryMaps => Set<ProjectCategoryMap>();
+
         public DbSet<FreelancerSkills> FreelancerSkills => Set<FreelancerSkills>();
         public DbSet<SavedProjects> SavedProjects => Set<SavedProjects>();
         public DbSet<Payment> Payments => Set<Payment>();
@@ -144,18 +144,6 @@ namespace LabCourse2.Infrastructure.Persistence
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
-            modelBuilder.Entity<ProjectCategoryMap>(e =>
-            {
-                e.HasKey(pcm => pcm.ProjectCategoryMapID);
-                e.HasOne(pcm => pcm.Project)
-                 .WithMany()
-                 .HasForeignKey(pcm => pcm.ProjectID)
-                 .OnDelete(DeleteBehavior.Cascade);
-                e.HasOne(pcm => pcm.Category)
-                 .WithMany()
-                 .HasForeignKey(pcm => pcm.CategoryID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
 
             modelBuilder.Entity<FreelancerSkills>(e =>
             {
@@ -186,6 +174,10 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<Contract>(e =>
             {
                 e.HasKey(c => c.ContractID);
+                e.HasOne(c => c.Proposal)
+                 .WithMany()
+                 .HasForeignKey(c => c.ProposalID)
+                 .OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(c => c.Client)
                  .WithMany(cp => cp.Contracts)
                  .HasForeignKey(c => c.ClientID)
@@ -212,12 +204,16 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<Payment>(e =>
             {
                 e.HasKey(p => p.PaymentID);
-                e.HasIndex(p => p.ContractID);
                 e.Property(p => p.Payment_method).IsRequired().HasMaxLength(50);
                 e.Property(p => p.Status).IsRequired().HasMaxLength(20);
+                e.Property(p => p.Amount).IsRequired().HasPrecision(18, 2);
                 e.HasOne<Contract>()
                  .WithMany(c => c.Payment)
                  .HasForeignKey(p => p.ContractID)
+                 .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(p => p.Milestone)
+                 .WithMany()
+                 .HasForeignKey(p => p.MilestoneID)
                  .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -229,6 +225,10 @@ namespace LabCourse2.Infrastructure.Persistence
                 e.HasIndex(t => t.MilestoneID);
                 e.Property(t => t.Status).IsRequired().HasMaxLength(20);
                 e.Property(t => t.Reference).IsRequired().HasMaxLength(100);
+                e.Property(t => t.Type).IsRequired().HasMaxLength(20);
+                e.Property(t => t.Amount).IsRequired().HasPrecision(18, 2);
+                e.ToTable(t => t.HasCheckConstraint("CK_Transactions_Type",
+                    "[Type] IN ('deposit','release','refund')"));
                 e.HasOne(t => t.Payment)
                  .WithMany(p => p.Transactions)
                  .HasForeignKey(t => t.PaymentID)
@@ -329,7 +329,6 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<ClientProfile>().Property(c => c.Budget).HasPrecision(18, 2);
             modelBuilder.Entity<Project>().Property(p => p.Budget).HasPrecision(18, 2);
             modelBuilder.Entity<Proposal>().Property(p => p.BidAmount).HasPrecision(18, 2);
-            modelBuilder.Entity<Contract>().Property(c => c.Price).HasPrecision(18, 2);
             modelBuilder.Entity<Contract>().Property(c => c.Agreed_Price).HasPrecision(18, 2);
         }
     }

@@ -50,6 +50,13 @@ namespace LabCourse2.Application.Services.User
 
             if (user is null) return null;
 
+            var freelancerSkills = user.FreelancerProfile is null
+                ? new List<string>()
+                : await _db.FreelancerSkills
+                    .Where(fs => fs.FreelancerID == user.FreelancerProfile.FreelancerID)
+                    .Select(fs => fs.Skill.Name)
+                    .ToListAsync();
+
             return new UserProfileDto
             {
                 UserId = user.UserID,
@@ -62,7 +69,8 @@ namespace LabCourse2.Application.Services.User
                 FreelancerProfile = user.FreelancerProfile is null ? null : new FreelancerProfileDto
                 {
                     ExperienceLevel = user.FreelancerProfile.Experience_Level,
-                    HourlyRate = user.FreelancerProfile.Hourly_Rate
+                    HourlyRate = user.FreelancerProfile.Hourly_Rate,
+                    Skills = freelancerSkills
                 },
 
                 ClientProfile = user.ClientProfile is null ? null : new ClientProfileDto
@@ -110,30 +118,46 @@ namespace LabCourse2.Application.Services.User
 
             await _db.SaveChangesAsync();
 
-            var dto = new UserProfileDto
+            var dto = await GetUserByIdAsync(user.UserID);
+            return Result<UserProfileDto>.Success(dto!);
+        }
+
+        public async Task<Result<List<string>>> UpdateFreelancerSkillsAsync(UpdateFreelancerSkillsRequest request)
+        {
+            var freelancer = await _db.FreelancerProfiles
+                .FirstOrDefaultAsync(fp => fp.UserID == UserId);
+
+            if (freelancer is null)
+                return Result<List<string>>.Forbidden("Only freelancers can manage skills.");
+
+            var validSkillIds = await _db.Skills
+                .Where(s => request.SkillIds.Contains(s.SkillsID))
+                .Select(s => s.SkillsID)
+                .ToListAsync();
+
+            var existing = await _db.FreelancerSkills
+                .Where(fs => fs.FreelancerID == freelancer.FreelancerID)
+                .ToListAsync();
+
+            _db.FreelancerSkills.RemoveRange(existing);
+
+            var newEntries = validSkillIds.Select(sid => new Domain.Entities.FreelancerSkills
             {
-                UserId = user.UserID,
-                Name = user.Name,
-                Surname = user.Surname,
-                Username = user.Username,
-                Email = user.Email,
-                Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
+                FreelancerSkillsID = Guid.NewGuid(),
+                FreelancerID = freelancer.FreelancerID,
+                SkillID = sid,
+                Level = "General"
+            });
 
-                FreelancerProfile = user.FreelancerProfile is null ? null : new FreelancerProfileDto
-                {
-                    ExperienceLevel = user.FreelancerProfile.Experience_Level,
-                    HourlyRate = user.FreelancerProfile.Hourly_Rate
-                },
+            await _db.FreelancerSkills.AddRangeAsync(newEntries);
+            await _db.SaveChangesAsync();
 
-                ClientProfile = user.ClientProfile is null ? null : new ClientProfileDto
-                {
-                    Bio = user.ClientProfile.Bio,
-                    Industry = user.ClientProfile.Industry,
-                    Budget = user.ClientProfile.Budget
-                }
-            };
+            var skillNames = await _db.FreelancerSkills
+                .Where(fs => fs.FreelancerID == freelancer.FreelancerID)
+                .Select(fs => fs.Skill.Name)
+                .ToListAsync();
 
-            return Result<UserProfileDto>.Success(dto);
+            return Result<List<string>>.Success(skillNames);
         }
 
         public async Task<Result<bool>> DeleteCurrentUserAsync(DeleteUserRequest request)

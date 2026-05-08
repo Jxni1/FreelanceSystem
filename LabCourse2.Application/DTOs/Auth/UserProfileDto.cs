@@ -17,6 +17,7 @@ namespace LabCourse2.Application.DTOs.Auth
     {
         public string ExperienceLevel { get; set; } = string.Empty;
         public decimal HourlyRate { get; set; }
+        public List<string> Skills { get; set; } = new();
     }
 
     public class ClientProfileDto

@@ -16,5 +16,6 @@
         public Guid? CategoryID { get; set; }
         public string? Status { get; set; }
         public string? Visibility { get; set; }
+        public string? Skill { get; set; }
     }
 }

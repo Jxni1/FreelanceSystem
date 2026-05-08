@@ -18,9 +18,6 @@ namespace LabCourse2.Application.Validators.Contracts
             RuleFor(x => x.End_Date)
                 .NotEmpty().WithMessage("End date is required.");
 
-            RuleFor(x => x.Price)
-                .GreaterThan(0).WithMessage("Price must be greater than 0.");
-
             RuleFor(x => x.Agreed_Price)
                 .GreaterThan(0).WithMessage("Agreed price must be greater than 0.");
 

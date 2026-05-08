@@ -1,4 +1,4 @@
-﻿using LabCourse2.Application.DTOs.Milestones;
+using LabCourse2.Application.DTOs.Milestones;
 using LabCourse2.Domain.Constants;
 using LabCourse2.Domain.Entities;
 
@@ -16,10 +16,16 @@ namespace LabCourse2.Application.Mappings
                 DueDate = milestone.DueDate,
                 Status = milestone.status,
                 ContractID = milestone.ContractID,
+                OrderIndex = milestone.Order_Index,
+                FundedAt = milestone.Funded_at,
+                SubmittedAt = milestone.Submitted_at,
+                ApprovedAt = milestone.Approved_at,
 
                 IsOverdue = milestone.DueDate < DateTime.UtcNow
-                            && milestone.status != MilestoneStatus.Completed
+                            && milestone.status != MilestoneStatus.Approved
                             && milestone.status != MilestoneStatus.Cancelled,
+
+                SubmissionNote = milestone.Submission_Note,
 
                 TotalDeliverables = milestone.Deliverables?.Count ?? 0,
 
@@ -39,7 +45,7 @@ namespace LabCourse2.Application.Mappings
                 Amount = request.Amount,
                 DueDate = request.DueDate,
                 ContractID = request.ContractID,
-                status = MilestoneStatus.Pending  
+                status = MilestoneStatus.Draft
             };
 
         public static void ApplyUpdate(this Milestone milestone, UpdateMilestoneRequest request)

@@ -10,6 +10,7 @@ namespace LabCourse2.Application.Interfaces.Users
         Task<UserProfileDto?> GetUserByIdAsync(Guid userId);
 
         Task<Result<UserProfileDto>> UpdateCurrentUserAsync(UpdateUserRequest request);
+        Task<Result<List<string>>> UpdateFreelancerSkillsAsync(UpdateFreelancerSkillsRequest request);
         Task<Result<bool>> DeleteCurrentUserAsync(DeleteUserRequest request);
 
         Task<Result<PagedResult<UserListItemDto>>> GetAllUsersAsync(UserQueryParams query);

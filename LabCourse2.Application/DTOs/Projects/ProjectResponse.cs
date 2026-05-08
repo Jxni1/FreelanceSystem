@@ -13,5 +13,6 @@
         public Guid ClientID { get; init; }
         public Guid CategoryID { get; init; }
         public string CategoryName { get; init; } = string.Empty;
+        public List<string> Skills { get; init; } = new();
     }
 }

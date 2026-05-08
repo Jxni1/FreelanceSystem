@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace LabCourse2.Domain.Entities
 {
@@ -11,6 +9,10 @@ namespace LabCourse2.Domain.Entities
         public string Status { get; set; } = string.Empty;
 
         public string Reference { get; set; } = string.Empty;
+
+        public string Type { get; set; } = string.Empty;
+
+        public decimal Amount { get; set; }
 
         public Guid PaymentID { get; set; }
 

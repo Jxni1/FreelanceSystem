@@ -1,4 +1,5 @@
-﻿using LabCourse2.Application.DTOs.Users;
+﻿using LabCourse2.Application.DTOs.Auth;
+using LabCourse2.Application.DTOs.Users;
 using LabCourse2.Application.Interfaces.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,6 +46,13 @@ namespace LabCourse2.API.Controllers
                 return BadRequest("Request body is required.");
 
             var result = await _userService.UpdateCurrentUserAsync(request);
+            return ToActionResult(result);
+        }
+
+        [HttpPut("me/skills")]
+        public async Task<IActionResult> UpdateMySkills([FromBody] UpdateFreelancerSkillsRequest request)
+        {
+            var result = await _userService.UpdateFreelancerSkillsAsync(request);
             return ToActionResult(result);
         }
 

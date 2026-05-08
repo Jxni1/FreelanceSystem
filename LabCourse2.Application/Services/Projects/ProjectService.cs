@@ -43,14 +43,32 @@ namespace LabCourse2.Application.Services.Projects
             if (!string.IsNullOrWhiteSpace(query.Visibility))
                 q = q.Where(p => p.Visibility == query.Visibility);
 
+            if (!string.IsNullOrWhiteSpace(query.Skill))
+                q = q.Where(p => _context.ProjectSkills
+                    .Any(ps => ps.ProjectID == p.ProjectID &&
+                               ps.Skill.Name.Contains(query.Skill)));
+
             var totalCount = await q.CountAsync();
 
-            var items = await q
+            var rawItems = await q
                 .OrderByDescending(p => p.CreatedAt)
                 .Skip((query.Page - 1) * query.PageSize)
                 .Take(query.PageSize)
-                .Select(p => p.ToResponse())
                 .ToListAsync();
+
+            var projectIds = rawItems.Select(p => p.ProjectID).ToList();
+            var skillEntries = await _context.ProjectSkills
+                .Where(ps => projectIds.Contains(ps.ProjectID))
+                .Select(ps => new { ps.ProjectID, ps.Skill.Name })
+                .ToListAsync();
+
+            var skillsMap = skillEntries
+                .GroupBy(x => x.ProjectID)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Name).ToList());
+
+            var items = rawItems
+                .Select(p => p.ToResponse(skillsMap.GetValueOrDefault(p.ProjectID)))
+                .ToList();
 
             return Result<PagedResult<ProjectResponse>>.Success(new PagedResult<ProjectResponse>
             {
@@ -71,7 +89,12 @@ namespace LabCourse2.Application.Services.Projects
             if (project is null)
                 return Result<ProjectResponse>.NotFound($"Project with ID {id} was not found.");
 
-            return Result<ProjectResponse>.Success(project.ToResponse());
+            var skills = await _context.ProjectSkills
+                .Where(ps => ps.ProjectID == id)
+                .Select(ps => ps.Skill.Name)
+                .ToListAsync();
+
+            return Result<ProjectResponse>.Success(project.ToResponse(skills));
         }
 
         public async Task<Result<ProjectResponse>> CreateAsync(CreateProjectRequest request)

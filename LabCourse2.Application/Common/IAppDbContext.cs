@@ -19,7 +19,6 @@ namespace LabCourse2.Application.Common
         DbSet<Category> Categories { get; }
         DbSet<Proposal> Proposals { get; }
         DbSet<ProjectSkills> ProjectSkills { get; }
-        DbSet<ProjectCategoryMap> ProjectCategoryMaps { get; }
         DbSet<FreelancerSkills> FreelancerSkills { get; }
         DbSet<SavedProjects> SavedProjects { get; }
         DbSet<Skills> Skills { get; }

@@ -13,9 +13,9 @@ namespace LabCourse2.Application.Mappings
                 Description = contract.Description,
                 Start_Date = contract.Start_Date,
                 End_Date = contract.End_Date,
-                Price = contract.Price,
                 Agreed_Price = contract.Agreed_Price,
                 Status = contract.Status,
+                ProposalID = contract.ProposalID,
                 ClientID = contract.ClientID,
                 ClientName = contract.Client?.User?.Username ?? string.Empty,
                 FreelancerID = contract.FreelancerID,
@@ -31,8 +31,8 @@ namespace LabCourse2.Application.Mappings
                 Description = request.Description,
                 Start_Date = request.Start_Date,
                 End_Date = request.End_Date,
-                Price = request.Price,
                 Agreed_Price = request.Agreed_Price,
+                ProposalID = request.ProposalID,
                 Status = ContractStatus.Pending,
                 ClientID = clientId,
                 FreelancerID = request.FreelancerID,
@@ -44,7 +44,6 @@ namespace LabCourse2.Application.Mappings
             contract.Description = request.Description;
             contract.Start_Date = request.Start_Date;
             contract.End_Date = request.End_Date;
-            contract.Price = request.Price;
             contract.Agreed_Price = request.Agreed_Price;
             contract.Status = request.Status;
         }

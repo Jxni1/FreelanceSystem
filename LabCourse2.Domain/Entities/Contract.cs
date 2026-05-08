@@ -11,13 +11,14 @@ namespace LabCourse2.Domain.Entities
 
         public DateTime Start_Date { get; set; }
 
-        public decimal Price { get; set; }
-
         public DateTime End_Date { get; set; }
 
         public decimal Agreed_Price { get; set; }
 
         public string Status { get; set; } = null!;
+
+        public Guid? ProposalID { get; set; }
+        public Proposal? Proposal { get; set; }
 
         public Guid ClientID { get; set; }
         public ClientProfile Client { get; set; } = null!;
@@ -30,8 +31,6 @@ namespace LabCourse2.Domain.Entities
 
         public ICollection<Milestone> Milestones { get; set; } = new List<Milestone>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
-
         public ICollection<Payment> Payment { get; set; } = new List<Payment>();
-
     }
 }

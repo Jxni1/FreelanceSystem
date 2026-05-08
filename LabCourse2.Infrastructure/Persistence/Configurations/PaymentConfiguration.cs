@@ -10,12 +10,20 @@ namespace LabCourse2.Infrastructure.Persistence.Cofigurations
         {
             builder.HasKey(p => p.PaymentID);
 
-            
-            builder.HasIndex(p => p.ContractID);
-
             builder.Property(p => p.Payment_method).IsRequired().HasMaxLength(50);
             builder.Property(p => p.Status).IsRequired().HasMaxLength(20);
             builder.Property(p => p.Payment_Date).IsRequired();
+            builder.Property(p => p.Amount).IsRequired().HasPrecision(18, 2).HasDefaultValue(0m);
+
+            builder.HasOne(p => p.Milestone)
+                .WithMany()
+                .HasForeignKey(p => p.MilestoneID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasIndex(p => p.ContractID);
+            builder.HasIndex(p => p.MilestoneID);
+
+            builder.ToTable(t => t.HasCheckConstraint("CK_Payment_Amount", "[Amount] >= 0"));
         }
     }
 }
