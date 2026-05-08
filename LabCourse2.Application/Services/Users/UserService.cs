@@ -64,6 +64,7 @@ namespace LabCourse2.Application.Services.User
                 Surname = user.Surname,
                 Username = user.Username,
                 Email = user.Email,
+                ProfilePhoto = user.Profile_Photo,
                 Roles = user.UserRoles.Select(ur => ur.Role.Name).ToList(),
 
                 FreelancerProfile = user.FreelancerProfile is null ? null : new FreelancerProfileDto
@@ -171,7 +172,6 @@ namespace LabCourse2.Application.Services.User
             if (string.IsNullOrWhiteSpace(request.Password))
                 return Result<bool>.Failure("Password is required.");
 
-            // Use same hashing as registration
             var passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.Password_Hash);
 
             if (!passwordValid)

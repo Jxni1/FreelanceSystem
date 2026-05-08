@@ -18,6 +18,6 @@ namespace LabCourse2.Domain.Entities
 
         public string Uploaded_by { get; set; } = null!;
 
-        public string Created_by { get; set; } = null!;
+        public DateTime Created_at { get; set; }
     }
 }

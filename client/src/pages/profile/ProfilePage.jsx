@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
@@ -11,13 +11,15 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
+  const API_BASE_URL = 'https://localhost:7244';
+
   const loadProfile = async () => {
     try {
       setIsLoading(true);
       setLoadError(null);
 
       const res = await apiClient.get('/api/users/me');
-      const data = res.data?.value ?? res.data;
+      const data = res.data?.value ?? res.data?.data ?? res.data;
       setProfile(data);
     } catch (err) {
       const msg =
@@ -33,6 +35,12 @@ export default function ProfilePage() {
   useEffect(() => {
     loadProfile();
   }, []);
+
+  const profilePhotoUrl = useMemo(() => {
+    if (!profile?.profilePhoto) return '';
+    if (profile.profilePhoto.startsWith('http')) return profile.profilePhoto;
+    return `${API_BASE_URL}/${profile.profilePhoto.replace(/^\/+/, '')}`;
+  }, [profile]);
 
   if (isLoading) {
     return (
@@ -98,9 +106,19 @@ export default function ProfilePage() {
 
       <div className="bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
         <div className="p-6 sm:p-8 flex items-start gap-6">
-          <div className="hidden sm:flex items-center justify-center w-20 h-20 bg-teal-100 text-teal-700 rounded-full text-2xl font-bold shrink-0">
-            {profile?.name?.[0]}
-            {profile?.surname?.[0]}
+          <div className="shrink-0">
+            {profilePhotoUrl ? (
+              <img
+                src={profilePhotoUrl}
+                alt={`${profile.name} ${profile.surname}`}
+                className="w-20 h-20 rounded-full object-cover border border-slate-300"
+              />
+            ) : (
+              <div className="hidden sm:flex items-center justify-center w-20 h-20 bg-teal-100 text-teal-700 rounded-full text-2xl font-bold">
+                {profile?.name?.[0]}
+                {profile?.surname?.[0]}
+              </div>
+            )}
           </div>
 
           <div className="flex-1">
@@ -148,7 +166,9 @@ export default function ProfilePage() {
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
                 Industry
               </p>
-              <p className="text-slate-900 font-medium">{profile.clientProfile.industry}</p>
+              <p className="text-slate-900 font-medium">
+                {profile.clientProfile.industry}
+              </p>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
