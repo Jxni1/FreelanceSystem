@@ -20,10 +20,6 @@ namespace LabCourse2.Infrastructure.Persistence.Configurations
             builder.Property(c => c.End_Date)
                 .IsRequired();
 
-            builder.Property(c => c.Price)
-                .IsRequired()
-                .HasPrecision(18, 2);
-
             builder.Property(c => c.Agreed_Price)
                 .IsRequired()
                 .HasPrecision(18, 2);
@@ -41,6 +37,11 @@ namespace LabCourse2.Infrastructure.Persistence.Configurations
             builder.Property(c => c.ProjectID)
                 .IsRequired();
 
+            builder.HasOne(c => c.Proposal)
+                .WithMany()
+                .HasForeignKey(c => c.ProposalID)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasOne(c => c.Client)
                 .WithMany()
                 .HasForeignKey(c => c.ClientID);
@@ -53,28 +54,16 @@ namespace LabCourse2.Infrastructure.Persistence.Configurations
                 .WithMany()
                 .HasForeignKey(c => c.ProjectID);
 
-            // Indexes -  per filtrim
-
+            builder.HasIndex(c => c.ProposalID);
             builder.HasIndex(c => c.ClientID);
-
-          
             builder.HasIndex(c => c.FreelancerID);
-
             builder.HasIndex(c => c.ProjectID);
-
-            
             builder.HasIndex(c => c.Status);
-
-         
             builder.HasIndex(c => c.Start_Date);
             builder.HasIndex(c => c.End_Date);
-
             builder.HasIndex(c => new { c.ClientID, c.Status });
-
-        
             builder.HasIndex(c => new { c.FreelancerID, c.Status });
 
-            builder.ToTable(t => t.HasCheckConstraint("CK_Contract_Price", "[Price] >= 0"));
             builder.ToTable(t => t.HasCheckConstraint("CK_Contract_AgreedPrice", "[Agreed_Price] >= 0"));
             builder.ToTable(t => t.HasCheckConstraint("CK_Contract_Date", "[End_Date] >= [Start_Date]"));
         }

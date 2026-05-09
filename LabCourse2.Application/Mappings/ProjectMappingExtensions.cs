@@ -6,7 +6,7 @@ namespace LabCourse2.Application.Mappings
 {
     public static class ProjectMappingExtensions
     {
-        public static ProjectResponse ToResponse(this Project project) =>
+        public static ProjectResponse ToResponse(this Project project, List<string>? skills = null) =>
             new()
             {
                 ProjectID = project.ProjectID,
@@ -19,7 +19,8 @@ namespace LabCourse2.Application.Mappings
                 UpdatedAt = project.UpdatedAt,
                 ClientID = project.ClientID,
                 CategoryID = project.CategoryID,
-                CategoryName = project.Category?.Name ?? string.Empty
+                CategoryName = project.Category?.Name ?? string.Empty,
+                Skills = skills ?? new List<string>()
             };
 
         public static Project ToEntity(this CreateProjectRequest request, Guid clientId) =>

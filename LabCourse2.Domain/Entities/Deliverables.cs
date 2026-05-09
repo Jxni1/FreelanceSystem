@@ -15,9 +15,5 @@ namespace LabCourse2.Domain.Entities
 
         public Guid FileID { get; set; }
         public Files File { get; set; } = null!;
-
-        // FK - Payment 
-        //public Guid PaymentID { get; set; }
-        //public Payment Payment { get; set; } = null!;
     }
 }

@@ -9,6 +9,7 @@ export const projectService = {
     if (params.categoryId) urlParams.append('categoryId', params.categoryId);
     if (params.status) urlParams.append('status', params.status);
     if (params.visibility) urlParams.append('visibility', params.visibility);
+    if (params.skill) urlParams.append('skill', params.skill);
 
     const queryString = urlParams.toString();
     const result = await apiClient.get(`/api/projects${queryString ? `?${queryString}` : ''}`);

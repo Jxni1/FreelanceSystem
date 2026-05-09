@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLES } from '../../constants/roles';
+import { settingService } from '../../lib/settingService';
 
 const EXPERIENCE_LEVELS = ['Junior', 'Mid', 'Senior', 'Expert'];
 
@@ -9,6 +10,34 @@ export function RegisterPage() {
   const [role, setRole] = useState('');
   const [errors, setErrors] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRegistrationEnabled, setIsRegistrationEnabled] = useState(true);
+  const [isCheckingSettings, setIsCheckingSettings] = useState(true);
+  const [minClientBudget, setMinClientBudget] = useState(0);
+
+  useEffect(() => {
+    const checkSettings = async () => {
+      try {
+        const registrationResult = await settingService.getByKey('registration_enabled');
+        if (registrationResult && registrationResult.value?.toLowerCase() === 'false') {
+          setIsRegistrationEnabled(false);
+        } else {
+          setIsRegistrationEnabled(true);
+        }
+
+        const budgetResult = await settingService.getByKey('min_client_budget');
+        if (budgetResult && budgetResult.value) {
+          setMinClientBudget(parseFloat(budgetResult.value) || 0);
+        }
+      } catch (err) {
+        setIsRegistrationEnabled(true);
+        setMinClientBudget(0);
+        console.error('Failed to check settings:', err);
+      } finally {
+        setIsCheckingSettings(false);
+      }
+    };
+    checkSettings();
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -32,9 +61,17 @@ export function RegisterPage() {
     }
 
     if (role === ROLES.CLIENT) {
+      const budget = parseFloat(form.get('budget')) ?? null;
+      
+      if (minClientBudget > 0 && budget && budget < minClientBudget) {
+        setErrors([`Minimum budget is $${minClientBudget.toFixed(2)}`]);
+        setIsSubmitting(false);
+        return;
+      }
+
       body.bio      = form.get('bio');
       body.industry = form.get('industry');
-      body.budget   = parseFloat(form.get('budget')) ?? null;
+      body.budget   = budget;
     }
 
     try {
@@ -62,13 +99,33 @@ export function RegisterPage() {
     }
   }
 
+  if (isCheckingSettings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-slate-200 border-t-teal-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#f0e6d8]">
-      <div className="w-full max-w-2xl bg-white rounded-2xl p-10 shadow-sm transition-all duration-300">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+      <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl p-10 shadow-sm transition-all duration-300">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-800 mb-2">Create an account</h1>
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-50 text-teal-600 rounded-xl mb-6 shadow-sm ring-1 ring-teal-100">
+            <svg width="32" height="32" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+              <path d="M11 18.5L16 23.5L25 13.5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">Create an account</h1>
           <p className="text-sm text-slate-500">Join as a freelancer or a client to get started</p>
         </div>
+
+        {!isRegistrationEnabled && (
+          <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm font-semibold text-amber-900 mb-1">Registration Disabled</p>
+            <p className="text-sm text-amber-800">Registration is currently disabled. Please try again later or contact support.</p>
+          </div>
+        )}
 
         <form className="space-y-8" onSubmit={handleSubmit} noValidate>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -77,6 +134,7 @@ export function RegisterPage() {
               value={ROLES.FREELANCER}
               selected={role === ROLES.FREELANCER}
               onSelect={setRole}
+              disabled={!isRegistrationEnabled}
               icon={
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"/>
@@ -91,6 +149,7 @@ export function RegisterPage() {
               value={ROLES.CLIENT}
               selected={role === ROLES.CLIENT}
               onSelect={setRole}
+              disabled={!isRegistrationEnabled}
               icon={
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -103,67 +162,74 @@ export function RegisterPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="name">First name</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="name">First name</label>
               <input 
                 id="name" name="name" type="text" autoComplete="given-name" placeholder="Jane" required 
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="surname">Last name</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="surname">Last name</label>
               <input 
                 id="surname" name="surname" type="text" autoComplete="family-name" placeholder="Smith" required 
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
 
           <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="username">Username</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="username">Username</label>
               <input 
                 id="username" name="username" type="text" autoComplete="username" placeholder="jane_smith" required 
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="reg-email">Email address</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="reg-email">Email address</label>
               <input 
                 id="reg-email" name="email" type="email" autoComplete="email" placeholder="jane@example.com" required 
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="reg-password">Password</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="reg-password">Password</label>
               <input 
                 id="reg-password" name="password" type="password" autoComplete="new-password" placeholder="Min 8 chars, upper, digit, symbol" required 
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
 
           {role === ROLES.FREELANCER && (
-            <div className="pt-6 border-t border-slate-200 flex flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
-              <p className="text-xs font-bold text-[#122C4F] uppercase tracking-widest">Freelancer details</p>
+            <div className="pt-6 border-t border-slate-100 flex flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+              <p className="text-xs font-bold text-teal-600 uppercase tracking-widest">Freelancer details</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="experienceLevel">Experience level</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="experienceLevel">Experience level</label>
                   <select 
                     id="experienceLevel" name="experienceLevel" required defaultValue=""
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%238b8b9e%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-[position:right_12px_center]"
+                    disabled={!isRegistrationEnabled}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%238b8b9e%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-position-[right_12px_center] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="" disabled>Select level</option>
                     {EXPERIENCE_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="hourlyRate">Hourly rate (USD)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="hourlyRate">Hourly rate (USD)</label>
                   <input 
                     id="hourlyRate" name="hourlyRate" type="number" min="1" step="0.01" placeholder="e.g. 45.00" required 
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                    disabled={!isRegistrationEnabled}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -171,29 +237,35 @@ export function RegisterPage() {
           )}
 
           {role === ROLES.CLIENT && (
-            <div className="pt-6 border-t border-slate-200 flex flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
-              <p className="text-xs font-bold text-[#122C4F] uppercase tracking-widest">Client details</p>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="bio">Bio</label>
+            <div className="pt-6 border-t border-slate-100 flex flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+              <p className="text-xs font-bold text-teal-600 uppercase tracking-widest">Client details</p>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="bio">Bio</label>
                 <textarea 
                   id="bio" name="bio" placeholder="Tell freelancers about yourself…" maxLength={1000} required 
-                  className="w-full px-4 py-2.5 min-h-[100px] border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all resize-y"
+                  disabled={!isRegistrationEnabled}
+                  className="w-full px-4 py-2.5 min-h-25 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all resize-y disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="industry">Industry</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="industry">Industry</label>
                   <input 
                     id="industry" name="industry" type="text" placeholder="e.g. Tech" required 
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                    disabled={!isRegistrationEnabled}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-widest" htmlFor="budget">Budget (USD)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="budget">Budget (USD)</label>
                   <input 
                     id="budget" name="budget" type="number" min="0" step="0.01" placeholder="e.g. 5000.00" required 
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                    disabled={!isRegistrationEnabled}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
+                  {minClientBudget > 0 && (
+                    <p className="text-xs text-slate-500">Minimum: ${minClientBudget.toFixed(2)}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -210,8 +282,8 @@ export function RegisterPage() {
           <button 
             id="register-submit" 
             type="submit" 
-            disabled={isSubmitting || !role}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-[#122C4F] hover:bg-[#0f1f38] disabled:bg-[#1a3a5c] text-white font-semibold rounded-lg shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+            disabled={isSubmitting || !role || !isRegistrationEnabled}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer"
           >
             {isSubmitting ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -222,38 +294,41 @@ export function RegisterPage() {
         </form>
 
         <p className="mt-8 text-center text-sm text-slate-500">
-          Already have an account? <a href="/auth/login" className="font-semibold text-[#122C4F] hover:text-[#0f1f38] transition-colors">Sign in</a>
+          Already have an account? <a href="/auth/login" className="font-semibold text-teal-600 hover:text-teal-700 transition-colors">Sign in</a>
         </p>
       </div>
     </div>
   );
 }
 
-function RoleCard({ id, value, selected, onSelect, icon, label, description }) {
+function RoleCard({ id, value, selected, onSelect, disabled, icon, label, description }) {
   return (
     <button
       id={id}
       type="button"
+      disabled={disabled}
       className={`relative flex flex-col items-center gap-2 p-5 border-2 rounded-xl transition-all cursor-pointer text-center group ${
-        selected 
-          ? 'border-[#122C4F] bg-blue-50 shadow-sm shadow-[#122C4F]/5' 
-          : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-slate-100'
+        disabled 
+          ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed' 
+          : selected 
+            ? 'border-teal-600 bg-teal-50 shadow-sm shadow-teal-600/5' 
+            : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-slate-100'
       }`}
-      onClick={() => onSelect(value)}
+      onClick={() => !disabled && onSelect(value)}
       aria-pressed={selected}
     >
       <div className={`flex items-center justify-center w-12 h-12 rounded-lg transition-colors ${
-        selected ? 'bg-[#122C4F] text-white' : 'bg-white text-slate-400 group-hover:text-slate-500 shadow-sm'
+        selected ? 'bg-teal-600 text-white' : 'bg-white text-slate-400 group-hover:text-slate-500 shadow-sm'
       }`}>
         {icon}
       </div>
       <div className="space-y-0.5">
-        <p className={`font-bold text-sm ${selected ? 'text-[#122C4F]' : 'text-slate-700'}`}>{label}</p>
-        <p className={`text-[11px] leading-tight ${selected ? 'text-[#122C4F]/70' : 'text-slate-400'}`}>{description}</p>
+        <p className={`font-bold text-sm ${selected ? 'text-teal-900' : 'text-slate-700'}`}>{label}</p>
+        <p className={`text-[11px] leading-tight ${selected ? 'text-teal-700/70' : 'text-slate-400'}`}>{description}</p>
       </div>
       {selected && (
         <div className="absolute top-2 right-2">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-[#122C4F]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-teal-600">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>

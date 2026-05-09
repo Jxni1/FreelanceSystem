@@ -1,4 +1,4 @@
-﻿
+
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Deliverables;
 using LabCourse2.Application.Interfaces.Deliverables;
@@ -20,8 +20,6 @@ namespace LabCourse2.Application.Services.Deliverables
             _currentUser = currentUser;
         }
 
-     
-
         private async Task<FreelancerProfile?> GetFreelancerProfileAsync() =>
             await _context.FreelancerProfiles
                 .FirstOrDefaultAsync(f => f.UserID == _currentUser.UserId);
@@ -30,7 +28,6 @@ namespace LabCourse2.Application.Services.Deliverables
             await _context.ClientProfiles
                 .FirstOrDefaultAsync(c => c.UserID == _currentUser.UserId);
 
-       
         public async Task<Result<PagedResult<DeliverableResponse>>> GetAllByMilestoneAsync(
             Guid milestoneId, DeliverableQueryParams query)
         {
@@ -73,7 +70,6 @@ namespace LabCourse2.Application.Services.Deliverables
                 });
         }
 
-      
         public async Task<Result<DeliverableResponse>> GetByIdAsync(Guid deliverableId)
         {
             var deliverable = await _context.Deliverables
@@ -110,13 +106,9 @@ namespace LabCourse2.Application.Services.Deliverables
                 return Result<DeliverableResponse>
                     .Forbidden("You are not the freelancer on this contract.");
 
-            if (milestone.status == MilestoneStatus.Completed)
+            if (milestone.status != MilestoneStatus.Funded)
                 return Result<DeliverableResponse>
-                    .Failure("Cannot submit a deliverable to a completed milestone.");
-
-            if (milestone.status == MilestoneStatus.Cancelled)
-                return Result<DeliverableResponse>
-                    .Failure("Cannot submit a deliverable to a cancelled milestone.");
+                    .Failure("Milestone must be funded before submitting deliverables.");
 
             var fileExists = await _context.Files
                 .AnyAsync(f => f.FilesID == request.FileID);
@@ -126,10 +118,6 @@ namespace LabCourse2.Application.Services.Deliverables
 
             var deliverable = request.ToEntity();
             await _context.Deliverables.AddAsync(deliverable);
-
-            if (milestone.status == MilestoneStatus.Pending)
-                milestone.status = MilestoneStatus.InProgress;
-
             await _context.SaveChangesAsync();
 
             var created = await _context.Deliverables
@@ -141,7 +129,6 @@ namespace LabCourse2.Application.Services.Deliverables
             return Result<DeliverableResponse>.Created(created!.ToResponse());
         }
 
-        
         public async Task<Result<DeliverableResponse>> UpdateAsync(
             Guid deliverableId, UpdateDeliverableRequest request)
         {
@@ -168,12 +155,11 @@ namespace LabCourse2.Application.Services.Deliverables
                 return Result<DeliverableResponse>
                     .Failure("Cannot update an already approved deliverable.");
 
-            if (deliverable.Milestone.status == MilestoneStatus.Completed ||
+            if (deliverable.Milestone.status == MilestoneStatus.Approved ||
                 deliverable.Milestone.status == MilestoneStatus.Cancelled)
                 return Result<DeliverableResponse>
-                    .Failure("Cannot update a deliverable on a completed or cancelled milestone.");
+                    .Failure("Cannot update a deliverable on an approved or cancelled milestone.");
 
-          
             var fileExists = await _context.Files
                 .AnyAsync(f => f.FilesID == request.FileID);
             if (!fileExists)
@@ -194,7 +180,6 @@ namespace LabCourse2.Application.Services.Deliverables
             return Result<DeliverableResponse>.Success(updated!.ToResponse());
         }
 
-       
         public async Task<Result<DeliverableResponse>> ApproveAsync(Guid deliverableId)
         {
             var client = await GetClientProfileAsync();
@@ -230,8 +215,7 @@ namespace LabCourse2.Application.Services.Deliverables
         {
             var client = await GetClientProfileAsync();
             if (client is null)
-                return Result<bool>
-                    .Forbidden("Only clients can reject deliverables.");
+                return Result<bool>.Forbidden("Only clients can reject deliverables.");
 
             var deliverable = await _context.Deliverables
                 .Include(d => d.Milestone)
@@ -239,16 +223,13 @@ namespace LabCourse2.Application.Services.Deliverables
                 .FirstOrDefaultAsync(d => d.DeliverablesID == deliverableId);
 
             if (deliverable is null)
-                return Result<bool>
-                    .NotFound($"Deliverable with ID {deliverableId} was not found.");
+                return Result<bool>.NotFound($"Deliverable with ID {deliverableId} was not found.");
 
             if (deliverable.Milestone.Contract.ClientID != client.ClientID)
-                return Result<bool>
-                    .Forbidden("You do not own the contract of this deliverable.");
+                return Result<bool>.Forbidden("You do not own the contract of this deliverable.");
 
             if (deliverable.Approved_at.HasValue)
-                return Result<bool>
-                    .Conflict("Cannot reject an already approved deliverable.");
+                return Result<bool>.Conflict("Cannot reject an already approved deliverable.");
 
             _context.Deliverables.Remove(deliverable);
             await _context.SaveChangesAsync();
@@ -256,13 +237,11 @@ namespace LabCourse2.Application.Services.Deliverables
             return Result<bool>.Success(true);
         }
 
-     
         public async Task<Result<bool>> DeleteAsync(Guid deliverableId)
         {
             var freelancer = await GetFreelancerProfileAsync();
             if (freelancer is null)
-                return Result<bool>
-                    .Forbidden("Only freelancers can delete their deliverables.");
+                return Result<bool>.Forbidden("Only freelancers can delete their deliverables.");
 
             var deliverable = await _context.Deliverables
                 .Include(d => d.Milestone)
@@ -270,16 +249,13 @@ namespace LabCourse2.Application.Services.Deliverables
                 .FirstOrDefaultAsync(d => d.DeliverablesID == deliverableId);
 
             if (deliverable is null)
-                return Result<bool>
-                    .NotFound($"Deliverable with ID {deliverableId} was not found.");
+                return Result<bool>.NotFound($"Deliverable with ID {deliverableId} was not found.");
 
             if (deliverable.Milestone.Contract.FreelancerID != freelancer.FreelancerID)
-                return Result<bool>
-                    .Forbidden("You are not the freelancer on this contract.");
+                return Result<bool>.Forbidden("You are not the freelancer on this contract.");
 
             if (deliverable.Approved_at.HasValue)
-                return Result<bool>
-                    .Failure("Cannot delete an approved deliverable.");
+                return Result<bool>.Failure("Cannot delete an approved deliverable.");
 
             _context.Deliverables.Remove(deliverable);
             await _context.SaveChangesAsync();

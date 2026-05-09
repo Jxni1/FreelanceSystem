@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useContracts } from '../../hooks/useContracts';
+import { useAuthorization } from '../../hooks/useAuthorization';
 
 const STATUS_STYLES = {
   Active: 'bg-teal-50 text-teal-700 border-teal-200',
   Pending: 'bg-amber-50 text-amber-700 border-amber-200',
   Completed: 'bg-blue-50 text-blue-700 border-blue-200',
-  Cancelled: 'bg-red-50 text-red-700 border-red-200',
+  Cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
 export default function ContractsListPage() {
   const { contracts, isLoading, error, fetchContracts, deleteContract } = useContracts();
+  const { isAdmin } = useAuthorization();
   const [filters, setFilters] = useState({ page: 1, pageSize: 10, status: '' });
 
- 
   useEffect(() => {
     fetchContracts(filters);
   }, [filters, fetchContracts]);
@@ -30,36 +31,46 @@ export default function ContractsListPage() {
   };
 
   const handlePageChange = (newPage) => {
-    setFilters(prev => ({ ...prev, page: newPage }));
+    setFilters((prev) => ({ ...prev, page: newPage }));
   };
 
-  return (
-    
-    <div className="p-8 max-w-7xl mx-auto text-slate-100">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">My Contracts</h1>
-          <p className="text-slate-300 mt-1">View and manage your contracts</p>
-        </div>
-        <Link
-          to="/admin/contracts/new"
-          className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
-        >
-          + New Contract
-        </Link>
-      </div>
-       
+  const totalPages = Math.max(
+    1,
+    Math.ceil((contracts.totalCount || 0) / (filters.pageSize || 10))
+  );
 
-      {/* Filters */}
-      <div className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+  return (
+    <div className="p-6 md:p-8 max-w-7xl mx-auto text-slate-900 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+            Contract Management
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500 mt-1">
+            View, create, and manage all contracts across the platform.
+          </p>
+        </div>
+        {isAdmin && (
+          <Link
+            to="/admin/contracts/new"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-sm font-semibold text-white shadow-sm transition-colors"
+          >
+            <span className="text-base leading-none">+</span>
+            <span>New Contract</span>
+          </Link>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm mb-4">
+        <div className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <select
             value={filters.status}
-            onChange={e => setFilters(f => ({ ...f, status: e.target.value, page: 1 }))}
-            className="px-4 py-2 border border-slate-200 rounded-lg text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 flex-1 max-w-xs"
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, status: e.target.value, page: 1 }))
+            }
+            className="px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent max-w-xs"
           >
-            <option value="">All Statuses</option>
+            <option value="">All statuses</option>
             <option value="Pending">Pending</option>
             <option value="Active">Active</option>
             <option value="Completed">Completed</option>
@@ -68,86 +79,102 @@ export default function ContractsListPage() {
         </div>
       </div>
 
-      {/* Loading */}
       {isLoading && (
-        <div className="text-center py-12">
-          <div className="inline-block w-10 h-10 border-4 border-slate-200 border-t-purple-600 rounded-full animate-spin mb-4" />
-          <p className="text-slate-500">Loading contracts...</p>
+        <div className="py-10 text-center text-slate-500">
+          <div className="inline-block w-9 h-9 border-4 border-slate-200 border-t-purple-500 rounded-full animate-spin mb-4" />
+          <p className="text-sm">Loading contracts...</p>
         </div>
       )}
 
-      {/* Error */}
       {error && !isLoading && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 mb-6">
-          {typeof error === 'string' ? error : error.message || 'Failed to load contracts.'}
+        <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-700">
+          {typeof error === 'string'
+            ? error
+            : error.message || 'Failed to load contracts.'}
         </div>
       )}
 
-      {/* Table */}
       {!isLoading && !error && (
-        <div className="bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="min-w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Description</th>
-                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Client</th>
-                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Freelancer</th>
-                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Price</th>
-                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Status</th>
-                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Start Date</th>
-                  <th className="px-6 py-4 text-right font-semibold text-slate-600">Actions</th>
+                <tr className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  <th className="px-5 py-3 text-left">Description</th>
+                  <th className="px-5 py-3 text-left">Client</th>
+                  <th className="px-5 py-3 text-left">Freelancer</th>
+                  <th className="px-5 py-3 text-left">Agreed Price</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                  <th className="px-5 py-3 text-left">Start Date</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {contracts.items?.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                    <td
+                      colSpan={7}
+                      className="px-6 py-10 text-center text-slate-500 text-sm"
+                    >
                       No contracts found matching your filters.
                     </td>
                   </tr>
                 ) : (
-                  contracts.items?.map(contract => (
-                    <tr key={contract.contractID} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 text-slate-700 max-w-[200px] truncate">
+                  contracts.items?.map((contract) => (
+                    <tr
+                      key={contract.contractID}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="px-5 py-3 max-w-[260px] text-slate-900 truncate">
                         {contract.description}
                       </td>
-                      <td className="px-6 py-4 text-slate-600 font-medium">{contract.clientName}</td>
-                      <td className="px-6 py-4 text-slate-600">{contract.freelancerName}</td>
-                      <td className="px-6 py-4 text-slate-800 font-semibold">
+                      <td className="px-5 py-3 text-slate-700 font-medium">
+                        {contract.clientName}
+                      </td>
+                      <td className="px-5 py-3 text-slate-700">
+                        {contract.freelancerName}
+                      </td>
+                      <td className="px-5 py-3 text-slate-900 font-semibold">
                         ${contract.agreedPrice?.toLocaleString() || 'N/A'}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${STATUS_STYLES[contract.status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                      <td className="px-5 py-3">
+                        <span
+                          className={`px-3 py-1 text-[11px] font-semibold rounded-full border ${
+                            STATUS_STYLES[contract.status] ||
+                            'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
                           {contract.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        {contract.start_Date ? new Date(contract.start_Date).toLocaleDateString() : 'N/A'}
+                      <td className="px-5 py-3 text-slate-500">
+                        {contract.start_Date
+                          ? new Date(contract.start_Date).toLocaleDateString()
+                          : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-5 py-3">
                         <div className="flex justify-end gap-2">
                           <Link
                             to={`/admin/contracts/${contract.contractID}`}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-colors"
+                            className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                           >
                             View
                           </Link>
                           <Link
                             to={`/admin/contracts/${contract.contractID}/edit`}
-                            className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-medium transition-colors"
+                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-semibold text-white"
                           >
                             Edit
                           </Link>
                           <Link
-                            to={`/admin/contracts/${contract.contractID}/workflow`}
-                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium transition-colors"
+                            to={`/contracts/${contract.contractID}/workflow`}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white"
                           >
                             Workflow
                           </Link>
                           <button
                             onClick={() => handleDelete(contract.contractID)}
-                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition-colors"
+                            className="px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 hover:bg-rose-100 text-xs font-semibold text-rose-600"
                           >
                             Delete
                           </button>
@@ -160,33 +187,41 @@ export default function ContractsListPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           {contracts.totalCount > filters.pageSize && (
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">
-                  Showing {(filters.page - 1) * filters.pageSize + 1} to {Math.min(filters.page * filters.pageSize, contracts.totalCount)} of{' '}
-                  <span className="font-semibold text-slate-700">{contracts.totalCount}</span> contracts
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={filters.page <= 1}
-                    onClick={() => handlePageChange(filters.page - 1)}
-                    className="px-4 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-slate-500 px-3">
-                    Page {filters.page} of {Math.ceil(contracts.totalCount / filters.pageSize)}
-                  </span>
-                  <button
-                    disabled={filters.page >= Math.ceil(contracts.totalCount / filters.pageSize)}
-                    onClick={() => handlePageChange(filters.page + 1)}
-                    className="px-4 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Next
-                  </button>
-                </div>
+            <div className="px-5 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+              <p>
+                Showing{' '}
+                <span className="font-semibold text-slate-700">
+                  {(filters.page - 1) * filters.pageSize + 1}
+                </span>{' '}
+                to{' '}
+                <span className="font-semibold text-slate-700">
+                  {Math.min(filters.page * filters.pageSize, contracts.totalCount)}
+                </span>{' '}
+                of{' '}
+                <span className="font-semibold text-slate-700">
+                  {contracts.totalCount}
+                </span>{' '}
+                contracts
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={filters.page <= 1}
+                  onClick={() => handlePageChange(filters.page - 1)}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="px-2">
+                  Page {filters.page} of {totalPages}
+                </span>
+                <button
+                  disabled={filters.page >= totalPages}
+                  onClick={() => handlePageChange(filters.page + 1)}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
               </div>
             </div>
           )}

@@ -29,6 +29,19 @@ namespace LabCourse2.Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasMaxLength(50);
 
+            builder.Property(m => m.Order_Index)
+                .IsRequired()
+                .HasDefaultValue(0);
+
+            builder.Property(m => m.Funded_at);
+
+            builder.Property(m => m.Submitted_at);
+
+            builder.Property(m => m.Approved_at);
+
+            builder.Property(m => m.Submission_Note)
+                .HasMaxLength(2000);
+
             builder.Property(m => m.ContractID)
                 .IsRequired();
 
@@ -36,23 +49,17 @@ namespace LabCourse2.Infrastructure.Persistence.Configurations
                 .WithMany(c => c.Milestones)
                 .HasForeignKey(m => m.ContractID);
 
-          
             builder.HasIndex(m => m.ContractID);
-
             builder.HasIndex(m => m.status);
-
             builder.HasIndex(m => m.DueDate);
-
-           
+            builder.HasIndex(m => m.Order_Index);
+            builder.HasIndex(m => new { m.ContractID, m.Order_Index }).IsUnique();
             builder.HasIndex(m => new { m.ContractID, m.DueDate });
 
-           
-
             builder.HasCheckConstraint("CK_Milestone_Amount", "[Amount] >= 0");
-
             builder.HasCheckConstraint(
                 "CK_Milestone_Status",
-                "[status] IN ('pending','in_progress','completed','cancelled')"
+                "[status] IN ('Draft','Funded','Submitted','Approved','Cancelled')"
             );
 
             builder.ToTable("Milestones");

@@ -1,4 +1,3 @@
-// src/lib/deliverableService.js
 import { apiClient } from './apiClient';
 
 export const deliverableService = {
@@ -12,7 +11,6 @@ export const deliverableService = {
     return result.data;
   },
 
-  // matches CreateDeliverableRequest: { MilestoneID, FileID }
   async submit(data) {
     const result = await apiClient.post('/api/deliverables', data);
     return result.data;

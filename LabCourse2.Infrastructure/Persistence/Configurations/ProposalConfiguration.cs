@@ -10,17 +10,17 @@ namespace LabCourse2.Infrastructure.Persistence.Cofigurations
         {
             builder.HasKey(pr => pr.ProposalId);
 
-            builder.Property(pr => pr.DeliveryDays)
-                .IsRequired();
+            builder.Property(pr => pr.DeliveryDays).IsRequired();
+
+            builder.Property(pr => pr.BidAmount).HasPrecision(18, 2);
+
+            builder.Property(pr => pr.Created_at).IsRequired();
+
+            builder.HasIndex(pr => pr.Created_at);
 
             builder.ToTable(t => t.HasCheckConstraint("CK_Proposal_BidAmount", "[BidAmount]>0"));
-
             builder.ToTable(t => t.HasCheckConstraint("CK_Proposal_DeliveryDays", "[DeliveryDays]>0"));
-
             builder.ToTable(t => t.HasCheckConstraint("CK_Proposal_Status", "[Status] IN('pending','accepted','rejected','withdrawn')"));
-
-            builder.Property(pr => pr.BidAmount)
-                .HasPrecision(18, 2);
         }
     }
 }

@@ -32,21 +32,14 @@ namespace LabCourse2.Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasMaxLength(100);
 
-            builder.Property(f => f.Created_by)
-                .IsRequired()
-                .HasMaxLength(100);
-
-            
+            builder.Property(f => f.Created_at)
+                .IsRequired();
 
             builder.HasIndex(f => new { f.Entity, f.EntityID });
 
-          
             builder.HasIndex(f => f.Filename);
 
-          
             builder.HasIndex(f => f.Uploaded_by);
-
-          
 
             builder.HasCheckConstraint(
                 "CK_Files_FileSize",

@@ -1,8 +1,6 @@
-// src/lib/milestoneService.js
 import { apiClient } from './apiClient';
 
 export const milestoneService = {
-  // GET /api/milestones/contract/{contractId}
   async getByContract(contractId) {
     const result = await apiClient.get(`/api/milestones/contract/${contractId}`);
     return result.data;
@@ -13,7 +11,6 @@ export const milestoneService = {
     return result.data;
   },
 
-  // matches CreateMilestoneRequest: { Title, Description, Amount, DueDate, ContractID }
   async create(data) {
     const result = await apiClient.post('/api/milestones', data);
     return result.data;
@@ -24,8 +21,18 @@ export const milestoneService = {
     return result.data;
   },
 
-  async complete(id) {
-    const result = await apiClient.patch(`/api/milestones/${id}/complete`);
+  async fund(id, data) {
+    const result = await apiClient.post(`/api/milestones/${id}/fund`, data);
+    return result.data;
+  },
+
+  async submit(id, data) {
+    const result = await apiClient.post(`/api/milestones/${id}/submit`, data);
+    return result.data;
+  },
+
+  async approve(id) {
+    const result = await apiClient.patch(`/api/milestones/${id}/approve`);
     return result.data;
   },
 

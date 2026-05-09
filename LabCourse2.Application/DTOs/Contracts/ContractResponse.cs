@@ -6,9 +6,10 @@
         public string Description { get; init; } = string.Empty;
         public DateTime Start_Date { get; init; }
         public DateTime End_Date { get; init; }
-        public decimal Price { get; init; }
         public decimal Agreed_Price { get; init; }
         public string Status { get; init; } = string.Empty;
+
+        public Guid? ProposalID { get; init; }
 
         public Guid ClientID { get; init; }
         public string ClientName { get; init; } = string.Empty;

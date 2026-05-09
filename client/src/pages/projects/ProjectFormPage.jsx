@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
 import { SmartBackButton } from '../../components/SmartBackButton';
 
@@ -15,7 +15,7 @@ export default function ProjectFormPage() {
     budget: '',
     visibility: 'Public',
     status: 'Open',
-    categoryID: ''
+    categoryID: '',
   });
 
   const categories = [
@@ -42,21 +42,23 @@ export default function ProjectFormPage() {
         budget: project.budget || '',
         visibility: project.visibility || 'Public',
         status: project.status || 'Open',
-        categoryID: project.categoryID || ''
+        categoryID: project.categoryID || '',
       });
     }
   }, [isEditMode, project]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleValidation = () => {
-    if (!formData.title.trim()) return "Title is required";
-    if (!formData.description.trim()) return "Description is required";
-    if (!formData.budget || isNaN(formData.budget) || Number(formData.budget) <= 0) return "Budget must be a number greater than 0";
-    if (!formData.categoryID) return "Category is required";
+    if (!formData.title.trim()) return 'Title is required';
+    if (!formData.description.trim()) return 'Description is required';
+    if (!formData.budget || isNaN(formData.budget) || Number(formData.budget) <= 0) {
+      return 'Budget must be a number greater than 0';
+    }
+    if (!formData.categoryID) return 'Category is required';
     return null;
   };
 
@@ -74,7 +76,7 @@ export default function ProjectFormPage() {
     try {
       const payload = {
         ...formData,
-        budget: Number(formData.budget)
+        budget: Number(formData.budget),
       };
 
       if (isEditMode) {
@@ -85,7 +87,11 @@ export default function ProjectFormPage() {
         navigate(`/projects/${result.projectID || ''}`);
       }
     } catch (err) {
-      setFormError(typeof err?.response?.data === 'string' ? err?.response?.data : 'Failed to save project. Ensure your Client account has permissions to do this or Category IDs matches.');
+      setFormError(
+        typeof err?.response?.data === 'string'
+          ? err.response.data
+          : 'Failed to save project. Ensure your account has permission and the category is valid.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -93,96 +99,103 @@ export default function ProjectFormPage() {
 
   if (isEditMode && isLoading && !project) {
     return (
-      <div className="p-12 text-center text-slate-500">
-        <div className="inline-block w-8 h-8 border-4 border-slate-200 border-t-teal-600 rounded-full animate-spin mb-4" />
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-500">
+        <div className="inline-block w-10 h-10 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin mb-4" />
         <p>Loading project form...</p>
       </div>
     );
   }
 
+  const inputClass =
+    'w-full px-4 py-3 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent';
+  const labelClass =
+    'block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-2';
+
   return (
-    <div className="p-8 max-w-3xl mx-auto text-slate-100">
+    <div className="max-w-4xl mx-auto text-slate-900 space-y-6">
       <SmartBackButton fallbackTo={isEditMode ? `/projects/${id}` : '/projects'} label="Back" />
 
-      <div className="bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-teal-500 to-emerald-400" />
-        <div className="p-8">
-          <h1 className="text-3xl font-extrabold text-slate-900 mb-2">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="h-1 bg-linear-to-r from-teal-500 to-emerald-400" />
+
+        <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
+          <h1 className="text-2xl font-bold text-slate-900">
             {isEditMode ? 'Edit Project' : 'Create New Project'}
           </h1>
-          <p className="text-slate-500 mb-8">
-            {isEditMode ? 'Make changes to your project configuration below.' : 'Fill out the initial details to create a new workspace for your project.'}
+          <p className="text-sm text-slate-500 mt-1">
+            {isEditMode
+              ? 'Update project details, visibility, status, and category.'
+              : 'Create a new project for the platform using the required fields below.'}
           </p>
+        </div>
 
+        <div className="p-6 md:p-8">
           {(error || formError) && (
-            <div className="p-4 mb-6 text-red-700 bg-red-50 rounded-lg border border-red-200 font-medium">
+            <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               {formError || (typeof error === 'string' ? error : 'Failed to load data')}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2" htmlFor="title">
-                  Project Title *
+                <label className={labelClass} htmlFor="title">
+                  Project Title
                 </label>
                 <input
-                  type="text"
                   id="title"
                   name="title"
-                  required
+                  type="text"
                   value={formData.title}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-shadow bg-slate-50 focus:bg-white"
+                  className={inputClass}
                   placeholder="e.g. Website Redesign Q3"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2" htmlFor="description">
-                  Description *
+                <label className={labelClass} htmlFor="description">
+                  Description
                 </label>
                 <textarea
                   id="description"
                   name="description"
-                  required
-                  rows="4"
+                  rows="5"
                   value={formData.description}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-shadow bg-slate-50 focus:bg-white resize-y"
-                  placeholder="Describe the main goals and scope..."
+                  className={`${inputClass} resize-y`}
+                  placeholder="Describe the scope, deliverables, and overall goal..."
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2" htmlFor="budget">
-                    Budget ($) *
+                  <label className={labelClass} htmlFor="budget">
+                    Budget
                   </label>
                   <input
-                    type="number"
                     id="budget"
                     name="budget"
+                    type="number"
                     min="1"
                     step="0.01"
-                    required
                     value={formData.budget}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-shadow bg-slate-50 focus:bg-white"
-                    placeholder="e.g. 5000"
+                    className={inputClass}
+                    placeholder="5000"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2" htmlFor="visibility">
-                    Visibility *
+                  <label className={labelClass} htmlFor="visibility">
+                    Visibility
                   </label>
                   <select
                     id="visibility"
                     name="visibility"
                     value={formData.visibility}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-shadow bg-slate-50 focus:bg-white"
+                    className={inputClass}
                   >
                     <option value="Public">Public</option>
                     <option value="Private">Private</option>
@@ -191,18 +204,17 @@ export default function ProjectFormPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2" htmlFor="categoryID">
-                  Category *
+                <label className={labelClass} htmlFor="categoryID">
+                  Category
                 </label>
                 <select
                   id="categoryID"
                   name="categoryID"
-                  required
                   value={formData.categoryID}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-shadow bg-slate-50 focus:bg-white"
+                  className={inputClass}
                 >
-                  <option value="" disabled>Select a Category</option>
+                  <option value="">Select a category</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
@@ -213,15 +225,15 @@ export default function ProjectFormPage() {
 
               {isEditMode && (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2" htmlFor="status">
-                    Status *
+                  <label className={labelClass} htmlFor="status">
+                    Status
                   </label>
                   <select
                     id="status"
                     name="status"
                     value={formData.status}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-shadow bg-slate-50 focus:bg-white"
+                    className={inputClass}
                   >
                     <option value="Open">Open</option>
                     <option value="InProgress">In Progress</option>
@@ -232,24 +244,27 @@ export default function ProjectFormPage() {
               )}
             </div>
 
-            <div className="pt-6 border-t border-slate-100 flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => navigate(isEditMode ? `/projects/${id}` : '/projects')}
-                className="px-6 py-3 font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-xl transition-colors"
+                className="px-6 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                 disabled={isSubmitting}
               >
                 Cancel
               </button>
+
               <button
                 type="submit"
-                className="px-8 py-3 font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2 min-w-[140px]"
+                className="min-w-40 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : isEditMode ? (
+                  'Save Changes'
                 ) : (
-                  isEditMode ? 'Save Changes' : 'Create Project'
+                  'Create Project'
                 )}
               </button>
             </div>

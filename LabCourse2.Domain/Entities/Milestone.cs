@@ -17,6 +17,16 @@ namespace LabCourse2.Domain.Entities
 
         public string status { get; set; } = null!;
 
+        public int Order_Index { get; set; }
+
+        public DateTime? Funded_at { get; set; }
+
+        public DateTime? Submitted_at { get; set; }
+
+        public DateTime? Approved_at { get; set; }
+
+        public string? Submission_Note { get; set; }
+
         public Guid ContractID { get; set; }
         public Contract Contract { get; set; } = null!;
 

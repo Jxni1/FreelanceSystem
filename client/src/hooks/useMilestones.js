@@ -1,4 +1,3 @@
-// src/hooks/useMilestones.js
 import { useState, useCallback } from 'react';
 import { milestoneService } from '../lib/milestoneService';
 
@@ -71,14 +70,47 @@ export function useMilestones() {
     }
   }, []);
 
-  const completeMilestone = useCallback(async (id) => {
+  const fundMilestone = useCallback(async (id, data) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await milestoneService.complete(id);
-      return { success: true, data };
+      const result = await milestoneService.fund(id, data);
+      return { success: true, data: result };
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to complete milestone';
+      const raw = err?.response?.data;
+      const message = typeof raw === 'string' ? raw : raw?.message || (Array.isArray(raw) ? raw.join(' ') : 'Failed to fund milestone.');
+      setError(message);
+      return { success: false, error: message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const submitMilestone = useCallback(async (id, data) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await milestoneService.submit(id, data);
+      return { success: true, data: result };
+    } catch (err) {
+      const raw = err?.response?.data;
+      const message = typeof raw === 'string' ? raw : raw?.message || (Array.isArray(raw) ? raw.join(' ') : 'Failed to submit milestone.');
+      setError(message);
+      return { success: false, error: message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const approveMilestone = useCallback(async (id) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await milestoneService.approve(id);
+      return { success: true, data: result };
+    } catch (err) {
+      const raw = err?.response?.data;
+      const message = typeof raw === 'string' ? raw : raw?.message || (Array.isArray(raw) ? raw.join(' ') : 'Failed to approve milestone.');
       setError(message);
       return { success: false, error: message };
     } finally {
@@ -110,7 +142,9 @@ export function useMilestones() {
     fetchMilestoneById,
     createMilestone,
     updateMilestone,
-    completeMilestone,
+    fundMilestone,
+    submitMilestone,
+    approveMilestone,
     deleteMilestone,
   };
 }

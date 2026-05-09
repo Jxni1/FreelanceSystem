@@ -7,6 +7,7 @@ namespace LabCourse2.Application.DTOs.Auth
         public string Surname { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? ProfilePhoto { get; set; }
         public List<string> Roles { get; set; } = new();
         public string? ProfilePhoto { get; set; }
 
@@ -18,6 +19,7 @@ namespace LabCourse2.Application.DTOs.Auth
     {
         public string ExperienceLevel { get; set; } = string.Empty;
         public decimal HourlyRate { get; set; }
+        public List<string> Skills { get; set; } = new();
     }
 
     public class ClientProfileDto
