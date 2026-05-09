@@ -5,7 +5,8 @@ const navItems = [
   { key: 'users', label: 'User Management', to: '/admin/users' },
   { key: 'projects', label: 'Project Management', to: '/admin/projects' },
   { key: 'contracts', label: 'Contract Management', to: '/admin/contracts' },
-  { key: 'reports', label: 'Reports & Analytics', to: '/admin/reports' }
+  { key: 'reports', label: 'Reports & Analytics', to: '/admin/reports' },
+  { key: 'settings', label: 'Settings Management', to: '/admin/settings' }
 ];
 
 export function AdminLayout() {

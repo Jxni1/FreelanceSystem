@@ -120,6 +120,8 @@ builder.Services.AddScoped<IValidator<UpdateSkillRequest>, UpdateSkillRequestVal
 
 builder.Services.AddScoped<IContractService, ContractService>();
 
+builder.Services.AddScoped<ISettingService, SettingService>();
+
 builder.Services.AddScoped<IProposalService, ProposalService>();
 builder.Services.AddScoped<IValidator<CreateProposalRequest>, CreateProposalRequestValidator>();
 
