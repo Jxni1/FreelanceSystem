@@ -114,6 +114,8 @@ builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IValidator<CreateProjectRequest>, CreateProjectRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateProjectRequest>, UpdateProjectRequestValidator>();
 
+builder.Services.AddScoped<ISettingService, SettingService>();
+
 builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IValidator<CreateSkillRequest>, CreateSkillRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateSkillRequest>, UpdateSkillRequestValidator>();

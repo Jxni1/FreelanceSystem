@@ -7,5 +7,6 @@ namespace LabCourse2.Application.Interfaces.Payments
     {
         Task<Result<PagedResult<PaymentResponse>>> GetByContractAsync(Guid contractId, int page, int pageSize);
         Task<Result<PaymentResponse>> GetByIdAsync(Guid id);
+        Task<Result<PaymentResponse>> WithdrawAsync(Guid contractId, decimal amount);
     }
 }

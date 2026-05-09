@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLES } from '../../constants/roles';
+import { settingService } from '../../lib/settingService';
 
 const EXPERIENCE_LEVELS = ['Junior', 'Mid', 'Senior', 'Expert'];
 
@@ -9,6 +10,34 @@ export function RegisterPage() {
   const [role, setRole] = useState('');
   const [errors, setErrors] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRegistrationEnabled, setIsRegistrationEnabled] = useState(true);
+  const [isCheckingSettings, setIsCheckingSettings] = useState(true);
+  const [minClientBudget, setMinClientBudget] = useState(0);
+
+  useEffect(() => {
+    const checkSettings = async () => {
+      try {
+        const registrationResult = await settingService.getByKey('registration_enabled');
+        if (registrationResult && registrationResult.value?.toLowerCase() === 'false') {
+          setIsRegistrationEnabled(false);
+        } else {
+          setIsRegistrationEnabled(true);
+        }
+
+        const budgetResult = await settingService.getByKey('min_client_budget');
+        if (budgetResult && budgetResult.value) {
+          setMinClientBudget(parseFloat(budgetResult.value) || 0);
+        }
+      } catch (err) {
+        setIsRegistrationEnabled(true);
+        setMinClientBudget(0);
+        console.error('Failed to check settings:', err);
+      } finally {
+        setIsCheckingSettings(false);
+      }
+    };
+    checkSettings();
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -32,9 +61,17 @@ export function RegisterPage() {
     }
 
     if (role === ROLES.CLIENT) {
+      const budget = parseFloat(form.get('budget')) ?? null;
+      
+      if (minClientBudget > 0 && budget && budget < minClientBudget) {
+        setErrors([`Minimum budget is $${minClientBudget.toFixed(2)}`]);
+        setIsSubmitting(false);
+        return;
+      }
+
       body.bio      = form.get('bio');
       body.industry = form.get('industry');
-      body.budget   = parseFloat(form.get('budget')) ?? null;
+      body.budget   = budget;
     }
 
     try {
@@ -62,6 +99,14 @@ export function RegisterPage() {
     }
   }
 
+  if (isCheckingSettings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-slate-200 border-t-teal-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
       <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl p-10 shadow-sm transition-all duration-300">
@@ -75,6 +120,13 @@ export function RegisterPage() {
           <p className="text-sm text-slate-500">Join as a freelancer or a client to get started</p>
         </div>
 
+        {!isRegistrationEnabled && (
+          <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm font-semibold text-amber-900 mb-1">Registration Disabled</p>
+            <p className="text-sm text-amber-800">Registration is currently disabled. Please try again later or contact support.</p>
+          </div>
+        )}
+
         <form className="space-y-8" onSubmit={handleSubmit} noValidate>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <RoleCard
@@ -82,6 +134,7 @@ export function RegisterPage() {
               value={ROLES.FREELANCER}
               selected={role === ROLES.FREELANCER}
               onSelect={setRole}
+              disabled={!isRegistrationEnabled}
               icon={
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"/>
@@ -96,6 +149,7 @@ export function RegisterPage() {
               value={ROLES.CLIENT}
               selected={role === ROLES.CLIENT}
               onSelect={setRole}
+              disabled={!isRegistrationEnabled}
               icon={
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -112,14 +166,16 @@ export function RegisterPage() {
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="name">First name</label>
               <input 
                 id="name" name="name" type="text" autoComplete="given-name" placeholder="Jane" required 
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="surname">Last name</label>
               <input 
                 id="surname" name="surname" type="text" autoComplete="family-name" placeholder="Smith" required 
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -129,7 +185,8 @@ export function RegisterPage() {
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="username">Username</label>
               <input 
                 id="username" name="username" type="text" autoComplete="username" placeholder="jane_smith" required 
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -137,7 +194,8 @@ export function RegisterPage() {
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="reg-email">Email address</label>
               <input 
                 id="reg-email" name="email" type="email" autoComplete="email" placeholder="jane@example.com" required 
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -145,7 +203,8 @@ export function RegisterPage() {
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="reg-password">Password</label>
               <input 
                 id="reg-password" name="password" type="password" autoComplete="new-password" placeholder="Min 8 chars, upper, digit, symbol" required 
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                disabled={!isRegistrationEnabled}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -158,7 +217,8 @@ export function RegisterPage() {
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="experienceLevel">Experience level</label>
                   <select 
                     id="experienceLevel" name="experienceLevel" required defaultValue=""
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%238b8b9e%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-position-[right_12px_center]"
+                    disabled={!isRegistrationEnabled}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%238b8b9e%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-position-[right_12px_center] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="" disabled>Select level</option>
                     {EXPERIENCE_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
@@ -168,7 +228,8 @@ export function RegisterPage() {
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="hourlyRate">Hourly rate (USD)</label>
                   <input 
                     id="hourlyRate" name="hourlyRate" type="number" min="1" step="0.01" placeholder="e.g. 45.00" required 
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                    disabled={!isRegistrationEnabled}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -182,7 +243,8 @@ export function RegisterPage() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="bio">Bio</label>
                 <textarea 
                   id="bio" name="bio" placeholder="Tell freelancers about yourself…" maxLength={1000} required 
-                  className="w-full px-4 py-2.5 min-h-25 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all resize-y"
+                  disabled={!isRegistrationEnabled}
+                  className="w-full px-4 py-2.5 min-h-25 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all resize-y disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -190,15 +252,20 @@ export function RegisterPage() {
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="industry">Industry</label>
                   <input 
                     id="industry" name="industry" type="text" placeholder="e.g. Tech" required 
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                    disabled={!isRegistrationEnabled}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="budget">Budget (USD)</label>
                   <input 
                     id="budget" name="budget" type="number" min="0" step="0.01" placeholder="e.g. 5000.00" required 
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                    disabled={!isRegistrationEnabled}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
+                  {minClientBudget > 0 && (
+                    <p className="text-xs text-slate-500">Minimum: ${minClientBudget.toFixed(2)}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -215,7 +282,7 @@ export function RegisterPage() {
           <button 
             id="register-submit" 
             type="submit" 
-            disabled={isSubmitting || !role}
+            disabled={isSubmitting || !role || !isRegistrationEnabled}
             className="w-full flex items-center justify-center gap-2 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-semibold rounded-lg shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer"
           >
             {isSubmitting ? (
@@ -234,17 +301,20 @@ export function RegisterPage() {
   );
 }
 
-function RoleCard({ id, value, selected, onSelect, icon, label, description }) {
+function RoleCard({ id, value, selected, onSelect, disabled, icon, label, description }) {
   return (
     <button
       id={id}
       type="button"
+      disabled={disabled}
       className={`relative flex flex-col items-center gap-2 p-5 border-2 rounded-xl transition-all cursor-pointer text-center group ${
-        selected 
-          ? 'border-teal-600 bg-teal-50 shadow-sm shadow-teal-600/5' 
-          : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-slate-100'
+        disabled 
+          ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed' 
+          : selected 
+            ? 'border-teal-600 bg-teal-50 shadow-sm shadow-teal-600/5' 
+            : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-slate-100'
       }`}
-      onClick={() => onSelect(value)}
+      onClick={() => !disabled && onSelect(value)}
       aria-pressed={selected}
     >
       <div className={`flex items-center justify-center w-12 h-12 rounded-lg transition-colors ${

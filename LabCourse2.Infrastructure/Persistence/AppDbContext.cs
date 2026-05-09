@@ -171,6 +171,14 @@ namespace LabCourse2.Infrastructure.Persistence
                  .OnDelete(DeleteBehavior.Restrict);
             });
 
+    modelBuilder.Entity<Setting>(e =>
+    {
+        e.HasKey(s => s.SettingID);
+        e.Property(s => s.Key).IsRequired();
+        e.Property(s => s.Value).IsRequired();
+        e.HasIndex(s => s.Key).IsUnique();
+    });
+
             modelBuilder.Entity<Contract>(e =>
             {
                 e.HasKey(c => c.ContractID);
