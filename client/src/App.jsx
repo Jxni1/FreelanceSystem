@@ -13,6 +13,8 @@ import { ROLES } from "./constants/roles";
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AdminPanelPage = lazy(() => import("./pages/admin/AdminPanelPage"));
 const ProfilePage = lazy(() => import("./pages/profile/ProfilePage"));
+const AdminSettingsListPage = lazy(() => import("./pages/admin/settings/AdminSettingsListPage"));
+const AdminSettingFormPage = lazy(() => import("./pages/admin/settings/AdminSettingFormPage"));
 
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import EditProfilePage from "./pages/profile/EditProfile";
@@ -108,7 +110,10 @@ export default function App() {
                     <Route path="skills" element={<SkillsListPage />} />
                     <Route path="skills/new" element={<SkillFormPage />} />
                     <Route path="skills/:id/edit" element={<SkillFormPage />} />
-                      <Route path="reports" element={<AdminReportsPage />} />
+                    <Route path="settings" element={<AdminSettingsListPage />} />
+                    <Route path="settings/new" element={<AdminSettingFormPage />} />
+                    <Route path="settings/:id/edit" element={<AdminSettingFormPage />} />
+                    <Route path="reports" element={<AdminReportsPage />} />
                    
                   </Route>
                 </Route>

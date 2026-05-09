@@ -21,4 +21,3 @@ namespace LabCourse2.Application.Interfaces.Users
 
         Task<Result<UserListItemDto>> CreateUserByAdminAsync(CreateUserByAdminRequest request);
     }
-}

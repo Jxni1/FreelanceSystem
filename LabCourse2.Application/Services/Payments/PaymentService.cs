@@ -73,6 +73,16 @@ namespace LabCourse2.Application.Services.Payments
 
         public async Task<Result<PaymentResponse>> GetByIdAsync(Guid id)
         {
+
+            var minWithdrawalSetting = await _settingService.GetSettingValueAsync("min_withdrawal_amount");
+    
+            if (decimal.TryParse(minWithdrawalSetting, out var minAmount) && request.Amount < minAmount)
+            {
+                return Result<PaymentResponse>.Failure(
+                 $"Minimum withdrawal amount is ${minAmount:F2}. Your amount must be at least this much."
+                );
+            }
+
             var payment = await _context.Payments
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PaymentID == id);
