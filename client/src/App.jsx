@@ -25,6 +25,8 @@ const ProjectFormPage = lazy(() => import("./pages/projects/ProjectFormPage"));
 const SkillsListPage = lazy(() => import("./pages/admin/skills/SkillsListPage"));
 const SkillFormPage = lazy(() => import("./pages/admin/skills/SkillFormPage"));
 const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
+const AdminSettingsListPage = lazy(() => import("./pages/admin/settings/AdminSettingsListPage"));
+const AdminSettingFormPage = lazy(() => import("./pages/admin/settings/AdminSettingFormPage"));
 
 const ContractsListPage = lazy(() => import("./pages/contracts/ContractsListPage"));
 const ContractDetailsPage = lazy(() => import("./pages/contracts/ContractDetailPage"));
@@ -108,6 +110,9 @@ export default function App() {
                     <Route path="skills" element={<SkillsListPage />} />
                     <Route path="skills/new" element={<SkillFormPage />} />
                     <Route path="skills/:id/edit" element={<SkillFormPage />} />
+                    <Route path="settings" element={<AdminSettingsListPage />} />
+                    <Route path="settings/new" element={<AdminSettingFormPage />} />
+                    <Route path="settings/:id/edit" element={<AdminSettingFormPage />} />
                       <Route path="reports" element={<AdminReportsPage />} />
                    
                   </Route>
