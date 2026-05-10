@@ -155,19 +155,19 @@ export default function ContractsListPage() {
                       <td className="px-5 py-3">
                         <div className="flex justify-end gap-2">
                           <Link
-                            to={`/admin/contracts/${contract.contractID}`}
+                            to={isAdmin ? `/admin/contracts/${contract.contractID}` : `/contracts/${contract.contractID}`}
                             className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                           >
                             View
                           </Link>
                           <Link
-                            to={`/admin/contracts/${contract.contractID}/edit`}
+                            to={isAdmin ? `/admin/contracts/${contract.contractID}/edit` : `/contracts/${contract.contractID}/edit`}
                             className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-xs font-semibold text-white"
                           >
                             Edit
                           </Link>
                           <Link
-                            to={`/contracts/${contract.contractID}/workflow`}
+                            to={isAdmin ? `/admin/contracts/${contract.contractID}/workflow` : `/contracts/${contract.contractID}/workflow`}
                             className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white"
                           >
                             Workflow

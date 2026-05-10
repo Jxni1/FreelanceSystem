@@ -146,6 +146,7 @@ builder.Services.AddScoped<IValidator<UpdateFileRequest>, UpdateFileRequestValid
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IValidator<CreateReviewRequest>, CreateReviewRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateReviewRequest>, UpdateReviewRequestValidator>();
 
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 

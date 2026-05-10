@@ -23,6 +23,10 @@ namespace LabCourse2.Application.Services.Reviews
             await _context.ClientProfiles
                 .FirstOrDefaultAsync(c => c.UserID == _currentUser.UserId);
 
+        private async Task<FreelancerProfile?> GetFreelancerProfileAsync() =>
+            await _context.FreelancerProfiles
+                .FirstOrDefaultAsync(f => f.UserID == _currentUser.UserId);
+
         public async Task<Result<PagedResult<ReviewResponse>>> GetAllAsync(ReviewQueryParams query)
         {
             var q = _context.Reviews
@@ -36,6 +40,10 @@ namespace LabCourse2.Application.Services.Reviews
 
             if (query.ContractID.HasValue)
                 q = q.Where(r => r.ContractID == query.ContractID.Value);
+
+            var freelancer = await GetFreelancerProfileAsync();
+            if (freelancer is not null)
+                q = q.Where(r => r.FreelancerID == freelancer.FreelancerID);
 
             var totalCount = await q.CountAsync();
 
@@ -113,6 +121,56 @@ namespace LabCourse2.Application.Services.Reviews
                 .FirstOrDefaultAsync(r => r.ReviewsID == review.ReviewsID);
 
             return Result<ReviewResponse>.Created(created!.ToResponse());
+        }
+
+        public async Task<Result<ReviewResponse>> UpdateAsync(Guid id, UpdateReviewRequest request)
+        {
+            var client = await GetClientProfileAsync();
+            if (client is null)
+                return Result<ReviewResponse>.Forbidden("Only clients can update reviews.");
+
+            var review = await _context.Reviews
+                .FirstOrDefaultAsync(r => r.ReviewsID == id);
+
+            if (review is null)
+                return Result<ReviewResponse>.NotFound($"Review with ID {id} was not found.");
+
+            if (review.ClientID != client.ClientID)
+                return Result<ReviewResponse>.Forbidden("You can only update your own reviews.");
+
+            review.Comment = request.Comment;
+            review.Rating = request.Rating;
+
+            await _context.SaveChangesAsync();
+
+            var updated = await _context.Reviews
+                .Include(r => r.Freelancer).ThenInclude(f => f.User)
+                .Include(r => r.Client).ThenInclude(c => c.User)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.ReviewsID == id);
+
+            return Result<ReviewResponse>.Success(updated!.ToResponse());
+        }
+
+        public async Task<Result<bool>> DeleteAsync(Guid id)
+        {
+            var client = await GetClientProfileAsync();
+            if (client is null)
+                return Result<bool>.Forbidden("Only clients can delete reviews.");
+
+            var review = await _context.Reviews
+                .FirstOrDefaultAsync(r => r.ReviewsID == id);
+
+            if (review is null)
+                return Result<bool>.NotFound($"Review with ID {id} was not found.");
+
+            if (review.ClientID != client.ClientID)
+                return Result<bool>.Forbidden("You can only delete your own reviews.");
+
+            _context.Reviews.Remove(review);
+            await _context.SaveChangesAsync();
+
+            return Result<bool>.Success(true);
         }
     }
 }
