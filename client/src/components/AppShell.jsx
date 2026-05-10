@@ -19,6 +19,7 @@ export function AppShell() {
                 <NavItem to="/discover">Discover</NavItem>
                 <NavItem to="/my-work">My Work</NavItem>
                 <NavItem to="/contracts">Contracts</NavItem>
+                <NavItem to="/reviews">Reviews</NavItem>
               </>
             )}
 
@@ -28,6 +29,7 @@ export function AppShell() {
                 <NavItem to="/projects">Projects</NavItem>
                 <NavItem to="/freelancers">Freelancers</NavItem>
                 <NavItem to="/contracts">Contracts</NavItem>
+                <NavItem to="/reviews">Reviews</NavItem>
               </>
             )}
 

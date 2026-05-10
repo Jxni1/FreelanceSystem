@@ -37,6 +37,9 @@ const FreelancerDiscoverPage = lazy(() => import("./pages/freelancer/FreelancerD
 const MyWorkPage = lazy(() => import("./pages/freelancer/MyWorkPage"));
 const FreelancersPage = lazy(() => import("./pages/client/FreelancersPage"));
 
+const ReviewsListPage = lazy(()=> import("./pages/reviews/ReviewsListPage"));
+const ReviewFormPage = lazy(()=> import("./pages/reviews/ReviewFormPage"));
+
 const GlobalSuspenseLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
     <div className="flex flex-col items-center gap-4">
@@ -88,12 +91,16 @@ export default function App() {
                   <Route path="/projects/new" element={<ProjectFormPage />} />
                   <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
                   <Route path="/freelancers" element={<FreelancersPage />} />
+                  <Route path="/reviews/new" element={<ReviewFormPage />} />
+                  <Route path="/reviews/:id/edit" element={<ReviewFormPage />} />
                 </Route>
 
                 {/* Client + Freelancer: their own contracts */}
                 <Route element={<ProtectedRoute requiredRoles={[ROLES.CLIENT, ROLES.FREELANCER]} />}>
                   <Route path="/contracts" element={<ContractsListPage />} />
                   <Route path="/contracts/:id" element={<ContractDetailsPage />} />
+                  <Route path="/contracts/:id/edit" element={<ContractFormPage />} />
+                  <Route path="/reviews" element={<ReviewsListPage />} />
                 </Route>
 
                 {/* Admin only */}
