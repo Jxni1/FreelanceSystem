@@ -17,6 +17,8 @@ const ProfilePage = lazy(() => import("./pages/profile/ProfilePage"));
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import EditProfilePage from "./pages/profile/EditProfile";
 import AdminReportsPage from "./pages/admin/reports/AdminReportsPage";
+import ClientsPage from "./pages/freelancer/ClientsPage";
+import ClientProjectsPage from "./pages/freelancer/ClientsProjectsPage";
 
 const ProjectsListPage = lazy(() => import("./pages/projects/ProjectsListPage"));
 const ProjectDetailsPage = lazy(() => import("./pages/projects/ProjectDetailsPage"));
@@ -84,6 +86,8 @@ export default function App() {
                 <Route element={<ProtectedRoute requiredRoles={[ROLES.FREELANCER]} />}>
                   <Route path="/discover" element={<FreelancerDiscoverPage />} />
                   <Route path="/my-work" element={<MyWorkPage />} />
+                  <Route path="/clients" element={<ClientsPage/>}/>
+                   <Route path="/clients/:clientId/projects" element={<ClientProjectsPage/>} />
                 </Route>
 
                 {/* Client only */}
