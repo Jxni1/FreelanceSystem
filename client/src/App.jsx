@@ -19,6 +19,7 @@ import EditProfilePage from "./pages/profile/EditProfile";
 import AdminReportsPage from "./pages/admin/reports/AdminReportsPage";
 import ClientsPage from "./pages/freelancer/ClientsPage";
 import ClientProjectsPage from "./pages/freelancer/ClientsProjectsPage";
+import FavoriteFreelancersPage from "./pages/client/FavoriteFreelancersPage";
 
 const ProjectsListPage = lazy(() => import("./pages/projects/ProjectsListPage"));
 const ProjectDetailsPage = lazy(() => import("./pages/projects/ProjectDetailsPage"));
@@ -97,6 +98,7 @@ export default function App() {
                   <Route path="/freelancers" element={<FreelancersPage />} />
                   <Route path="/reviews/new" element={<ReviewFormPage />} />
                   <Route path="/reviews/:id/edit" element={<ReviewFormPage />} />
+                  <Route path="/favorite-freelancers" element={<FavoriteFreelancersPage />} />
                 </Route>
 
                 {/* Client + Freelancer: their own contracts */}

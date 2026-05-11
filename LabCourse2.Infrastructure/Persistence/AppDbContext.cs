@@ -273,14 +273,18 @@ namespace LabCourse2.Infrastructure.Persistence
             modelBuilder.Entity<Favorite_Freelancer>(e =>
             {
                 e.HasKey(ff => ff.Favorite_FreelancerID);
+
                 e.HasOne(ff => ff.Client)
                  .WithMany(c => c.FavoriteFreelancers)
                  .HasForeignKey(ff => ff.ClientID)
                  .OnDelete(DeleteBehavior.Cascade);
+
                 e.HasOne(ff => ff.Freelancer)
                  .WithMany(f => f.FavoriteFreelancers)
                  .HasForeignKey(ff => ff.FreelancerID)
                  .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasIndex(ff => new { ff.ClientID, ff.FreelancerID }).IsUnique();
             });
 
             modelBuilder.Entity<Report>(e =>

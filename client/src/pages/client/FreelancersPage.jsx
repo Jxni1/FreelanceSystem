@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useFreelancers } from '../../hooks/useFreelancers';
+import { useEffect, useMemo, useState } from 'react';
+import { useFavoriteFreelancers } from '../../hooks/useFavoriteFreelancers';
 import { ReportModal } from '../admin/reports/ReportModal';
-
+import { useFreelancers } from '../../hooks/useFreelancers';
+// import { useFavoriteFreelancers } from '../../hooks/useFavoriteFreelancers';
+// import { ReportModal } from '../admin/reports/ReportModal';
 
 const EXPERIENCE_LEVELS = ['Junior', 'Mid', 'Senior', 'Expert'];
 
@@ -27,12 +29,19 @@ function StarRating({ rating }) {
 
 export default function FreelancersPage() {
   const { freelancers, isLoading, error, fetchFreelancers } = useFreelancers();
+  const {
+    favorites,
+    fetchFavorites,
+    addFavorite,
+    removeFavorite,
+    isToggling,
+    error: favoritesError,
+  } = useFavoriteFreelancers();
 
   const [search, setSearch] = useState('');
   const [skill, setSkill] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('');
   const [page, setPage] = useState(1);
-
   const [reportingFreelancer, setReportingFreelancer] = useState(null);
 
   const load = (overrides = {}) => {
@@ -49,6 +58,15 @@ export default function FreelancersPage() {
   useEffect(() => {
     load();
   }, [page]);
+
+  useEffect(() => {
+    fetchFavorites();
+  }, [fetchFavorites]);
+
+  const favoriteIds = useMemo(
+    () => new Set(favorites.map((f) => f.freelancerID)),
+    [favorites]
+  );
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -70,18 +88,42 @@ export default function FreelancersPage() {
     setReportingFreelancer(null);
   };
 
+  const handleToggleFavorite = async (freelancerId) => {
+    if (!freelancerId) return;
+
+    if (favoriteIds.has(freelancerId)) {
+      await removeFavorite(freelancerId);
+      return;
+    }
+
+    const result = await addFavorite(freelancerId);
+    if (result?.success) {
+      await fetchFavorites();
+    }
+  };
+
   const items = freelancers?.items ?? [];
   const totalPages = Math.max(1, Math.ceil((freelancers?.totalCount ?? 0) / 12));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6 text-slate-900">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-          Find Freelancers
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Browse and search freelancers by skill or experience.
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-col sm:flex-row">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Find Freelancers
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Browse and search freelancers by skill or experience.
+          </p>
+        </div>
+
+        <a
+          href="/favorite-freelancers"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
+        >
+          <span aria-hidden>♥</span>
+          <span>My Favorites</span>
+        </a>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -123,15 +165,15 @@ export default function FreelancersPage() {
         </select>
       </div>
 
-      {isLoading && (
-        <div className="flex justify-center py-16">
-          <div className="w-10 h-10 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin" />
+      {(error || favoritesError) && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700 text-sm">
+          {error || favoritesError}
         </div>
       )}
 
-      {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700 text-sm">
-          {error}
+      {isLoading && (
+        <div className="flex justify-center py-16">
+          <div className="w-10 h-10 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin" />
         </div>
       )}
 
@@ -145,62 +187,82 @@ export default function FreelancersPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((f) => (
-          <div
-            key={f.freelancerID}
-            className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600 text-lg font-semibold">
-                {f.name?.[0] ?? '?'}
+        {items.map((f) => {
+          const isFavorited = favoriteIds.has(f.freelancerID);
+
+          return (
+            <div
+              key={f.freelancerID}
+              className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600 text-lg font-semibold">
+                    {f.name?.[0] ?? '?'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900 truncate">{f.name}</p>
+                    <p className="text-xs text-slate-500">@{f.username}</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isToggling}
+                  onClick={() => handleToggleFavorite(f.freelancerID)}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
+                    isFavorited
+                      ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
+                      : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-rose-500'
+                  }`}
+                  title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  ♥
+                </button>
               </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-slate-900 truncate">{f.name}</p>
-                <p className="text-xs text-slate-500">@{f.username}</p>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600">
+                  {f.experienceLevel}
+                </span>
+                <span className="text-teal-600 font-semibold">
+                  ${f.hourlyRate}/hr
+                </span>
+              </div>
+
+              <StarRating rating={f.averageRating} />
+
+              {f.skills?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {f.skills.slice(0, 5).map((s) => (
+                    <span
+                      key={s}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 border border-teal-100 text-teal-700"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                  {f.skills.length > 5 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400">
+                      +{f.skills.length - 5}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => openReportModal(f)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-700"
+                >
+                  <span aria-hidden>🚩</span>
+                  <span>Report</span>
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600">
-                {f.experienceLevel}
-              </span>
-              <span className="text-teal-600 font-semibold">
-                ${f.hourlyRate}/hr
-              </span>
-            </div>
-
-            <StarRating rating={f.averageRating} />
-
-            {f.skills?.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {f.skills.slice(0, 5).map((s) => (
-                  <span
-                    key={s}
-                    className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 border border-teal-100 text-teal-700"
-                  >
-                    {s}
-                  </span>
-                ))}
-                {f.skills.length > 5 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400">
-                    +{f.skills.length - 5}
-                  </span>
-                )}
-              </div>
-            )}
-
-            <div className="pt-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => openReportModal(f)}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-700"
-              >
-                <span aria-hidden>🚩</span>
-                <span>Report</span>
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {totalPages > 1 && (
