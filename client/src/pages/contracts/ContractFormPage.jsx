@@ -22,7 +22,9 @@ export default function ContractFormPage() {
   });
 
   const [projects, setProjects] = useState([]);
+  const [freelancers, setFreelancers] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
+  const [freelancersLoading, setFreelancersLoading] = useState(false);
   const [formError, setFormError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,7 +52,13 @@ export default function ContractFormPage() {
       setProjectsLoading(true);
       try {
         const res = await apiClient.get('/api/projects');
-        const payload = res.data?.items ?? res.data?.value?.items ?? res.data?.value ?? res.data ?? [];
+        const payload =
+          res.data?.items ??
+          res.data?.value?.items ??
+          res.data?.value ??
+          res.data ??
+          [];
+
         setProjects(Array.isArray(payload) ? payload : []);
       } catch (err) {
         console.error('Failed to load projects', err);
@@ -59,7 +67,27 @@ export default function ContractFormPage() {
       }
     }
 
+    async function loadFreelancers() {
+      setFreelancersLoading(true);
+      try {
+        const res = await apiClient.get('/api/freelancers');
+        const payload =
+          res.data?.items ??
+          res.data?.value?.items ??
+          res.data?.value ??
+          res.data ??
+          [];
+
+        setFreelancers(Array.isArray(payload) ? payload : []);
+      } catch (err) {
+        console.error('Failed to load freelancers', err);
+      } finally {
+        setFreelancersLoading(false);
+      }
+    }
+
     loadProjects();
+    loadFreelancers();
   }, []);
 
   const handleChange = (e) => {
@@ -225,16 +253,38 @@ export default function ContractFormPage() {
             {!isEditMode && (
               <>
                 <div>
-                  <label className={labelClass}>Freelancer ID</label>
-                  <input
-                    type="text"
+                  <label className={labelClass}>Freelancer</label>
+                  <select
                     name="freelancerID"
                     value={formData.freelancerID}
                     onChange={handleChange}
                     required
                     className={inputClass}
-                    placeholder="Enter freelancer UUID..."
-                  />
+                    disabled={freelancersLoading}
+                  >
+                    <option value="">
+                      {freelancersLoading ? 'Loading freelancers...' : 'Select freelancer'}
+                    </option>
+                    {freelancers.map((freelancer) => {
+                      const freelancerId =
+                        freelancer.freelancerID ??
+                        freelancer.freelancerId ??
+                        freelancer.id;
+
+                      const freelancerName =
+                        freelancer.fullName ??
+                        freelancer.name ??
+                        freelancer.username ??
+                        freelancer.email ??
+                        `Freelancer ${freelancerId}`;
+
+                      return (
+                        <option key={freelancerId} value={freelancerId}>
+                          {freelancerName}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
 
                 <div>
@@ -279,6 +329,7 @@ export default function ContractFormPage() {
                   ? 'Save Changes'
                   : 'Create Contract'}
               </button>
+
               <Link
                 to={isEditMode ? `/admin/contracts/${id}` : '/admin/contracts'}
                 className="px-6 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold text-center transition-colors"

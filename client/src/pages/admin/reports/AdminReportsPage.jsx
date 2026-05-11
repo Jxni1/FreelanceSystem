@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useReports } from '../../../hooks/useReports';
 
 const STATUS_OPTIONS = ['Pending', 'Reviewed', 'Resolved', 'Rejected'];
-const ENTITY_OPTIONS = ['Project', 'User', 'Proposal', 'Review'];
+const ENTITY_OPTIONS = ['Project', 'Client', 'Freelancer', 'Proposal', 'Review'];
 
 export default function AdminReportsPage() {
   const {
@@ -15,8 +15,8 @@ export default function AdminReportsPage() {
     error,
     fetchReports,
     fetchReportById,
-  updateReportStatus,
-deleteReport,
+    updateReportStatus,
+    deleteReport,
     setSelectedReport,
   } = useReports();
 
@@ -49,11 +49,17 @@ deleteReport,
     }
   };
 
+  const getEntityLabel = (report) => {
+    if (report.entity === 'User' && report.reportedUserRole) {
+      return report.reportedUserRole;
+    }
+    return report.entity;
+  };
+
   const handleOpenDetails = async (reportId) => {
     await fetchReportById(reportId);
   };
 
-  // NEW: open the reported entity when clicking Review
   const handleReview = (report) => {
     if (report.entity === 'Project') {
       navigate(`/projects/${report.entityID}`, {
@@ -63,30 +69,30 @@ deleteReport,
           reportReason: report.reason,
           reportStatus: report.status,
           reporterName: report.username || report.created_by,
-          reportEntity: report.entity,
+          reportEntity: getEntityLabel(report),
         },
       });
       return;
     }
 
-    // For other entities, you can add routes later
-    alert(`Review flow for ${report.entity} is not implemented yet.`);
+    alert(`Review flow for ${getEntityLabel(report)} is not implemented yet.`);
   };
-const handleStatusUpdate = async (reportId, status) => {
-  await updateReportStatus(reportId, status);
-};
 
-const handleDelete = async (reportId) => {
-  if (!window.confirm('Are you sure you want to delete this report?')) return;
-  await deleteReport(reportId);
+  const handleStatusUpdate = async (reportId, status) => {
+    await updateReportStatus(reportId, status);
+  };
 
-  if (selectedReport?.reportsID === reportId) {
-    setSelectedReport(null);
-  }
-};
+  const handleDelete = async (reportId) => {
+    if (!window.confirm('Are you sure you want to delete this report?')) return;
+    await deleteReport(reportId);
+
+    if (selectedReport?.reportsID === reportId) {
+      setSelectedReport(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header + filters */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -132,7 +138,6 @@ const handleDelete = async (reportId) => {
         </div>
       </div>
 
-      {/* Table + list */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {error && (
           <div className="p-4 border-b border-rose-200 bg-rose-50 text-sm text-rose-700">
@@ -176,7 +181,7 @@ const handleDelete = async (reportId) => {
                   >
                     <td className="px-5 py-3 align-middle">
                       <div className="font-semibold text-slate-900">
-                        {report.entity}
+                        {getEntityLabel(report)}
                       </div>
                       <div className="text-xs text-slate-500 break-all">
                         {report.entityID}
@@ -318,7 +323,6 @@ const handleDelete = async (reportId) => {
         )}
       </div>
 
-      {/* Details panel */}
       {selectedReport && (
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -347,7 +351,7 @@ const handleDelete = async (reportId) => {
                   Entity
                 </p>
                 <p className="font-medium text-slate-900">
-                  {selectedReport.entity}
+                  {getEntityLabel(selectedReport)}
                 </p>
                 <p className="text-xs text-slate-500 break-all mt-1">
                   {selectedReport.entityID}
