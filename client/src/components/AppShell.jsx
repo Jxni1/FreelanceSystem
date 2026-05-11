@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAuthorization } from '../hooks/useAuthorization';
 
+
 export function AppShell() {
   const { logout } = useAuth();
   const { isAdmin, isClient, isFreelancer } = useAuthorization();
@@ -10,13 +11,18 @@ export function AppShell() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <NavLink to={isFreelancer ? '/discover' : '/home'} className="font-semibold tracking-wide text-teal-600 hover:text-teal-700">
+          <NavLink
+            to={isFreelancer ? '/discover' : '/home'}
+            className="font-semibold tracking-wide text-teal-600 hover:text-teal-700"
+          >
             Freelance System
           </NavLink>
+
           <nav className="flex items-center gap-1">
             {isFreelancer && (
               <>
                 <NavItem to="/discover">Discover</NavItem>
+                <NavItem to="/clients">Clients</NavItem>
                 <NavItem to="/my-work">My Work</NavItem>
                 <NavItem to="/contracts">Contracts</NavItem>
                 <NavItem to="/reviews">Reviews</NavItem>
@@ -35,8 +41,6 @@ export function AppShell() {
 
             {isAdmin && (
               <>
-                <NavItem to="/home">Dashboard</NavItem>
-                <NavItem to="/projects">Projects</NavItem>
                 <NavItem to="/admin">Admin Panel</NavItem>
               </>
             )}

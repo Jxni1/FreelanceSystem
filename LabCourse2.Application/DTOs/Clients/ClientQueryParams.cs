@@ -1,11 +1,12 @@
-﻿namespace LabCourse2.Application.DTOs.Projects
+﻿namespace LabCourse2.Application.DTOs.ClientProfiles
 {
-    public class ProjectQueryParams
+    public class ClientQueryParams
     {
         private const int MaxPageSize = 50;
         private int _pageSize = 10;
 
         public int Page { get; set; } = 1;
+
         public int PageSize
         {
             get => _pageSize;
@@ -13,11 +14,6 @@
         }
 
         public string? Search { get; set; }
-        public Guid? CategoryID { get; set; }
-        public string? Status { get; set; }
-        public string? Visibility { get; set; }
-        public string? Skill { get; set; }
-
-      
+        public string? Industry { get; set; }
     }
 }

@@ -140,6 +140,11 @@ builder.Services.AddScoped<IValidator<CreateReportRequest>, CreateReportRequestV
 builder.Services.AddScoped<IValidator<UpdateReportStatusRequest>, UpdateReportStatusRequestValidator>();
 
 
+builder.Services.AddScoped<IClientService, ClientService>();
+
+builder.Services.AddScoped<IFavoriteFreelancerService, FavoriteFreelancerService>();
+
+
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IValidator<UploadFileRequest>, UploadFileRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateFileRequest>, UpdateFileRequestValidator>();
