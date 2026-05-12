@@ -1,6 +1,7 @@
 ﻿using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Contracts;
 using LabCourse2.Application.Interfaces.Contracts;
+using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -11,11 +12,16 @@ namespace LabCourse2.Application.Services.Contracts
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly INotificationCreator _notificationCreator;
 
-        public ContractService(IAppDbContext context, ICurrentUserService currentUser)
+        public ContractService(
+            IAppDbContext context,
+            ICurrentUserService currentUser,
+            INotificationCreator notificationCreator)
         {
             _context = context;
             _currentUser = currentUser;
+            _notificationCreator = notificationCreator;
         }
 
         private async Task<ClientProfile?> GetClientProfileAsync() =>
@@ -28,7 +34,6 @@ namespace LabCourse2.Application.Services.Contracts
 
         public async Task<Result<PagedResult<ContractResponse>>> GetAllAsync(ContractQueryParams query)
         {
-           
             var q = _context.Contracts
                 .Include(c => c.Client).ThenInclude(c => c.User)
                 .Include(c => c.Freelancer).ThenInclude(f => f.User)
@@ -77,7 +82,7 @@ namespace LabCourse2.Application.Services.Contracts
                 .Include(c => c.Freelancer).ThenInclude(f => f.User)
                 .Include(c => c.Project)
                 .AsNoTracking()
-                .Where(c => c.ClientID == client.ClientID) // Only client's contracts
+                .Where(c => c.ClientID == client.ClientID)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.Status))
@@ -115,7 +120,7 @@ namespace LabCourse2.Application.Services.Contracts
                 .Include(c => c.Freelancer).ThenInclude(f => f.User)
                 .Include(c => c.Project)
                 .AsNoTracking()
-                .Where(c => c.FreelancerID == freelancer.FreelancerID) // Only freelancer's contracts
+                .Where(c => c.FreelancerID == freelancer.FreelancerID)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.Status))
@@ -187,6 +192,15 @@ namespace LabCourse2.Application.Services.Contracts
                 .Include(c => c.Project)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.ContractID == contract.ContractID);
+
+            if (created?.Freelancer?.User?.UserID != null)
+            {
+                await _notificationCreator.CreateAsync(
+                    created.Freelancer.User.UserID,
+                    "ContractCreated",
+                    "New contract created",
+                    $"You have been assigned a new contract for project \"{created.Project?.Title}\".");
+            }
 
             return Result<ContractResponse>.Created(created!.ToResponse());
         }

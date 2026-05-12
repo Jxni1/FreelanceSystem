@@ -20,6 +20,7 @@ import AdminReportsPage from "./pages/admin/reports/AdminReportsPage";
 import ClientsPage from "./pages/freelancer/ClientsPage";
 import ClientProjectsPage from "./pages/freelancer/ClientsProjectsPage";
 import FavoriteFreelancersPage from "./pages/client/FavoriteFreelancersPage";
+import NotificationsPage from "./pages/notifications/NotificationsPage";
 
 const ProjectsListPage = lazy(() => import("./pages/projects/ProjectsListPage"));
 const ProjectDetailsPage = lazy(() => import("./pages/projects/ProjectDetailsPage"));
@@ -82,6 +83,7 @@ export default function App() {
                 <Route path="/projects/:id" element={<ProjectDetailsPage />} />
                 <Route path="/projects/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
 
                 {/* Freelancer only */}
                 <Route element={<ProtectedRoute requiredRoles={[ROLES.FREELANCER]} />}>

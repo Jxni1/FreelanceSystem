@@ -1,5 +1,6 @@
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Reviews;
+using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Interfaces.Reviews;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Constants;
@@ -12,11 +13,16 @@ namespace LabCourse2.Application.Services.Reviews
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly INotificationCreator _notificationCreator;
 
-        public ReviewService(IAppDbContext context, ICurrentUserService currentUser)
+        public ReviewService(
+            IAppDbContext context,
+            ICurrentUserService currentUser,
+            INotificationCreator notificationCreator)
         {
             _context = context;
             _currentUser = currentUser;
+            _notificationCreator = notificationCreator;
         }
 
         private async Task<ClientProfile?> GetClientProfileAsync() =>
@@ -83,6 +89,8 @@ namespace LabCourse2.Application.Services.Reviews
                 return Result<ReviewResponse>.Forbidden("Only clients can leave reviews.");
 
             var contract = await _context.Contracts
+                .Include(c => c.Freelancer)
+                    .ThenInclude(f => f.User)
                 .FirstOrDefaultAsync(c => c.ContractID == request.ContractID);
 
             if (contract is null)
@@ -113,6 +121,15 @@ namespace LabCourse2.Application.Services.Reviews
 
             await _context.Reviews.AddAsync(review);
             await _context.SaveChangesAsync();
+
+            if (contract.Freelancer?.User?.UserID != null)
+            {
+                await _notificationCreator.CreateAsync(
+                    contract.Freelancer.User.UserID,
+                    "ReviewReceived",
+                    "New review received",
+                    "You received a new review on a completed contract.");
+            }
 
             var created = await _context.Reviews
                 .Include(r => r.Freelancer).ThenInclude(f => f.User)
