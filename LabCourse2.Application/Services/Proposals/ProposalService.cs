@@ -1,6 +1,7 @@
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Contracts;
 using LabCourse2.Application.DTOs.Proposals;
+using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Interfaces.Proposals;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Constants;
@@ -13,11 +14,16 @@ namespace LabCourse2.Application.Services.Proposals
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly INotificationCreator _notificationCreator;
 
-        public ProposalService(IAppDbContext context, ICurrentUserService currentUser)
+        public ProposalService(
+            IAppDbContext context,
+            ICurrentUserService currentUser,
+            INotificationCreator notificationCreator)
         {
             _context = context;
             _currentUser = currentUser;
+            _notificationCreator = notificationCreator;
         }
 
         private async Task<FreelancerProfile?> GetFreelancerProfileAsync() =>
@@ -92,6 +98,8 @@ namespace LabCourse2.Application.Services.Proposals
                 return Result<ProposalResponse>.Forbidden("Only freelancers can submit proposals.");
 
             var project = await _context.Projects
+                .Include(p => p.Client)
+                    .ThenInclude(c => c.User)
                 .FirstOrDefaultAsync(p => p.ProjectID == request.ProjectId);
 
             if (project is null)
@@ -117,6 +125,15 @@ namespace LabCourse2.Application.Services.Proposals
                 .Include(p => p.Project)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProposalId == proposal.ProposalId);
+
+            if (project.Client?.User?.UserID != null)
+            {
+                await _notificationCreator.CreateAsync(
+                    project.Client.User.UserID,
+                    "ProposalSubmitted",
+                    "New proposal received",
+                    $"A new proposal was submitted for your project \"{project.Title}\".");
+            }
 
             return Result<ProposalResponse>.Created(created!.ToResponse());
         }
@@ -167,6 +184,8 @@ namespace LabCourse2.Application.Services.Proposals
             await _context.Contracts.AddAsync(contract);
 
             var otherProposals = await _context.Proposals
+                .Include(p => p.Freelancer)
+                    .ThenInclude(f => f.User)
                 .Where(p => p.ProjectId == proposal.ProjectId
                          && p.ProposalId != proposalId
                          && p.Status == ProposalStatus.Pending)
@@ -182,6 +201,30 @@ namespace LabCourse2.Application.Services.Proposals
                 project.Status = ProjectStatus.InProgress;
 
             await _context.SaveChangesAsync();
+
+            if (proposal.Freelancer?.User?.UserID != null)
+            {
+                await _notificationCreator.CreateAsync(
+                    proposal.Freelancer.User.UserID,
+                    "ProposalAccepted",
+                    "Proposal accepted",
+                    $"Your proposal for project \"{proposal.Project.Title}\" was accepted.");
+            }
+
+            var rejectedUserIds = otherProposals
+                .Where(p => p.Freelancer?.User?.UserID != null)
+                .Select(p => p.Freelancer!.User!.UserID)
+                .Distinct()
+                .ToList();
+
+            if (rejectedUserIds.Any())
+            {
+                await _notificationCreator.CreateManyAsync(
+                    rejectedUserIds,
+                    "ProposalRejected",
+                    "Proposal not selected",
+                    $"Your proposal for project \"{proposal.Project.Title}\" was not selected.");
+            }
 
             var created = await _context.Contracts
                 .Include(c => c.Client).ThenInclude(cl => cl.User)
@@ -215,6 +258,15 @@ namespace LabCourse2.Application.Services.Proposals
 
             proposal.Status = ProposalStatus.Rejected;
             await _context.SaveChangesAsync();
+
+            if (proposal.Freelancer?.User?.UserID != null)
+            {
+                await _notificationCreator.CreateAsync(
+                    proposal.Freelancer.User.UserID,
+                    "ProposalRejected",
+                    "Proposal rejected",
+                    $"Your proposal for project \"{proposal.Project.Title}\" was rejected.");
+            }
 
             return Result<ProposalResponse>.Success(proposal.ToResponse());
         }

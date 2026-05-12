@@ -18,11 +18,9 @@ namespace LabCourse2.Application.Services.Projects
             _currentUser = currentUser;
         }
 
-
         private async Task<ClientProfile?> GetClientProfileAsync() =>
             await _context.ClientProfiles
                 .FirstOrDefaultAsync(c => c.UserID == _currentUser.UserId);
-
 
         public async Task<Result<PagedResult<ProjectResponse>>> GetAllAsync(ProjectQueryParams query)
         {
@@ -113,6 +111,20 @@ namespace LabCourse2.Application.Services.Projects
             var project = request.ToEntity(client.ClientID);
 
             await _context.Projects.AddAsync(project);
+
+            var notification = new Notification
+            {
+                NotificationID = Guid.NewGuid(),
+                UserID = client.UserID,
+                Type = "ProjectCreated",
+                Title = "Project created",
+                Message = $"Your project \"{project.Title}\" was created successfully.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Notifications.Add(notification);
+
             await _context.SaveChangesAsync();
 
             var created = await _context.Projects
@@ -146,7 +158,26 @@ namespace LabCourse2.Application.Services.Projects
             if (!categoryExists)
                 return Result<ProjectResponse>.NotFound("Category not found.");
 
+            var oldStatus = project.Status;
+
             project.ApplyUpdate(request);
+
+            if (!string.Equals(oldStatus, project.Status, StringComparison.OrdinalIgnoreCase))
+            {
+                var notification = new Notification
+                {
+                    NotificationID = Guid.NewGuid(),
+                    UserID = client.UserID,
+                    Type = "ProjectStatusChanged",
+                    Title = "Project status updated",
+                    Message = $"Your project \"{project.Title}\" status changed from {oldStatus} to {project.Status}.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Notifications.Add(notification);
+            }
+
             await _context.SaveChangesAsync();
 
             var updated = await _context.Projects

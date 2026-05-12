@@ -78,10 +78,11 @@ namespace LabCourse2.Infrastructure.Services
             if (client == null)
                 return Result<string>.Failure("Client profile not found.");
 
-            var freelancerExists = await _context.FreelancerProfiles
-                .AnyAsync(f => f.FreelancerID == freelancerId);
+            var freelancer = await _context.FreelancerProfiles
+                .Include(f => f.User)
+                .FirstOrDefaultAsync(f => f.FreelancerID == freelancerId);
 
-            if (!freelancerExists)
+            if (freelancer == null)
                 return Result<string>.Failure("Freelancer not found.");
 
             var alreadyExists = await _context.Favorite_Freelancers
@@ -98,6 +99,25 @@ namespace LabCourse2.Infrastructure.Services
             };
 
             _context.Favorite_Freelancers.Add(favorite);
+
+            var clientUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserID == client.UserID);
+
+            var notification = new Notification
+            {
+                NotificationID = Guid.NewGuid(),
+                UserID = freelancer.UserID,
+                Type = "AddedToFavorites",
+                Title = "You were added to favorites",
+                Message = clientUser != null
+                    ? $"{clientUser.Name} {clientUser.Surname} added your profile to favorites."
+                    : "A client added your profile to their favorites list.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Notifications.Add(notification);
+
             await _context.SaveChangesAsync(CancellationToken.None);
 
             return Result<string>.Success("Freelancer added to favorites.");

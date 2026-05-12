@@ -1,7 +1,7 @@
-
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Deliverables;
 using LabCourse2.Application.Interfaces.Deliverables;
+using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Constants;
 using LabCourse2.Domain.Entities;
@@ -13,11 +13,16 @@ namespace LabCourse2.Application.Services.Deliverables
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly INotificationCreator _notificationCreator;
 
-        public DeliverableService(IAppDbContext context, ICurrentUserService currentUser)
+        public DeliverableService(
+            IAppDbContext context,
+            ICurrentUserService currentUser,
+            INotificationCreator notificationCreator)
         {
             _context = context;
             _currentUser = currentUser;
+            _notificationCreator = notificationCreator;
         }
 
         private async Task<FreelancerProfile?> GetFreelancerProfileAsync() =>
@@ -96,6 +101,8 @@ namespace LabCourse2.Application.Services.Deliverables
             var milestone = await _context.Milestones
                 .Include(m => m.Deliverables)
                 .Include(m => m.Contract)
+                    .ThenInclude(c => c.Client)
+                        .ThenInclude(c => c.User)
                 .FirstOrDefaultAsync(m => m.MilestoneID == request.MilestoneID);
 
             if (milestone is null)
@@ -119,6 +126,15 @@ namespace LabCourse2.Application.Services.Deliverables
             var deliverable = request.ToEntity();
             await _context.Deliverables.AddAsync(deliverable);
             await _context.SaveChangesAsync();
+
+            if (milestone.Contract.Client?.User?.UserID != null)
+            {
+                await _notificationCreator.CreateAsync(
+                    milestone.Contract.Client.User.UserID,
+                    "DeliverableSubmitted",
+                    "New deliverable submitted",
+                    $"A deliverable was submitted for milestone \"{milestone.Title}\".");
+            }
 
             var created = await _context.Deliverables
                 .Include(d => d.Milestone)
@@ -190,6 +206,8 @@ namespace LabCourse2.Application.Services.Deliverables
             var deliverable = await _context.Deliverables
                 .Include(d => d.Milestone)
                     .ThenInclude(m => m.Contract)
+                        .ThenInclude(c => c.Freelancer)
+                            .ThenInclude(f => f.User)
                 .Include(d => d.File)
                 .FirstOrDefaultAsync(d => d.DeliverablesID == deliverableId);
 
@@ -208,6 +226,15 @@ namespace LabCourse2.Application.Services.Deliverables
             deliverable.Approved_at = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
+            if (deliverable.Milestone.Contract.Freelancer?.User?.UserID != null)
+            {
+                await _notificationCreator.CreateAsync(
+                    deliverable.Milestone.Contract.Freelancer.User.UserID,
+                    "DeliverableApproved",
+                    "Deliverable approved",
+                    $"Your deliverable for milestone \"{deliverable.Milestone.Title}\" was approved.");
+            }
+
             return Result<DeliverableResponse>.Success(deliverable.ToResponse());
         }
 
@@ -220,6 +247,8 @@ namespace LabCourse2.Application.Services.Deliverables
             var deliverable = await _context.Deliverables
                 .Include(d => d.Milestone)
                     .ThenInclude(m => m.Contract)
+                        .ThenInclude(c => c.Freelancer)
+                            .ThenInclude(f => f.User)
                 .FirstOrDefaultAsync(d => d.DeliverablesID == deliverableId);
 
             if (deliverable is null)
@@ -231,8 +260,20 @@ namespace LabCourse2.Application.Services.Deliverables
             if (deliverable.Approved_at.HasValue)
                 return Result<bool>.Conflict("Cannot reject an already approved deliverable.");
 
+            var freelancerUserId = deliverable.Milestone.Contract.Freelancer?.User?.UserID;
+            var milestoneTitle = deliverable.Milestone.Title;
+
             _context.Deliverables.Remove(deliverable);
             await _context.SaveChangesAsync();
+
+            if (freelancerUserId.HasValue)
+            {
+                await _notificationCreator.CreateAsync(
+                    freelancerUserId.Value,
+                    "DeliverableRejected",
+                    "Deliverable rejected",
+                    $"Your deliverable for milestone \"{milestoneTitle}\" was rejected.");
+            }
 
             return Result<bool>.Success(true);
         }

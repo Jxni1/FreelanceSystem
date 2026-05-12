@@ -1,6 +1,7 @@
 ﻿using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Reports;
 using LabCourse2.Application.Interfaces;
+using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Interfaces.Reports;
 using LabCourse2.Application.Mappings;
 using Microsoft.EntityFrameworkCore;
@@ -11,11 +12,16 @@ namespace LabCourse2.Application.Services.Reports
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly INotificationCreator _notificationCreator;
 
-        public ReportService(IAppDbContext context, ICurrentUserService currentUser)
+        public ReportService(
+            IAppDbContext context,
+            ICurrentUserService currentUser,
+            INotificationCreator notificationCreator)
         {
             _context = context;
             _currentUser = currentUser;
+            _notificationCreator = notificationCreator;
         }
 
         public async Task<Result<PagedResult<ReportResponse>>> GetAllAsync(ReportQueryParams query)
@@ -86,6 +92,21 @@ namespace LabCourse2.Application.Services.Reports
 
             await _context.Reports.AddAsync(report);
             await _context.SaveChangesAsync();
+
+            var adminUserIds = await _context.Users
+                .Where(u => u.Is_Active && u.UserRoles.Any(ur => ur.Role.Name == "Admin"))
+                .Select(u => u.UserID)
+                .Distinct()
+                .ToListAsync();
+
+            if (adminUserIds.Any())
+            {
+                await _notificationCreator.CreateManyAsync(
+                    adminUserIds,
+                    "ReportSubmitted",
+                    "New report submitted",
+                    $"A new report was submitted for entity \"{report.Entity}\".");
+            }
 
             var created = await _context.Reports
                 .Include(r => r.User)
