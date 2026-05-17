@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useProjects } from '../../hooks/useProjects';
 import { apiClient } from '../../lib/apiClient';
+import { useCategories } from '../../hooks/useCategories';
 
 const STATUS_STYLES = {
   Open: 'bg-teal-50 text-teal-700 border-teal-200',
@@ -13,7 +14,9 @@ const STATUS_STYLES = {
 export default function FreelancerDiscoverPage() {
   const { user } = useAuth();
   const { projects, isLoading, error, fetchProjects } = useProjects();
-
+  const { categories: categoriesData, fetchCategories } = useCategories();
+ 
+  const [activeCategory, setActiveCategory] = useState('');
   const [mySkills, setMySkills] = useState([]);
   const [activeSkill, setActiveSkill] = useState('');
   const [search, setSearch] = useState('');
@@ -28,13 +31,17 @@ export default function FreelancerDiscoverPage() {
   }, []);
 
   useEffect(() => {
-    fetchProjects({ page, pageSize: 12, status: 'Open', skill: activeSkill || undefined, search: search || undefined });
-  }, [page, activeSkill, search, fetchProjects]);
+    fetchProjects({ page, pageSize: 12, status: 'Open', skill: activeSkill || undefined, search: search || undefined, categoryId: activeCategory || undefined });
+  }, [page, activeSkill, search, activeCategory, fetchProjects]);
+
+  useEffect(() => {
+  fetchCategories({ pageSize: 100 });
+}, [fetchCategories]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchProjects({ page: 1, pageSize: 12, status: 'Open', skill: activeSkill || undefined, search: search || undefined });
+    fetchProjects({ page: 1, pageSize: 12, status: 'Open', skill: activeSkill || undefined, search: search || undefined, categoryId: activeCategory || undefined });
   };
 
   const items = projects?.items ?? [];
@@ -168,6 +175,22 @@ export default function FreelancerDiscoverPage() {
           >
             Next
           </button>
+        </div>
+      )}
+
+      {categoriesData.items.length > 0 && (
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide shrink-0">Category</label>
+          <select
+            value={activeCategory}
+            onChange={e => { setActiveCategory(e.target.value); setPage(1); }}
+            className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          >
+            <option value="">All Categories</option>
+            {categoriesData.items.map(cat => (
+              <option key={cat.categoryID} value={cat.categoryID}>{cat.name}</option>
+            ))}
+          </select>
         </div>
       )}
     </div>
