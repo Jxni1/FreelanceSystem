@@ -44,6 +44,9 @@ const FreelancersPage = lazy(() => import("./pages/client/FreelancersPage"));
 const ReviewsListPage = lazy(()=> import("./pages/reviews/ReviewsListPage"));
 const ReviewFormPage = lazy(()=> import("./pages/reviews/ReviewFormPage"));
 
+const CategoriesListPage = lazy(() => import("./pages/admin/categories/CategoriesListPage"));
+const CategoryFormPage = lazy(() => import("./pages/admin/categories/CategoryFormPage"));
+
 const GlobalSuspenseLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
     <div className="flex flex-col items-center gap-4">
@@ -129,6 +132,9 @@ export default function App() {
                     <Route path="settings/new" element={<AdminSettingFormPage />} />
                     <Route path="settings/:id/edit" element={<AdminSettingFormPage />} />
                       <Route path="reports" element={<AdminReportsPage />} />
+                    <Route path="categories" element={<CategoriesListPage />} />
+                    <Route path="categories/new" element={<CategoryFormPage />} />
+                    <Route path="categories/:id/edit" element={<CategoryFormPage />} />
                    
                   </Route>
                 </Route>
