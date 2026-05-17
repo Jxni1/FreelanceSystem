@@ -55,6 +55,10 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.IO;
 using System.Text;
+using LabCourse2.Application.DTOs.Categories;
+using LabCourse2.Application.Interfaces.Categories;
+using LabCourse2.Application.Services.Categories;
+using LabCourse2.Application.Validators.Categories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -163,6 +167,10 @@ builder.Services.AddScoped<INotificationCreator, NotificationCreator>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddScoped<IFreelancerService, FreelancerService>();
+
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IValidator<CreateCategoryRequest>, CreateCategoryRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateCategoryRequest>, UpdateCategoryRequestValidator>();
 
 builder.Services.AddHttpContextAccessor();
 

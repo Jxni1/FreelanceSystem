@@ -5,6 +5,7 @@ const navItems = [
   { key: 'users', label: 'User Management', to: '/admin/users' },
   { key: 'projects', label: 'Project Management', to: '/admin/projects' },
   { key: 'contracts', label: 'Contract Management', to: '/admin/contracts' },
+  { key: 'categories', label: 'Category Management', to: '/admin/categories' },
   { key: 'reports', label: 'Reports & Analytics', to: '/admin/reports' },
   { key: 'settings', label: 'Settings Management', to: '/admin/settings' }
 ];
