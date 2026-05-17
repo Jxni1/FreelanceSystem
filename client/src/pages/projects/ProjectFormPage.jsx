@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
 import { SmartBackButton } from '../../components/SmartBackButton';
+import { useCategories } from '../../hooks/useCategories';
 
 export default function ProjectFormPage() {
   const { id } = useParams();
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
   const { project, isLoading, error, fetchProjectById, createProject, updateProject } = useProjects();
-
+  const { categories: categoriesData, fetchCategories } = useCategories();
   const [formData, setFormData] = useState({
+
     title: '',
     description: '',
     budget: '',
@@ -18,12 +20,12 @@ export default function ProjectFormPage() {
     categoryID: '',
   });
 
-  const categories = [
-    { id: '00000000-0000-0000-0000-000000000000', name: 'Uncategorized' },
-    { id: 'A1B2C3D4-E5F6-4A7B-8C9D-0123456789AB', name: 'Web Development' },
-    { id: 'B2C3D4E5-F6A7-4B8C-9D01-23456789ABCD', name: 'Mobile Apps' },
-    { id: 'C3D4E5F6-A7B8-4C9D-0123-456789ABCDEF', name: 'UI/UX Design' },
-  ];
+  // const categories = [
+  //   { id: '00000000-0000-0000-0000-000000000000', name: 'Uncategorized' },
+  //   { id: 'A1B2C3D4-E5F6-4A7B-8C9D-0123456789AB', name: 'Web Development' },
+  //   { id: 'B2C3D4E5-F6A7-4B8C-9D01-23456789ABCD', name: 'Mobile Apps' },
+  //   { id: 'C3D4E5F6-A7B8-4C9D-0123-456789ABCDEF', name: 'UI/UX Design' },
+  // ];
 
   const [formError, setFormError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,6 +48,10 @@ export default function ProjectFormPage() {
       });
     }
   }, [isEditMode, project]);
+
+  useEffect(() => {
+  fetchCategories({ pageSize: 100 });
+}, [fetchCategories]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -215,8 +221,8 @@ export default function ProjectFormPage() {
                   className={inputClass}
                 >
                   <option value="">Select a category</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
+                  {categoriesData.items?.map((cat) => (
+                    <option key={cat.categoryID} value={cat.categoryID}>
                       {cat.name}
                     </option>
                   ))}
