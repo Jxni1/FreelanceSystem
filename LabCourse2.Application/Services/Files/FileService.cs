@@ -95,6 +95,13 @@ namespace LabCourse2.Application.Services.Files
                 return Result<FileResponse>.NotFound("Target entity was not found.");
 
             var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", normalizedEntity.ToLower());
+            
+            // For User entity, create a profiles subdirectory
+            if (normalizedEntity.Equals("User", StringComparison.OrdinalIgnoreCase))
+            {
+                uploadsRoot = Path.Combine(uploadsRoot, "profiles");
+            }
+            
             Directory.CreateDirectory(uploadsRoot);
 
             var extension = Path.GetExtension(request.File.FileName);
@@ -106,8 +113,9 @@ namespace LabCourse2.Application.Services.Files
                 await request.File.CopyToAsync(stream);
             }
 
-            var relativePath = Path.Combine("uploads", normalizedEntity.ToLower(), storedFileName)
-                .Replace("\\", "/");
+            var relativePath = normalizedEntity.Equals("User", StringComparison.OrdinalIgnoreCase)
+                ? Path.Combine("uploads", normalizedEntity.ToLower(), "profiles", storedFileName).Replace("\\", "/")
+                : Path.Combine("uploads", normalizedEntity.ToLower(), storedFileName).Replace("\\", "/");
 
             var file = new Domain.Entities.Files
             {
@@ -149,6 +157,13 @@ namespace LabCourse2.Application.Services.Files
             }
 
             var entityFolder = Path.Combine(uploadsRoot, "uploads", file.Entity.ToLower());
+            
+            // For User entity, create a profiles subdirectory
+            if (file.Entity.Equals("User", StringComparison.OrdinalIgnoreCase))
+            {
+                entityFolder = Path.Combine(entityFolder, "profiles");
+            }
+            
             Directory.CreateDirectory(entityFolder);
 
             var extension = Path.GetExtension(request.File.FileName);
@@ -161,8 +176,9 @@ namespace LabCourse2.Application.Services.Files
             }
 
             file.Filename = storedFileName;
-            file.File_Path = Path.Combine("uploads", file.Entity.ToLower(), storedFileName)
-                .Replace("\\", "/");
+            file.File_Path = file.Entity.Equals("User", StringComparison.OrdinalIgnoreCase)
+                ? Path.Combine("uploads", file.Entity.ToLower(), "profiles", storedFileName).Replace("\\", "/")
+                : Path.Combine("uploads", file.Entity.ToLower(), storedFileName).Replace("\\", "/");
             file.File_Size = request.File.Length;
             file.Uploaded_by = _currentUser.Username ?? file.Uploaded_by;
 

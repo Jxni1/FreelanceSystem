@@ -11,6 +11,13 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
+  const [tempPhotoPreview, setTempPhotoPreview] = useState('');
+  const [photoInputKey, setPhotoInputKey] = useState(Date.now());
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
   const API_BASE_URL = 'https://localhost:7244';
 
   const loadProfile = async () => {
@@ -36,11 +43,128 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
+  useEffect(() => {
+    if (!selectedPhotoFile) {
+      setTempPhotoPreview('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedPhotoFile);
+    setTempPhotoPreview(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedPhotoFile]);
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0] || null;
+
+    if (!file) {
+      setSelectedPhotoFile(null);
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file.');
+      return;
+    }
+
+    setUploadError(null);
+    setUploadSuccess(false);
+    setSelectedPhotoFile(file);
+  };
+
+  const handleRemoveSelectedPhoto = () => {
+    setSelectedPhotoFile(null);
+    setTempPhotoPreview('');
+    setPhotoInputKey(Date.now());
+    setUploadError(null);
+    setUploadSuccess(false);
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!selectedPhotoFile) {
+      setUploadError('Please choose an image first.');
+      return;
+    }
+
+    try {
+      setUploadError(null);
+      setUploadSuccess(false);
+      setIsUploadingPhoto(true);
+
+      const meRes = await apiClient.get('/api/users/me');
+      const me = meRes.data?.value ?? meRes.data?.data ?? meRes.data;
+
+      const userId = me?.userId || me?.userID || me?.id;
+      if (!userId) {
+        setUploadError('Could not determine current user ID.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('Entity', 'User');
+      formData.append('EntityID', userId);
+      formData.append('File', selectedPhotoFile);
+
+      const uploadRes = await apiClient.post('/api/files', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const uploaded = uploadRes.data?.data ?? uploadRes.data;
+      const uploadedPath =
+        uploaded?.file_Path ||
+        uploaded?.filePath ||
+        uploaded?.path ||
+        uploaded?.url;
+
+      if (!uploadedPath) {
+        setUploadError('Upload succeeded but no file path was returned.');
+        return;
+      }
+
+      // Save the profile photo path to the database
+      await apiClient.put('/api/users/me', {
+        name: profile.name.trim(),
+        surname: profile.surname.trim(),
+        username: profile.username.trim(),
+        email: profile.email.trim(),
+        profilePhoto: uploadedPath,
+      });
+
+      // Update profile with new photo path
+      setProfile((prev) => ({
+        ...prev,
+        profilePhoto: uploadedPath,
+      }));
+
+      setSelectedPhotoFile(null);
+      setTempPhotoPreview('');
+      setPhotoInputKey(Date.now());
+      setUploadSuccess(true);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setUploadSuccess(false), 3000);
+    } catch (err) {
+      const raw = err?.response?.data;
+      setUploadError(
+        raw?.error ||
+          raw?.message ||
+          raw?.title ||
+          (typeof raw === 'string' ? raw : 'Failed to upload profile photo.')
+      );
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
   const profilePhotoUrl = useMemo(() => {
+    // Show temp preview first if available
+    if (tempPhotoPreview) return tempPhotoPreview;
+
     if (!profile?.profilePhoto) return '';
     if (profile.profilePhoto.startsWith('http')) return profile.profilePhoto;
     return `${API_BASE_URL}/${profile.profilePhoto.replace(/^\/+/, '')}`;
-  }, [profile]);
+  }, [profile, tempPhotoPreview]);
 
   if (isLoading) {
     return (
@@ -105,18 +229,77 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
-        <div className="p-6 sm:p-8 flex items-start gap-6">
-          <div className="shrink-0">
-            {profilePhotoUrl ? (
-              <img
-                src={profilePhotoUrl}
-                alt={`${profile.name} ${profile.surname}`}
-                className="w-20 h-20 rounded-full object-cover border border-slate-300"
+        <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start gap-6">
+          <div className="shrink-0 w-full sm:w-auto">
+            {/* Profile Photo with Upload Overlay */}
+            <div className="relative inline-block group">
+              {profilePhotoUrl ? (
+                <img
+                  src={profilePhotoUrl}
+                  alt={`${profile.name} ${profile.surname}`}
+                  className="w-20 h-20 rounded-full object-cover border-2 border-slate-300 group-hover:border-teal-400 transition-colors"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-2xl font-bold border-2 border-slate-300 group-hover:border-teal-400 transition-colors">
+                  {profile?.name?.[0]}
+                  {profile?.surname?.[0]}
+                </div>
+              )}
+
+              {/* Upload Overlay */}
+              <input
+                id="profile-photo-upload"
+                key={photoInputKey}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handlePhotoSelect}
+                className="hidden"
               />
-            ) : (
-              <div className="hidden sm:flex items-center justify-center w-20 h-20 bg-teal-100 text-teal-700 rounded-full text-2xl font-bold">
-                {profile?.name?.[0]}
-                {profile?.surname?.[0]}
+
+              <label
+                htmlFor="profile-photo-upload"
+                className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/50 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <span className="text-white text-1xl opacity-0 group-hover:opacity-80 transition-opacity">
+                  Add photo
+                </span>
+              </label>
+            </div>
+
+            {/* Upload Status Messages */}
+            {uploadError && (
+              <div className="mt-3 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-xs text-rose-700">
+                {uploadError}
+              </div>
+            )}
+
+            {uploadSuccess && (
+              <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700 font-medium">
+                ✓ Photo updated!
+              </div>
+            )}
+
+            {/* Upload Controls - shown when file selected */}
+            {selectedPhotoFile && (
+              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 space-y-2">
+                <p className="text-xs font-medium text-amber-800">Selected: {selectedPhotoFile.name}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePhotoUpload}
+                    disabled={isUploadingPhoto}
+                    className="flex-1 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:bg-emerald-300 transition-colors"
+                  >
+                    {isUploadingPhoto ? 'Uploading...' : 'Upload'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveSelectedPhoto}
+                    className="flex-1 px-2 py-1 rounded border border-amber-300 text-amber-800 text-xs font-semibold hover:bg-amber-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
           </div>
