@@ -95,7 +95,7 @@ export default function AdminUsersPage() {
     setFormError(null);
 
     if (!createRole) {
-      setFormError('Please select Client or Freelancer.');
+      setFormError('Please select a role (Admin, Client, or Freelancer).');
       return;
     }
 
@@ -363,7 +363,14 @@ export default function AdminUsersPage() {
             </div>
 
             <form className="p-6 space-y-6" onSubmit={handleCreateSubmit} noValidate>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <RoleCard
+                  value={ROLES.ADMIN}
+                  selected={createRole === ROLES.ADMIN}
+                  onSelect={setCreateRole}
+                  label="Admin"
+                  description="Manage system & users"
+                />
                 <RoleCard
                   value={ROLES.FREELANCER}
                   selected={createRole === ROLES.FREELANCER}
