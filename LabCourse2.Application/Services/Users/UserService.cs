@@ -393,7 +393,7 @@ namespace LabCourse2.Application.Services.User
             if (request.Password != request.ConfirmPassword)
                 return Result<UserListItemDto>.Failure("Passwords do not match.");
 
-            if (request.Role != "Client" && request.Role != "Freelancer")
+            if (request.Role != "Admin" && request.Role != "Client" && request.Role != "Freelancer")
                 return Result<UserListItemDto>.Failure("Invalid role.");
 
             var usernameExists = await _db.Users.AnyAsync(u =>
