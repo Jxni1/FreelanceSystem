@@ -29,6 +29,13 @@ namespace LabCourse2.Application.Services.Projects
                 .AsNoTracking()
                 .AsQueryable();
 
+            // If the current user is a client, only show their own projects
+            var clientProfile = await GetClientProfileAsync();
+            if (clientProfile != null)
+            {
+                q = q.Where(p => p.ClientID == clientProfile.ClientID);
+            }
+
             if (!string.IsNullOrWhiteSpace(query.Search))
                 q = q.Where(p => p.Title.Contains(query.Search));
 
