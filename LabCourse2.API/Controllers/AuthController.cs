@@ -145,11 +145,13 @@ namespace LabCourse2.API.Controllers
 
         private void SetRefreshTokenCookie(string token)
         {
+
+            var isDev = _env.IsDevelopment();
             Response.Cookies.Append("rt", token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = !_env.IsDevelopment(),
-                SameSite = SameSiteMode.Strict,
+                Secure = true,
+                SameSite = isDev ? SameSiteMode.None : SameSiteMode.Strict,
                 Path = "/api/auth",
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
@@ -157,7 +159,13 @@ namespace LabCourse2.API.Controllers
 
         private void ClearRefreshTokenCookie()
         {
-            Response.Cookies.Delete("rt", new CookieOptions { Path = "/api/auth" });
+            var isDev = _env.IsDevelopment();
+            Response.Cookies.Delete("rt", new CookieOptions
+            {
+                Path = "/api/auth",
+                Secure = true,
+                SameSite = isDev ? SameSiteMode.None : SameSiteMode.Strict,
+            });
         }
 
         private string? UserAgent =>
