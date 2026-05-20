@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiClient } from '../../lib/apiClient';
-import { useAuthorization } from '../../hooks/useAuthorization';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiClient } from "../../lib/apiClient";
+import { useAuthorization } from "../../hooks/useAuthorization";
 
 export default function EditProfilePage() {
   const navigate = useNavigate();
   const { isFreelancer } = useAuthorization();
 
   const [form, setForm] = useState({
-    name: '',
-    surname: '',
-    username: '',
-    email: '',
-    profilePhoto: '',
+    name: "",
+    surname: "",
+    username: "",
+    email: "",
+    profilePhoto: "",
   });
 
   const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
-  const [tempPhotoPreview, setTempPhotoPreview] = useState('');
+  const [tempPhotoPreview, setTempPhotoPreview] = useState("");
   const [photoInputKey, setPhotoInputKey] = useState(Date.now());
 
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +26,7 @@ export default function EditProfilePage() {
 
   const [allSkills, setAllSkills] = useState([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState([]);
-  const [skillsSearch, setSkillsSearch] = useState('');
+  const [skillsSearch, setSkillsSearch] = useState("");
   const [isSavingSkills, setIsSavingSkills] = useState(false);
   const [skillsMessage, setSkillsMessage] = useState(null);
 
@@ -35,22 +35,22 @@ export default function EditProfilePage() {
       try {
         setIsLoading(true);
 
-        const res = await apiClient.get('/api/users/me');
+        const res = await apiClient.get("/api/users/me");
         const data = res.data?.value ?? res.data?.data ?? res.data;
 
         setForm({
-          name: data?.name || '',
-          surname: data?.surname || '',
-          username: data?.username || '',
-          email: data?.email || '',
-          profilePhoto: data?.profilePhoto || '',
+          name: data?.name || "",
+          surname: data?.surname || "",
+          username: data?.username || "",
+          email: data?.email || "",
+          profilePhoto: data?.profilePhoto || "",
         });
 
         if (isFreelancer) {
           const currentSkillNames = data?.freelancerProfile?.skills ?? [];
 
           const [skillsRes] = await Promise.all([
-            apiClient.get('/api/skills?pageSize=100'),
+            apiClient.get("/api/skills?pageSize=100"),
           ]);
 
           const skills = skillsRes.data?.items ?? skillsRes.data ?? [];
@@ -63,7 +63,7 @@ export default function EditProfilePage() {
           setSelectedSkillIds(matchedIds);
         }
       } catch (err) {
-        setFormError(err?.response?.data?.message || 'Failed to load profile.');
+        setFormError(err?.response?.data?.message || "Failed to load profile.");
       } finally {
         setIsLoading(false);
       }
@@ -74,7 +74,7 @@ export default function EditProfilePage() {
 
   useEffect(() => {
     if (!selectedPhotoFile) {
-      setTempPhotoPreview('');
+      setTempPhotoPreview("");
       return;
     }
 
@@ -85,7 +85,7 @@ export default function EditProfilePage() {
   }, [selectedPhotoFile]);
 
   const previewSrc = useMemo(
-    () => tempPhotoPreview || form.profilePhoto || '',
+    () => tempPhotoPreview || form.profilePhoto || "",
     [tempPhotoPreview, form.profilePhoto]
   );
 
@@ -102,8 +102,8 @@ export default function EditProfilePage() {
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
-      setFormError('Please select a valid image file.');
+    if (!file.type.startsWith("image/")) {
+      setFormError("Please select a valid image file.");
       return;
     }
 
@@ -113,13 +113,13 @@ export default function EditProfilePage() {
 
   const handleRemoveSelectedPhoto = () => {
     setSelectedPhotoFile(null);
-    setTempPhotoPreview('');
+    setTempPhotoPreview("");
     setPhotoInputKey(Date.now());
   };
 
   const handlePhotoUpload = async () => {
     if (!selectedPhotoFile) {
-      setFormError('Please choose an image first.');
+      setFormError("Please choose an image first.");
       return;
     }
 
@@ -127,22 +127,22 @@ export default function EditProfilePage() {
       setFormError(null);
       setIsUploadingPhoto(true);
 
-      const meRes = await apiClient.get('/api/users/me');
+      const meRes = await apiClient.get("/api/users/me");
       const me = meRes.data?.value ?? meRes.data?.data ?? meRes.data;
 
       const userId = me?.userId || me?.userID || me?.id;
       if (!userId) {
-        setFormError('Could not determine current user ID.');
+        setFormError("Could not determine current user ID.");
         return;
       }
 
       const formData = new FormData();
-      formData.append('Entity', 'User');
-      formData.append('EntityID', userId);
-      formData.append('File', selectedPhotoFile);
+      formData.append("Entity", "User");
+      formData.append("EntityID", userId);
+      formData.append("File", selectedPhotoFile);
 
-      const uploadRes = await apiClient.post('/api/files', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const uploadRes = await apiClient.post("/api/files", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       const uploaded = uploadRes.data?.data ?? uploadRes.data;
@@ -153,7 +153,7 @@ export default function EditProfilePage() {
         uploaded?.url;
 
       if (!uploadedPath) {
-        setFormError('Upload succeeded but no file path was returned.');
+        setFormError("Upload succeeded but no file path was returned.");
         return;
       }
 
@@ -163,7 +163,7 @@ export default function EditProfilePage() {
       }));
 
       setSelectedPhotoFile(null);
-      setTempPhotoPreview('');
+      setTempPhotoPreview("");
       setPhotoInputKey(Date.now());
     } catch (err) {
       const raw = err?.response?.data;
@@ -171,7 +171,7 @@ export default function EditProfilePage() {
         raw?.error ||
           raw?.message ||
           raw?.title ||
-          (typeof raw === 'string' ? raw : 'Failed to upload profile photo.')
+          (typeof raw === "string" ? raw : "Failed to upload profile photo.")
       );
     } finally {
       setIsUploadingPhoto(false);
@@ -184,9 +184,9 @@ export default function EditProfilePage() {
     setIsSaving(true);
 
     try {
-      console.log('SUBMIT FORM', form);
+      console.log("SUBMIT FORM", form);
 
-      await apiClient.put('/api/users/me', {
+      await apiClient.put("/api/users/me", {
         name: form.name.trim(),
         surname: form.surname.trim(),
         username: form.username.trim(),
@@ -194,14 +194,14 @@ export default function EditProfilePage() {
         profilePhoto: form.profilePhoto?.trim() || null,
       });
 
-      navigate('/profile');
+      navigate("/profile");
     } catch (err) {
       const raw = err?.response?.data;
       setFormError(
         raw?.error ||
           raw?.message ||
           raw?.title ||
-          (typeof raw === 'string' ? raw : 'Failed to update profile.')
+          (typeof raw === "string" ? raw : "Failed to update profile.")
       );
     } finally {
       setIsSaving(false);
@@ -219,15 +219,17 @@ export default function EditProfilePage() {
     setSkillsMessage(null);
 
     try {
-      await apiClient.put('/api/users/me/skills', { skillIds: selectedSkillIds });
-      setSkillsMessage({ type: 'success', text: 'Skills updated.' });
+      await apiClient.put("/api/users/me/skills", {
+        skillIds: selectedSkillIds,
+      });
+      setSkillsMessage({ type: "success", text: "Skills updated." });
     } catch (err) {
       const raw = err?.response?.data;
       setSkillsMessage({
-        type: 'error',
+        type: "error",
         text:
           raw?.message ||
-          (typeof raw === 'string' ? raw : 'Failed to save skills.'),
+          (typeof raw === "string" ? raw : "Failed to save skills."),
       });
     } finally {
       setIsSavingSkills(false);
@@ -239,10 +241,10 @@ export default function EditProfilePage() {
   );
 
   const inputClass =
-    'w-full px-3 py-2.5 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500';
+    "w-full px-3 py-2.5 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500";
 
   const labelClass =
-    'block text-[11px] font-semibold text-slate-400 uppercase mb-1.5';
+    "block text-[11px] font-semibold text-slate-400 uppercase mb-1.5";
 
   if (isLoading) {
     return (
@@ -307,13 +309,13 @@ export default function EditProfilePage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-700 group-hover:text-teal-700">
                         {selectedPhotoFile
-                          ? 'Change selected image'
-                          : 'Choose a profile image'}
+                          ? "Change selected image"
+                          : "Choose a profile image"}
                       </p>
                       <p className="text-xs text-slate-500 truncate">
                         {selectedPhotoFile
                           ? selectedPhotoFile.name
-                          : 'PNG, JPG, JPEG or WEBP'}
+                          : "PNG, JPG, JPEG or WEBP"}
                       </p>
                     </div>
 
@@ -325,7 +327,7 @@ export default function EditProfilePage() {
 
                 {selectedPhotoFile && (
                   <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-                    New image selected. Click{' '}
+                    New image selected. Click{" "}
                     <span className="font-semibold">Upload Photo</span> to save
                     it.
                   </div>
@@ -338,7 +340,7 @@ export default function EditProfilePage() {
                     disabled={!selectedPhotoFile || isUploadingPhoto}
                     className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold text-white disabled:bg-emerald-300"
                   >
-                    {isUploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                    {isUploadingPhoto ? "Uploading..." : "Upload Photo"}
                   </button>
 
                   <button
@@ -424,7 +426,7 @@ export default function EditProfilePage() {
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate("/profile")}
                 className="px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 hover:bg-slate-50"
               >
                 Cancel
@@ -435,7 +437,7 @@ export default function EditProfilePage() {
                 disabled={isSaving}
                 className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-sm font-semibold text-white disabled:bg-teal-300"
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>
@@ -444,7 +446,89 @@ export default function EditProfilePage() {
 
       {isFreelancer && (
         <div className="bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          {/* skills section unchanged */}
+          <div className="h-1 bg-linear-to-r from-teal-500 to-emerald-400" />
+          <div className="p-8">
+            <h2 className="text-xl font-extrabold text-slate-900 mb-1">
+              Your Skills
+            </h2>
+            <p className="text-slate-500 mb-6 text-sm">
+              Select the skills you offer. Projects matching your skills will be
+              shown to you first.
+            </p>
+
+            {skillsMessage && (
+              <div
+                className={`mb-4 p-3 rounded-xl text-sm border ${
+                  skillsMessage.type === "success"
+                    ? "bg-teal-50 border-teal-200 text-teal-700"
+                    : "bg-rose-50 border-rose-200 text-rose-700"
+                }`}
+              >
+                {skillsMessage.text}
+              </div>
+            )}
+
+            {selectedSkillIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {allSkills
+                  .filter((s) => selectedSkillIds.includes(s.skillsID))
+                  .map((s) => (
+                    <span
+                      key={s.skillsID}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200"
+                    >
+                      {s.name}
+                      <button
+                        type="button"
+                        onClick={() => toggleSkill(s.skillsID)}
+                        className="text-teal-500 hover:text-teal-700 leading-none"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+              </div>
+            )}
+
+            <input
+              type="text"
+              placeholder="Search skills..."
+              value={skillsSearch}
+              onChange={(e) => setSkillsSearch(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 mb-3"
+            />
+
+            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto mb-5">
+              {filteredSkills.map((s) => (
+                <button
+                  key={s.skillsID}
+                  type="button"
+                  onClick={() => toggleSkill(s.skillsID)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    selectedSkillIds.includes(s.skillsID)
+                      ? "bg-teal-600 border-teal-600 text-white"
+                      : "bg-white border-slate-300 text-slate-600 hover:border-teal-400 hover:text-teal-600"
+                  }`}
+                >
+                  {s.name}
+                </button>
+              ))}
+              {filteredSkills.length === 0 && (
+                <p className="text-xs text-slate-400">No skills found.</p>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleSaveSkills}
+                disabled={isSavingSkills}
+                className="px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-sm font-semibold text-white disabled:bg-teal-300"
+              >
+                {isSavingSkills ? "Saving..." : "Save Skills"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

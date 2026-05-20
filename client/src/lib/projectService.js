@@ -10,6 +10,9 @@ export const projectService = {
     if (params.status) urlParams.append('status', params.status);
     if (params.visibility) urlParams.append('visibility', params.visibility);
     if (params.skill) urlParams.append('skill', params.skill);
+    if (Array.isArray(params.skillNames)) {
+      params.skillNames.forEach(s => urlParams.append('skillNames', s));
+    }
 
     const queryString = urlParams.toString();
     const result = await apiClient.get(`/api/projects${queryString ? `?${queryString}` : ''}`);

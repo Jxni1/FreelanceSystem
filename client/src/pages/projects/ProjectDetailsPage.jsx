@@ -218,6 +218,24 @@ export default function ProjectDetailsPage() {
               </div>
             </section>
 
+            {project.skills?.length > 0 && (
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500 mb-3">
+                  Required Skills
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {project.skills.map(skill => (
+                    <span
+                      key={skill}
+                      className="px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
             <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
                 <div className="flex items-start gap-4">

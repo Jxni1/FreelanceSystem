@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROLES } from '../../constants/roles';
 import { settingService } from '../../lib/settingService';
+import { skillService } from '../../lib/skillService';
 
 const EXPERIENCE_LEVELS = ['Junior', 'Mid', 'Senior', 'Expert'];
 
@@ -13,6 +14,9 @@ export function RegisterPage() {
   const [isRegistrationEnabled, setIsRegistrationEnabled] = useState(true);
   const [isCheckingSettings, setIsCheckingSettings] = useState(true);
   const [minClientBudget, setMinClientBudget] = useState(0);
+  const [allSkills, setAllSkills] = useState([]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState([]);
+  const [skillSearch, setSkillSearch] = useState('');
 
   useEffect(() => {
     const checkSettings = async () => {
@@ -39,6 +43,14 @@ export function RegisterPage() {
     checkSettings();
   }, []);
 
+  useEffect(() => {
+    if (role === ROLES.FREELANCER && allSkills.length === 0) {
+      skillService.getAll({ pageSize: 200 }).then(data => {
+        setAllSkills(data?.items ?? data ?? []);
+      }).catch(() => {});
+    }
+  }, [role, allSkills.length]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setErrors([]);
@@ -58,6 +70,7 @@ export function RegisterPage() {
     if (role === ROLES.FREELANCER) {
       body.experienceLevel = form.get('experienceLevel');
       body.hourlyRate = parseFloat(form.get('hourlyRate')) || null;
+      body.skillIds = selectedSkillIds;
     }
 
     if (role === ROLES.CLIENT) {
@@ -215,7 +228,7 @@ export function RegisterPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="experienceLevel">Experience level</label>
-                  <select 
+                  <select
                     id="experienceLevel" name="experienceLevel" required defaultValue=""
                     disabled={!isRegistrationEnabled}
                     className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%238b8b9e%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E')] bg-no-repeat bg-position-[right_12px_center] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -226,11 +239,69 @@ export function RegisterPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest" htmlFor="hourlyRate">Hourly rate (USD)</label>
-                  <input 
-                    id="hourlyRate" name="hourlyRate" type="number" min="1" step="0.01" placeholder="e.g. 45.00" required 
+                  <input
+                    id="hourlyRate" name="hourlyRate" type="number" min="1" step="0.01" placeholder="e.g. 45.00" required
                     disabled={!isRegistrationEnabled}
                     className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Skills</label>
+                <p className="text-xs text-slate-400">Select the skills you can offer. You can update these later.</p>
+                {selectedSkillIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {allSkills
+                      .filter(s => selectedSkillIds.includes(s.skillsID))
+                      .map(s => (
+                        <span
+                          key={s.skillsID}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200"
+                        >
+                          {s.name}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSkillIds(prev => prev.filter(id => id !== s.skillsID))}
+                            className="text-teal-500 hover:text-teal-700 leading-none"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                )}
+                <input
+                  type="text"
+                  placeholder="Search skills..."
+                  value={skillSearch}
+                  onChange={e => setSkillSearch(e.target.value)}
+                  disabled={!isRegistrationEnabled}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 disabled:opacity-50"
+                />
+                <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
+                  {allSkills
+                    .filter(s => s.name.toLowerCase().includes(skillSearch.toLowerCase()))
+                    .map(s => (
+                      <button
+                        key={s.skillsID}
+                        type="button"
+                        disabled={!isRegistrationEnabled}
+                        onClick={() => setSelectedSkillIds(prev =>
+                          prev.includes(s.skillsID) ? prev.filter(id => id !== s.skillsID) : [...prev, s.skillsID]
+                        )}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors disabled:opacity-50 ${
+                          selectedSkillIds.includes(s.skillsID)
+                            ? 'bg-teal-600 border-teal-600 text-white'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-teal-400 hover:text-teal-600'
+                        }`}
+                      >
+                        {s.name}
+                      </button>
+                    ))}
+                  {allSkills.length === 0 && (
+                    <p className="text-xs text-slate-400">No skills available yet.</p>
+                  )}
                 </div>
               </div>
             </div>

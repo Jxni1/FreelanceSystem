@@ -84,13 +84,31 @@ namespace LabCourse2.Infrastructure.Services
 
                 if (request.Role == RoleConstants.Freelancer)
                 {
-                    _db.FreelancerProfiles.Add(new FreelancerProfile
+                    var freelancerProfile = new FreelancerProfile
                     {
                         FreelancerID = Guid.NewGuid(),
                         UserID = user.UserID,
                         Experience_Level = request.ExperienceLevel!,
                         Hourly_Rate = request.HourlyRate!.Value
-                    });
+                    };
+                    _db.FreelancerProfiles.Add(freelancerProfile);
+
+                    if (request.SkillIds != null && request.SkillIds.Count > 0)
+                    {
+                        var validSkillIds = await _db.Skills
+                            .Where(s => request.SkillIds.Contains(s.SkillsID))
+                            .Select(s => s.SkillsID)
+                            .ToListAsync();
+
+                        foreach (var sid in validSkillIds)
+                            _db.FreelancerSkills.Add(new FreelancerSkills
+                            {
+                                FreelancerSkillsID = Guid.NewGuid(),
+                                FreelancerID = freelancerProfile.FreelancerID,
+                                SkillID = sid,
+                                Level = "General"
+                            });
+                    }
                 }
                 else if (request.Role == RoleConstants.Client)
                 {

@@ -23,5 +23,7 @@ namespace LabCourse2.Application.DTOs.Projects
 
         [Required]
         public Guid CategoryID { get; set; }
+
+        public List<Guid>? SkillIds { get; set; }
     }
 }

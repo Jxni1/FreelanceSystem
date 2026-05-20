@@ -11,6 +11,7 @@ namespace LabCourse2.Application.DTOs.Auth
 
         public string? ExperienceLevel { get; set; }
         public decimal? HourlyRate { get; set; }
+        public List<Guid>? SkillIds { get; set; }
 
         public string? Bio { get; set; }
         public string? Industry { get; set; }

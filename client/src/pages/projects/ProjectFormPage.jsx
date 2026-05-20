@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
 import { SmartBackButton } from '../../components/SmartBackButton';
 import { useCategories } from '../../hooks/useCategories';
+import { skillService } from '../../lib/skillService';
 
 export default function ProjectFormPage() {
   const { id } = useParams();
@@ -11,7 +12,6 @@ export default function ProjectFormPage() {
   const { project, isLoading, error, fetchProjectById, createProject, updateProject } = useProjects();
   const { categories: categoriesData, fetchCategories } = useCategories();
   const [formData, setFormData] = useState({
-
     title: '',
     description: '',
     budget: '',
@@ -20,15 +20,12 @@ export default function ProjectFormPage() {
     categoryID: '',
   });
 
-  // const categories = [
-  //   { id: '00000000-0000-0000-0000-000000000000', name: 'Uncategorized' },
-  //   { id: 'A1B2C3D4-E5F6-4A7B-8C9D-0123456789AB', name: 'Web Development' },
-  //   { id: 'B2C3D4E5-F6A7-4B8C-9D01-23456789ABCD', name: 'Mobile Apps' },
-  //   { id: 'C3D4E5F6-A7B8-4C9D-0123-456789ABCDEF', name: 'UI/UX Design' },
-  // ];
-
   const [formError, setFormError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [allSkills, setAllSkills] = useState([]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState([]);
+  const [skillSearch, setSkillSearch] = useState('');
 
   useEffect(() => {
     if (isEditMode) {
@@ -50,12 +47,31 @@ export default function ProjectFormPage() {
   }, [isEditMode, project]);
 
   useEffect(() => {
-  fetchCategories({ pageSize: 100 });
-}, [fetchCategories]);
+    skillService.getAll({ pageSize: 200 }).then(data => {
+      const skills = data?.items ?? data ?? [];
+      setAllSkills(skills);
+      if (isEditMode && project?.skills?.length > 0) {
+        const matched = skills
+          .filter(s => project.skills.includes(s.name))
+          .map(s => s.skillsID);
+        setSelectedSkillIds(matched);
+      }
+    }).catch(() => {});
+  }, [isEditMode, project]);
+
+  useEffect(() => {
+    fetchCategories({ pageSize: 100 });
+  }, [fetchCategories]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const toggleSkill = (skillId) => {
+    setSelectedSkillIds(prev =>
+      prev.includes(skillId) ? prev.filter(s => s !== skillId) : [...prev, skillId]
+    );
   };
 
   const handleValidation = () => {
@@ -83,6 +99,7 @@ export default function ProjectFormPage() {
       const payload = {
         ...formData,
         budget: Number(formData.budget),
+        skillIds: selectedSkillIds,
       };
 
       if (isEditMode) {
@@ -116,6 +133,10 @@ export default function ProjectFormPage() {
     'w-full px-4 py-3 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent';
   const labelClass =
     'block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-2';
+
+  const filteredSkills = allSkills.filter(s =>
+    s.name.toLowerCase().includes(skillSearch.toLowerCase())
+  );
 
   return (
     <div className="max-w-4xl mx-auto text-slate-900 space-y-6">
@@ -248,6 +269,62 @@ export default function ProjectFormPage() {
                   </select>
                 </div>
               )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-4">
+              <div>
+                <p className={labelClass}>Required Skills</p>
+                <p className="text-xs text-slate-400 mb-3">
+                  Select the skills freelancers will need to complete this project.
+                </p>
+                {selectedSkillIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {allSkills
+                      .filter(s => selectedSkillIds.includes(s.skillsID))
+                      .map(s => (
+                        <span
+                          key={s.skillsID}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200"
+                        >
+                          {s.name}
+                          <button
+                            type="button"
+                            onClick={() => toggleSkill(s.skillsID)}
+                            className="text-teal-500 hover:text-teal-700 leading-none"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                )}
+                <input
+                  type="text"
+                  placeholder="Search skills..."
+                  value={skillSearch}
+                  onChange={e => setSkillSearch(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2"
+                />
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                  {filteredSkills.map(s => (
+                    <button
+                      key={s.skillsID}
+                      type="button"
+                      onClick={() => toggleSkill(s.skillsID)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                        selectedSkillIds.includes(s.skillsID)
+                          ? 'bg-teal-600 border-teal-600 text-white'
+                          : 'bg-white border-slate-300 text-slate-600 hover:border-teal-400 hover:text-teal-600'
+                      }`}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                  {filteredSkills.length === 0 && (
+                    <p className="text-xs text-slate-400">No skills found.</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">

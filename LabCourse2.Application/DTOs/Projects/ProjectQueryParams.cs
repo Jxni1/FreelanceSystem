@@ -17,7 +17,6 @@
         public string? Status { get; set; }
         public string? Visibility { get; set; }
         public string? Skill { get; set; }
-
-      
+        public List<string>? SkillNames { get; set; }
     }
 }

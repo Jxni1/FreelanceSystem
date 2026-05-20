@@ -29,7 +29,6 @@ namespace LabCourse2.Application.Services.Projects
                 .AsNoTracking()
                 .AsQueryable();
 
-            // If the current user is a client, only show their own projects
             var clientProfile = await GetClientProfileAsync();
             if (clientProfile != null)
             {
@@ -52,6 +51,11 @@ namespace LabCourse2.Application.Services.Projects
                 q = q.Where(p => _context.ProjectSkills
                     .Any(ps => ps.ProjectID == p.ProjectID &&
                                ps.Skill.Name.Contains(query.Skill)));
+
+            if (query.SkillNames != null && query.SkillNames.Count > 0)
+                q = q.Where(p => _context.ProjectSkills
+                    .Any(ps => ps.ProjectID == p.ProjectID &&
+                               query.SkillNames.Contains(ps.Skill.Name)));
 
             var totalCount = await q.CountAsync();
 
@@ -119,6 +123,22 @@ namespace LabCourse2.Application.Services.Projects
 
             await _context.Projects.AddAsync(project);
 
+            if (request.SkillIds != null && request.SkillIds.Count > 0)
+            {
+                var validSkillIds = await _context.Skills
+                    .Where(s => request.SkillIds.Contains(s.SkillsID))
+                    .Select(s => s.SkillsID)
+                    .ToListAsync();
+
+                foreach (var sid in validSkillIds)
+                    _context.ProjectSkills.Add(new Domain.Entities.ProjectSkills
+                    {
+                        ProjectSkillsID = Guid.NewGuid(),
+                        ProjectID = project.ProjectID,
+                        SkillID = sid
+                    });
+            }
+
             var notification = new Notification
             {
                 NotificationID = Guid.NewGuid(),
@@ -168,6 +188,27 @@ namespace LabCourse2.Application.Services.Projects
             var oldStatus = project.Status;
 
             project.ApplyUpdate(request);
+
+            var existingSkills = await _context.ProjectSkills
+                .Where(ps => ps.ProjectID == id)
+                .ToListAsync();
+            _context.ProjectSkills.RemoveRange(existingSkills);
+
+            if (request.SkillIds != null && request.SkillIds.Count > 0)
+            {
+                var validSkillIds = await _context.Skills
+                    .Where(s => request.SkillIds.Contains(s.SkillsID))
+                    .Select(s => s.SkillsID)
+                    .ToListAsync();
+
+                foreach (var sid in validSkillIds)
+                    _context.ProjectSkills.Add(new Domain.Entities.ProjectSkills
+                    {
+                        ProjectSkillsID = Guid.NewGuid(),
+                        ProjectID = project.ProjectID,
+                        SkillID = sid
+                    });
+            }
 
             if (!string.Equals(oldStatus, project.Status, StringComparison.OrdinalIgnoreCase))
             {
