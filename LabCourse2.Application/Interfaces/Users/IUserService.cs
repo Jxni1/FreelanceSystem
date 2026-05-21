@@ -1,6 +1,7 @@
 ﻿using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.DTOs.Users;
+using Microsoft.AspNetCore.Http;
 
 namespace LabCourse2.Application.Interfaces.Users
 {
@@ -8,7 +9,8 @@ namespace LabCourse2.Application.Interfaces.Users
     {
         Task<UserProfileDto?> GetCurrentUserProfileAsync();
         Task<UserProfileDto?> GetUserByIdAsync(Guid userId);
-
+        Task<Result<FileExportResultDto>> ExportUsersAsync(UserQueryParams query, string format);
+        Task<Result<ImportResultDto>> ImportUsersAsync(IFormFile file, string format);
         Task<Result<UserProfileDto>> UpdateCurrentUserAsync(UpdateUserRequest request);
         Task<Result<List<string>>> UpdateFreelancerSkillsAsync(UpdateFreelancerSkillsRequest request);
         Task<Result<bool>> DeleteCurrentUserAsync(DeleteUserRequest request);

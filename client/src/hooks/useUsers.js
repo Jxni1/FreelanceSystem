@@ -105,6 +105,44 @@ export function useUsers() {
     }
   };
 
+  const exportUsers = async (params = {}, format = 'csv') => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      return await userService.exportUsers(params, format);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        'Failed to export users.'
+      );
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const importUsers = async (file, format = 'csv') => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      return await userService.importUsers(file, format);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        'Failed to import users.'
+      );
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     users,
     user,
@@ -113,6 +151,8 @@ export function useUsers() {
     fetchUsers,
     createUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    exportUsers,
+    importUsers
   };
 }

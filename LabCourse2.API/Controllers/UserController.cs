@@ -104,7 +104,28 @@ namespace LabCourse2.API.Controllers
             var result = await _userService.GetReportableUsersAsync(query);
             return ToActionResult(result);
         }
+        [HttpGet("export")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ExportUsers([FromQuery] UserQueryParams query, [FromQuery] string format = "csv")
+        {
+            var result = await _userService.ExportUsersAsync(query, format);
 
+            if (!result.IsSuccess || result.Data is null)
+                return ToActionResult(result);
+
+            return File(result.Data.Content, result.Data.ContentType, result.Data.FileName);
+        }
+
+        [HttpPost("import")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ImportUsers([FromForm] IFormFile file, [FromQuery] string format = "csv")
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("File is required.");
+
+            var result = await _userService.ImportUsersAsync(file, format);
+            return ToActionResult(result);
+        }
         [HttpDelete("{id:guid}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(Guid id)

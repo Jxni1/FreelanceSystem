@@ -8,7 +8,6 @@ export const userService = {
     if (params.pageSize) urlParams.append('pageSize', params.pageSize);
     if (params.search) urlParams.append('search', params.search);
     if (params.role) urlParams.append('role', params.role);
-
     if (params.isActive !== undefined && params.isActive !== null) {
       urlParams.append('isActive', params.isActive);
     }
@@ -35,6 +34,39 @@ export const userService = {
 
   async delete(id) {
     const result = await apiClient.delete(`/api/users/${id}`);
+    return result.data;
+  },
+
+  async exportUsers(params = {}, format = 'csv') {
+    const urlParams = new URLSearchParams();
+
+    if (params.page) urlParams.append('page', params.page);
+    if (params.pageSize) urlParams.append('pageSize', params.pageSize);
+    if (params.search) urlParams.append('search', params.search);
+    if (params.role) urlParams.append('role', params.role);
+    if (params.isActive !== undefined && params.isActive !== null) {
+      urlParams.append('isActive', params.isActive);
+    }
+
+    urlParams.append('format', format);
+
+    const result = await apiClient.get(`/api/users/export?${urlParams.toString()}`, {
+      responseType: 'blob'
+    });
+
+    return result; // axios response (blob + headers)
+  },
+
+  async importUsers(file, format = 'csv') {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const result = await apiClient.post(`/api/users/import?format=${format}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
     return result.data;
   }
 };
