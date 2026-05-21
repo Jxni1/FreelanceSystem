@@ -24,6 +24,26 @@ namespace LabCourse2.Application.Services.User
             _db = db;
             _user = httpContextAccessor.HttpContext?.User;
         }
+        public async Task<Result<bool>> DeleteCurrentUserAsync(DeleteUserRequest request)
+        {
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => u.UserID == UserId);
+
+            if (user is null)
+                return Result<bool>.Failure("User not found.");
+
+            if (user.Is_Deleted)
+                return Result<bool>.Failure("User is already deleted.");
+
+            user.Is_Deleted = true;
+            user.Is_Active = false;
+            user.Deleted_At = DateTime.UtcNow;
+            user.Updated_At = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            return Result<bool>.Success(true);
+        }
 
         public async Task<Result<FileExportResultDto>> ExportUsersAsync(UserQueryParams query, string format)
         {
@@ -510,7 +530,7 @@ namespace LabCourse2.Application.Services.User
 
             var usernameExists = await _db.Users.AnyAsync(u =>
                 u.UserID != user.UserID &&
-                u.Is_Active &&
+                !u.Is_Deleted &&
                 u.Username == request.Username);
 
             if (usernameExists)
@@ -518,7 +538,7 @@ namespace LabCourse2.Application.Services.User
 
             var emailExists = await _db.Users.AnyAsync(u =>
                 u.UserID != user.UserID &&
-                u.Is_Active &&
+                !u.Is_Deleted &&
                 u.Email == request.Email);
 
             if (emailExists)
@@ -575,28 +595,25 @@ namespace LabCourse2.Application.Services.User
             return Result<List<string>>.Success(skillNames);
         }
 
-        public async Task<Result<bool>> DeleteCurrentUserAsync(DeleteUserRequest request)
+        // Soft delete usable from elsewhere in the app if you want
+        public async Task<bool> DeleteUserAsync(Guid userId)
         {
             var user = await _db.Users
-                .FirstOrDefaultAsync(u => u.UserID == UserId && u.Is_Active);
+                .FirstOrDefaultAsync(u => u.UserID == userId);
 
-            if (user is null)
-                return Result<bool>.NotFound("User not found.");
+            if (user == null)
+                return false;
 
-            if (string.IsNullOrWhiteSpace(request.Password))
-                return Result<bool>.Failure("Password is required.");
+            if (user.Is_Deleted)
+                return true;
 
-            var passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.Password_Hash);
-
-            if (!passwordValid)
-                return Result<bool>.Failure("Incorrect password.");
-
+            user.Is_Deleted = true;
             user.Is_Active = false;
+            user.Deleted_At = DateTime.UtcNow;
             user.Updated_At = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
-
-            return Result<bool>.Success(true);
+            return true;
         }
 
         public async Task<Result<PagedResult<UserListItemDto>>> GetAllUsersAsync(UserQueryParams query)
@@ -662,7 +679,7 @@ namespace LabCourse2.Application.Services.User
 
             var usernameExists = await _db.Users.AnyAsync(u =>
                 u.UserID != userId &&
-                u.Is_Active &&
+                !u.Is_Deleted &&
                 u.Username == request.Username);
 
             if (usernameExists)
@@ -670,7 +687,7 @@ namespace LabCourse2.Application.Services.User
 
             var emailExists = await _db.Users.AnyAsync(u =>
                 u.UserID != userId &&
-                u.Is_Active &&
+                !u.Is_Deleted &&
                 u.Email == request.Email);
 
             if (emailExists)
@@ -726,12 +743,18 @@ namespace LabCourse2.Application.Services.User
 
         public async Task<Result<bool>> AdminDeleteUserAsync(Guid userId)
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.UserID == userId);
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => u.UserID == userId);
 
             if (user is null)
                 return Result<bool>.Failure("User not found.");
 
+            if (user.Is_Deleted)
+                return Result<bool>.Failure("User is already deleted.");
+
+            user.Is_Deleted = true;
             user.Is_Active = false;
+            user.Deleted_At = DateTime.UtcNow;
             user.Updated_At = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
@@ -809,13 +832,15 @@ namespace LabCourse2.Application.Services.User
                 return Result<UserListItemDto>.Failure("Invalid role.");
 
             var usernameExists = await _db.Users.AnyAsync(u =>
-                u.Username == request.Username && u.Is_Active);
+                u.Username == request.Username &&
+                !u.Is_Deleted);
 
             if (usernameExists)
                 return Result<UserListItemDto>.Failure("Username is already taken.");
 
             var emailExists = await _db.Users.AnyAsync(u =>
-                u.Email == request.Email && u.Is_Active);
+                u.Email == request.Email &&
+                !u.Is_Deleted);
 
             if (emailExists)
                 return Result<UserListItemDto>.Failure("Email is already taken.");

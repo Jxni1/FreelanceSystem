@@ -20,7 +20,6 @@ namespace LabCourse2.Application.Interfaces.Users
 
         Task<Result<UserListItemDto>> AdminUpdateUserAsync(Guid userId, AdminUpdateUserRequest request);
         Task<Result<bool>> AdminDeleteUserAsync(Guid userId);
-
         Task<Result<UserListItemDto>> CreateUserByAdminAsync(CreateUserByAdminRequest request);
     }
 }

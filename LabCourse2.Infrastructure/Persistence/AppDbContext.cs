@@ -47,6 +47,7 @@ namespace LabCourse2.Infrastructure.Persistence
                 e.HasKey(u => u.UserID);
                 e.HasIndex(u => u.Email).IsUnique();
                 e.HasIndex(u => u.Username).IsUnique();
+                e.HasQueryFilter(u => !u.Is_Deleted);
             });
 
             modelBuilder.Entity<FreelancerProfile>(e =>
