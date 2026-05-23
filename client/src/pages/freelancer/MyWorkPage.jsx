@@ -60,6 +60,13 @@ export default function MyWorkPage() {
         ))}
       </div>
 
+      <div className="flex gap-1 border-b border-slate-200">
+        <Link to="/portfolio"
+          className="px-4 py-2 rounded-lg border border-teal-200 bg-teal-50 text-xs font-semibold text-teal-700 hover:bg-teal-100 transition-colors">
+          My Portfolio →
+        </Link>
+      </div>
+
       {tab === 'Proposals' && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">

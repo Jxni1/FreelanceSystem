@@ -104,6 +104,7 @@ export function AppShell() {
                 <NavItem to="/my-work">My Work</NavItem>
                 <NavItem to="/contracts">Contracts</NavItem>
                 <NavItem to="/reviews">Reviews</NavItem>
+                <NavItem to="/portfolio">Portfolio</NavItem>
               </>
             )}
 

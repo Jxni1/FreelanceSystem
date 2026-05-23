@@ -9,6 +9,8 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
 import { SecurityAlertPage } from "./pages/auth/SecurityAlertPage";
 import { ROLES } from "./constants/roles";
+import ClientSpendingDashboard from "./pages/dashboard/ClientSpendingDashboard";
+import FreelancerPortfolioPage from './pages/freelancer/FreelancerPortfolioPage';
 
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AdminPanelPage = lazy(() => import("./pages/admin/AdminPanelPage"));
@@ -94,8 +96,8 @@ export default function App() {
                 <Route path="/notifications" element={<NotificationsPage />} />
                 
                 <Route path="/contracts/:contractId/chat" element={<ContractChatPage />} />
-                 <Route path="/contracts/:id" element={<ContractDetailsPage />} />
-<Route path="/admin/contracts/:contractId/chat" element={<ContractChatPage />} />
+                <Route path="/contracts/:id" element={<ContractDetailsPage />} />
+                <Route path="/admin/contracts/:contractId/chat" element={<ContractChatPage />} />
 
 
                 {/* Freelancer only */}
@@ -103,7 +105,8 @@ export default function App() {
                   <Route path="/discover" element={<FreelancerDiscoverPage />} />
                   <Route path="/my-work" element={<MyWorkPage />} />
                   <Route path="/clients" element={<ClientsPage/>}/>
-                   <Route path="/clients/:clientId/projects" element={<ClientProjectsPage/>} />
+                  <Route path="/clients/:clientId/projects" element={<ClientProjectsPage/>} />
+                  <Route path="/portfolio" element={<FreelancerPortfolioPage />} />
                 </Route>
 
                 {/* Client only */}
@@ -115,6 +118,7 @@ export default function App() {
                   <Route path="/reviews/:id/edit" element={<ReviewFormPage />} />
                   <Route path="/favorite-freelancers" element={<FavoriteFreelancersPage />} />
                   <Route path="/projects/:id/stats" element={<ProtectedViewStatsPage />} />
+                  <Route path="/spending" element={<ClientSpendingDashboard />} />   {/* ← add this */}
                 </Route>
 
                 {/* Client + Freelancer: their own contracts */}
@@ -142,7 +146,7 @@ export default function App() {
                     <Route path="settings" element={<AdminSettingsListPage />} />
                     <Route path="settings/new" element={<AdminSettingFormPage />} />
                     <Route path="settings/:id/edit" element={<AdminSettingFormPage />} />
-                      <Route path="reports" element={<AdminReportsPage />} />
+                    <Route path="reports" element={<AdminReportsPage />} />
                     <Route path="categories" element={<CategoriesListPage />} />
                     <Route path="categories/new" element={<CategoryFormPage />} />
                     <Route path="categories/:id/edit" element={<CategoryFormPage />} />
