@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAuthorization } from '../../hooks/useAuthorization';
 import { Link } from 'react-router-dom';
 import { ReportModal } from '../admin/reports/ReportModal';
-
+import ClientHomePage from './ClientHomePage';
 
 const STAT_CARDS = [
   {
@@ -34,7 +34,9 @@ const STAT_CARDS = [
 
 export default function DashboardPage() {
   const { logout } = useAuth();
-  const { isAdmin, isFreelancer } = useAuthorization();
+  const { isAdmin, isFreelancer, isClient } = useAuthorization();
+
+  if (isClient) return <ClientHomePage />;
 
   const [isReportOpen, setIsReportOpen] = useState(false);
 
