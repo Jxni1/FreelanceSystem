@@ -1,7 +1,6 @@
 using FluentValidation;
-using LabCourse2.API.Hubs;
 using LabCourse2.API.Middleware;
-using LabCourse2.API.Services.Chat;
+using LabCourse2.API.WebSockets;
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Categories;
 using LabCourse2.Application.DTOs.Deliverables;
@@ -63,7 +62,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
-using System.IO;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -72,7 +70,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
-builder.Services.AddSignalR();
+
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -98,6 +96,21 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ClockSkew = TimeSpan.Zero
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var path = context.HttpContext.Request.Path;
+            if (path.StartsWithSegments("/ws/chat") &&
+                context.Request.Query.TryGetValue("token", out var token))
+            {
+                context.Token = token;
+            }
+
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -107,7 +120,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("FrontendPolicy", policy =>
         policy.WithOrigins(
                 builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-                ?? ["http://localhost:3000", "http://localhost:5173"])
+                ?? new[] { "http://localhost:3000", "http://localhost:5173" })
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
@@ -133,7 +146,6 @@ builder.Services.AddScoped<IValidator<CreateSkillRequest>, CreateSkillRequestVal
 builder.Services.AddScoped<IValidator<UpdateSkillRequest>, UpdateSkillRequestValidator>();
 
 builder.Services.AddScoped<IContractService, ContractService>();
-
 builder.Services.AddScoped<ISettingService, SettingService>();
 
 builder.Services.AddScoped<IProposalService, ProposalService>();
@@ -153,11 +165,8 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IValidator<CreateReportRequest>, CreateReportRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateReportStatusRequest>, UpdateReportStatusRequestValidator>();
 
-
 builder.Services.AddScoped<IClientService, ClientService>();
-
 builder.Services.AddScoped<IFavoriteFreelancerService, FavoriteFreelancerService>();
-
 
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IValidator<UploadFileRequest>, UploadFileRequestValidator>();
@@ -175,13 +184,15 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddScoped<IFreelancerService, FreelancerService>();
 
-builder.Services.AddScoped<IChatNotifier, ChatNotifier>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IValidator<CreateCategoryRequest>, CreateCategoryRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateCategoryRequest>, UpdateCategoryRequestValidator>();
 
-builder.Services.AddScoped<IProtectedViewService,ProtectedViewService>();
+builder.Services.AddScoped<IProtectedViewService, ProtectedViewService>();
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddSingleton<ChatWebSocketConnectionManager>();
+builder.Services.AddScoped<ChatWebSocketHandler>();
 
 var app = builder.Build();
 
@@ -192,11 +203,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("FrontendPolicy");
 app.UseHttpsRedirection();
-
-// Serve files from wwwroot if you use it
 app.UseStaticFiles();
 
-// Serve files from /uploads on disk
 var uploadsPath = Path.Combine(builder.Environment.ContentRootPath, "uploads");
 if (!Directory.Exists(uploadsPath))
 {
@@ -209,12 +217,33 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/uploads"
 });
 
-
-app.MapHub<ChatHub>("/hubs/chat");
 app.UseAuthentication();
-
 app.UseActiveUserCheck();
-
 app.UseAuthorization();
+
+app.UseWebSockets();
+
+app.Map("/ws/chat", async context =>
+{
+    Console.WriteLine($"[WS] Incoming request. IsWebSocket={context.WebSockets.IsWebSocketRequest}");
+    Console.WriteLine($"[WS] Authenticated={context.User.Identity?.IsAuthenticated}");
+    Console.WriteLine($"[WS] Username={context.User.Identity?.Name}");
+
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await context.Response.WriteAsync("WebSocket requests only.");
+        return;
+    }
+
+    var socket = await context.WebSockets.AcceptWebSocketAsync();
+
+    using var scope = app.Services.CreateScope();
+    var handler = scope.ServiceProvider.GetRequiredService<ChatWebSocketHandler>();
+
+    await handler.HandleAsync(context, socket);
+});
+
 app.MapControllers();
+
 app.Run();

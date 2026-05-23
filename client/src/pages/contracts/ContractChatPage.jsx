@@ -1,34 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import * as signalR from '@microsoft/signalr';
 import { useConversations } from '../../hooks/useConversations';
 
-const HUB_URL = `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/hubs/chat`;
+const WS_URL = `${import.meta.env.VITE_API_URL
+  .replace(/^http/, 'ws')
+  .replace(/\/api$/, '')}/ws/chat`;
 
 export default function ContractChatPage() {
   const { contractId } = useParams();
+
   const {
     conversation,
     messages,
     isLoading,
-    isSending,
     error,
     setMessages,
     createConversation,
     fetchMessages,
-    sendMessage,
     markAsRead,
   } = useConversations();
 
   const [content, setContent] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
-  const [toast, setToast] = useState(null);
-  const [notificationPermission, setNotificationPermission] = useState(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
-  );
-
+  const socketRef = useRef(null);
   const bottomRef = useRef(null);
-  const toastTimeoutRef = useRef(null);
 
   const currentUsername =
     localStorage.getItem('username') || localStorage.getItem('userName') || '';
@@ -39,27 +34,15 @@ export default function ContractChatPage() {
     '';
 
   useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.items]);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const normalizeRole = (role) => {
     if (!role) return '';
     const value = role.toLowerCase();
-
     if (value.includes('freelancer')) return 'Freelancer';
     if (value.includes('client')) return 'Client';
     if (value.includes('admin')) return 'Admin';
-
     return role;
   };
 
@@ -84,7 +67,7 @@ export default function ContractChatPage() {
     return 'User';
   };
 
-  const getBubbleClasses = (role, mine) => {
+  const getBubbleClasses = (mine, role) => {
     if (mine && role === 'Client') {
       return 'bg-blue-500 text-white rounded-br-md';
     }
@@ -106,181 +89,112 @@ export default function ContractChatPage() {
       : 'bg-white border border-slate-200 text-slate-800 rounded-bl-md';
   };
 
-  const getAvatarClasses = (role, mine) => {
-    if (role === 'Client') {
-      return mine
-        ? 'bg-blue-100 text-blue-700'
-        : 'bg-blue-200 text-blue-800';
-    }
-
-    if (role === 'Freelancer') {
-      return mine
-        ? 'bg-emerald-100 text-emerald-700'
-        : 'bg-emerald-200 text-emerald-800';
-    }
-
-    return 'bg-slate-200 text-slate-700';
-  };
-
-  const getBadgeClasses = (role, mine) => {
-    if (role === 'Client') {
-      return mine
-        ? 'bg-blue-400/20 text-blue-100 border border-blue-300/30'
-        : 'bg-blue-100 text-blue-700 border border-blue-200';
-    }
-
-    if (role === 'Freelancer') {
-      return mine
-        ? 'bg-emerald-400/20 text-emerald-50 border border-emerald-300/30'
-        : 'bg-emerald-100 text-emerald-700 border border-emerald-200';
-    }
-
-    return mine
-      ? 'bg-white/10 text-white border border-white/20'
-      : 'bg-slate-100 text-slate-600 border border-slate-200';
-  };
-
-  const showIncomingToast = (message) => {
-    const role = getRoleFromMessage(message);
-
-    setToast({
-      sender: message.senderUsername || 'Someone',
-      role,
-      content: message.content,
-    });
-
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast(null);
-    }, 4000);
-  };
-
-  const showBrowserNotification = (message) => {
-    if (!('Notification' in window)) return;
-    if (document.visibilityState === 'visible') return;
-    if (Notification.permission !== 'granted') return;
-
-    const role = getRoleFromMessage(message);
-
-    new Notification(`New ${role} message`, {
-      body: `${message.senderUsername || role}: ${message.content}`,
-      icon: '/favicon.ico',
-    });
-  };
-
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      alert('This browser does not support notifications.');
-      return;
-    }
-
-    const permission = await Notification.requestPermission();
-    setNotificationPermission(permission);
+  const getBadgeClasses = (mine, role) => {
+    if (mine && role === 'Client') return 'bg-blue-400/20 text-blue-50';
+    if (mine && role === 'Freelancer') return 'bg-emerald-400/20 text-emerald-50';
+    if (!mine && role === 'Client') return 'bg-blue-100 text-blue-700';
+    if (!mine && role === 'Freelancer') return 'bg-emerald-100 text-emerald-700';
+    return mine ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600';
   };
 
   useEffect(() => {
     let mounted = true;
-    let currentConnection = null;
-    let currentConversationId = null;
-
-    const token =
-      localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
 
     const initialize = async () => {
       try {
         setConnectionStatus('Connecting...');
+        console.log('[CHAT] contractId:', contractId);
 
         const createdConversation = await createConversation(contractId);
-        if (!mounted || !createdConversation?.conversationID) return;
+        console.log('[CHAT] createConversation result:', createdConversation);
 
-        currentConversationId = createdConversation.conversationID;
+        if (!mounted || !createdConversation?.conversationID) {
+          console.error('[CHAT] No conversation returned');
+          setConnectionStatus('Connection failed');
+          return;
+        }
 
         await fetchMessages(createdConversation.conversationID, {
           page: 1,
           pageSize: 50,
         });
+        console.log('[CHAT] fetchMessages success');
 
-        const connection = new signalR.HubConnectionBuilder()
-          .withUrl(HUB_URL, {
-            accessTokenFactory: () => token,
-          })
-          .withAutomaticReconnect()
-          .build();
+        await markAsRead(createdConversation.conversationID);
+        console.log('[CHAT] markAsRead success');
 
-        currentConnection = connection;
+        const token =
+          localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
 
-        connection.on('ReceiveMessage', (message) => {
-          setMessages((prev) => {
-            const prevItems = prev?.items || [];
-            const exactExists = prevItems.some((m) => m.messageID === message.messageID);
+        const fullWsUrl = `${WS_URL}?token=${encodeURIComponent(token)}`;
+        console.log('[CHAT] WS URL:', fullWsUrl);
 
-            if (exactExists) return prev;
+        const socket = new WebSocket(fullWsUrl);
+        socketRef.current = socket;
 
-            const optimisticIndex = prevItems.findIndex(
-              (m) =>
-                m.isOptimistic &&
-                m.content === message.content &&
-                m.senderUsername === message.senderUsername
-            );
+        socket.onopen = () => {
+          console.log('[WS] Connected');
+          setConnectionStatus('Connected');
 
-            if (optimisticIndex !== -1) {
-              const updatedItems = [...prevItems];
-              updatedItems[optimisticIndex] = { ...message, isOptimistic: false };
+          socket.send(
+            JSON.stringify({
+              type: 'join_room',
+              conversationId: createdConversation.conversationID,
+            })
+          );
+        };
+
+        socket.onmessage = (event) => {
+          console.log('[WS] Message:', event.data);
+
+          const response = JSON.parse(event.data);
+
+          if (response.type === 'room_joined') {
+            console.log('[WS] Joined room:', response.payload);
+          }
+
+          if (response.type === 'message_created' && response.payload) {
+            const message = response.payload;
+
+            setMessages((prev) => {
+              const prevItems = prev?.items || [];
+              const exists = prevItems.some((m) => m.messageID === message.messageID);
+
+              if (exists) return prev;
+
+              const withoutOptimistic = prevItems.filter(
+                (m) =>
+                  !(
+                    m.isOptimistic &&
+                    m.content === message.content &&
+                    m.senderUsername === message.senderUsername
+                  )
+              );
 
               return {
                 ...prev,
-                items: updatedItems,
+                items: [...withoutOptimistic, message],
+                totalCount: (prev.totalCount || 0) + (exists ? 0 : 1),
               };
-            }
-
-            return {
-              ...prev,
-              items: [...prevItems, message],
-              totalCount: (prev.totalCount || 0) + 1,
-            };
-          });
-
-          const mine =
-            message.senderUsername &&
-            currentUsername &&
-            message.senderUsername.toLowerCase() === currentUsername.toLowerCase();
-
-          if (!mine) {
-            showIncomingToast(message);
-            showBrowserNotification(message);
+            });
           }
-        });
 
-        connection.onreconnecting(() => {
-          setConnectionStatus('Reconnecting...');
-        });
-
-        connection.onreconnected(async () => {
-          setConnectionStatus('Connected');
-
-          if (currentConversationId) {
-            try {
-              await connection.invoke('JoinConversation', currentConversationId);
-            } catch (err) {
-              console.error('Rejoin failed:', err);
-            }
+          if (response.type === 'error') {
+            console.error('[WS] Server error:', response.error);
           }
-        });
+        };
 
-        connection.onclose(() => {
+        socket.onclose = (event) => {
+          console.log('[WS] Closed:', event.code, event.reason);
           setConnectionStatus('Disconnected');
-        });
+        };
 
-        await connection.start();
-        await connection.invoke('JoinConversation', currentConversationId);
-
-        setConnectionStatus('Connected');
-        await markAsRead(currentConversationId);
+        socket.onerror = (err) => {
+          console.error('[WS] Error:', err);
+          setConnectionStatus('Connection failed');
+        };
       } catch (err) {
-        console.error('Chat init failed:', err);
+        console.error('[CHAT] init failed:', err);
         setConnectionStatus('Connection failed');
       }
     };
@@ -289,45 +203,23 @@ export default function ContractChatPage() {
 
     return () => {
       mounted = false;
-
-      const cleanup = async () => {
-        try {
-          if (
-            currentConnection &&
-            currentConnection.state === signalR.HubConnectionState.Connected &&
-            currentConversationId
-          ) {
-            await currentConnection.invoke('LeaveConversation', currentConversationId);
-          }
-        } catch (err) {
-          console.error('Leave failed:', err);
-        }
-
-        try {
-          if (currentConnection) {
-            await currentConnection.stop();
-          }
-        } catch (err) {
-          console.error('Stop failed:', err);
-        }
-      };
-
-      cleanup();
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
     };
-  }, [
-    contractId,
-    createConversation,
-    fetchMessages,
-    markAsRead,
-    setMessages,
-    currentUsername,
-    currentRole,
-  ]);
+  }, [contractId, createConversation, fetchMessages, markAsRead, setMessages]);
 
-  const handleSend = async (e) => {
+  const handleSend = (e) => {
     e.preventDefault();
 
-    if (!content.trim() || !conversation?.conversationID) return;
+    if (
+      !content.trim() ||
+      !conversation?.conversationID ||
+      !socketRef.current ||
+      socketRef.current.readyState !== WebSocket.OPEN
+    ) {
+      return;
+    }
 
     const trimmedContent = content.trim();
     const tempId = `temp-${Date.now()}`;
@@ -349,103 +241,40 @@ export default function ContractChatPage() {
       totalCount: (prev?.totalCount || 0) + 1,
     }));
 
-    setContent('');
-
-    try {
-      const savedMessage = await sendMessage({
-        conversationID: conversation.conversationID,
+    socketRef.current.send(
+      JSON.stringify({
+        type: 'send_message',
+        conversationId: conversation.conversationID,
         content: trimmedContent,
-      });
+      })
+    );
 
-      const realMessage = savedMessage?.data ?? savedMessage?.value ?? savedMessage;
-
-      setMessages((prev) => {
-        const updatedItems = (prev?.items || []).map((m) =>
-          m.messageID === tempId ? { ...realMessage, isOptimistic: false } : m
-        );
-
-        return {
-          ...prev,
-          items: updatedItems,
-        };
-      });
-    } catch (err) {
-      setMessages((prev) => {
-        const updatedItems = (prev?.items || []).filter((m) => m.messageID !== tempId);
-
-        return {
-          ...prev,
-          items: updatedItems,
-          totalCount: Math.max((prev?.totalCount || 1) - 1, 0),
-        };
-      });
-
-      setContent(trimmedContent);
-      console.error('Send failed:', err);
-    }
+    setContent('');
   };
 
   return (
     <div className="mx-auto max-w-5xl p-6">
-      {toast && (
-        <div className="fixed right-6 top-6 z-50 w-[340px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-              {(toast.sender || 'U').charAt(0)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-slate-900">{toast.sender}</p>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                  {toast.role}
-                </span>
-              </div>
-              <p className="mt-1 line-clamp-2 text-sm text-slate-600">{toast.content}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setToast(null)}
-              className="text-slate-400 transition hover:text-slate-600"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
         <div className="border-b border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-5 text-white">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-xl font-bold">Contract Chat</h1>
               <p className="mt-1 text-sm text-slate-300">
-                Client and freelancer conversation
+                WebSocket real-time conversation
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={requestNotificationPermission}
-                className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-              >
-                {notificationPermission === 'granted'
-                  ? 'Notifications Enabled'
-                  : 'Enable Notifications'}
-              </button>
-
-              <span
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                  connectionStatus === 'Connected'
-                    ? 'bg-emerald-500/20 text-emerald-200'
-                    : connectionStatus === 'Reconnecting...'
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                connectionStatus === 'Connected'
+                  ? 'bg-emerald-500/20 text-emerald-200'
+                  : connectionStatus === 'Connecting...'
                     ? 'bg-amber-500/20 text-amber-200'
                     : 'bg-rose-500/20 text-rose-200'
-                }`}
-              >
-                {connectionStatus}
-              </span>
-            </div>
+              }`}
+            >
+              {connectionStatus}
+            </span>
           </div>
         </div>
 
@@ -463,14 +292,8 @@ export default function ContractChatPage() {
               Loading messages...
             </div>
           ) : messages.items?.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center text-center text-sm text-slate-500">
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-xl">
-                💬
-              </div>
-              <p className="font-medium text-slate-700">No messages yet</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Start the conversation with your first message.
-              </p>
+            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+              No messages yet.
             </div>
           ) : (
             <div className="space-y-4">
@@ -483,56 +306,45 @@ export default function ContractChatPage() {
                     key={message.messageID || `${message.senderUserID}-${message.sentAt}`}
                     className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`flex max-w-[85%] items-end gap-2 md:max-w-[72%] ${
-                        mine ? 'flex-row-reverse' : 'flex-row'
-                      }`}
-                    >
+                    <div className="max-w-[80%]">
                       <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase shadow-sm ${getAvatarClasses(
-                          role,
-                          mine
+                        className={`rounded-2xl px-4 py-3 shadow-sm ${getBubbleClasses(
+                          mine,
+                          role
                         )}`}
                       >
-                        {(message.senderUsername || 'U').charAt(0)}
-                      </div>
-
-                      <div className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
                         <div className="mb-1 flex items-center gap-2">
-                          <span className="text-xs font-semibold text-slate-700">
+                          <span className="text-xs font-semibold">
                             {message.senderUsername || 'User'}
                           </span>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${getBadgeClasses(
-                              role,
-                              mine
+                              mine,
+                              role
                             )}`}
                           >
                             {role}
                           </span>
                         </div>
 
-                        <div
-                          className={`rounded-2xl px-4 py-3 shadow-sm ${getBubbleClasses(
-                            role,
-                            mine
-                          )}`}
-                        >
-                          <p className="text-sm leading-relaxed break-words">
-                            {message.content}
-                          </p>
-                        </div>
+                        <p className="break-words text-sm leading-relaxed">
+                          {message.content}
+                        </p>
+                      </div>
 
-                        <span className="mt-1 px-1 text-[11px] text-slate-400">
-                          {message.sentAt
-                            ? new Date(message.sentAt).toLocaleString([], {
-                                month: 'numeric',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : ''}
-                        </span>
+                      <div
+                        className={`mt-1 px-1 text-[11px] text-slate-400 ${
+                          mine ? 'text-right' : 'text-left'
+                        }`}
+                      >
+                        {message.sentAt
+                          ? new Date(message.sentAt).toLocaleString([], {
+                              month: 'numeric',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : ''}
                       </div>
                     </div>
                   </div>
@@ -544,7 +356,10 @@ export default function ContractChatPage() {
           )}
         </div>
 
-        <form onSubmit={handleSend} className="border-t border-slate-200 bg-white px-4 py-4 md:px-6">
+        <form
+          onSubmit={handleSend}
+          className="border-t border-slate-200 bg-white px-4 py-4 md:px-6"
+        >
           <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm">
             <input
               type="text"
@@ -555,10 +370,10 @@ export default function ContractChatPage() {
             />
             <button
               type="submit"
-              disabled={isSending || !content.trim()}
-              className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!content.trim() || connectionStatus !== 'Connected'}
+              className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSending ? 'Sending...' : 'Send'}
+              Send
             </button>
           </div>
         </form>

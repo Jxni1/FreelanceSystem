@@ -1,5 +1,4 @@
-﻿using LabCourse2.API.Services.Chat;
-using LabCourse2.Application.DTOs.Messages;
+﻿using LabCourse2.Application.DTOs.Messages;
 using LabCourse2.Application.Interfaces.Messages;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,14 +9,10 @@ namespace LabCourse2.API.Controllers
     public class ConversationsController : BaseApiController
     {
         private readonly IMessageService _messageService;
-        private readonly IChatNotifier _chatNotifier;
 
-        public ConversationsController(
-            IMessageService messageService,
-            IChatNotifier chatNotifier)
+        public ConversationsController(IMessageService messageService)
         {
             _messageService = messageService;
-            _chatNotifier = chatNotifier;
         }
 
         [HttpPost]
@@ -45,11 +40,6 @@ namespace LabCourse2.API.Controllers
         public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
         {
             var result = await _messageService.SendMessageAsync(request);
-
-            if (!result.IsSuccess)
-                return ToActionResult(result);
-
-            await _chatNotifier.NotifyMessageCreatedAsync(result.Data);
             return ToActionResult(result);
         }
 

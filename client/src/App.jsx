@@ -21,7 +21,7 @@ import ClientsPage from "./pages/freelancer/ClientsPage";
 import ClientProjectsPage from "./pages/freelancer/ClientsProjectsPage";
 import FavoriteFreelancersPage from "./pages/client/FavoriteFreelancersPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
-import ChatTestPage from "./pages/ChatTestPage";
+
 import ContractChatPage from "./pages/contracts/ContractChatPage";
 
 const ProjectsListPage = lazy(() => import("./pages/projects/ProjectsListPage"));
@@ -92,7 +92,7 @@ export default function App() {
                 <Route path="/projects/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/chat-test" element={<ChatTestPage />} />
+                
                 <Route path="/contracts/:contractId/chat" element={<ContractChatPage />} />
                  <Route path="/contracts/:id" element={<ContractDetailsPage />} />
 <Route path="/admin/contracts/:contractId/chat" element={<ContractChatPage />} />
