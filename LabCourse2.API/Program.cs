@@ -59,6 +59,8 @@ using LabCourse2.Application.DTOs.Categories;
 using LabCourse2.Application.Interfaces.Categories;
 using LabCourse2.Application.Services.Categories;
 using LabCourse2.Application.Validators.Categories;
+using LabCourse2.Application.Interfaces.ProtectedViews;
+using LabCourse2.Application.Services.ProtectedViews;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -172,6 +174,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IValidator<CreateCategoryRequest>, CreateCategoryRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateCategoryRequest>, UpdateCategoryRequestValidator>();
 
+builder.Services.AddScoped<IProtectedViewService,ProtectedViewService>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();

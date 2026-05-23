@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext'; 
 
 const navItems = [
   { key: 'users', label: 'User Management', to: '/admin/users' },
@@ -7,11 +7,12 @@ const navItems = [
   { key: 'contracts', label: 'Contract Management', to: '/admin/contracts' },
   { key: 'categories', label: 'Category Management', to: '/admin/categories' },
   { key: 'reports', label: 'Reports & Analytics', to: '/admin/reports' },
-  { key: 'settings', label: 'Settings Management', to: '/admin/settings' }
+  { key: 'settings', label: 'Settings Management', to: '/admin/settings' },
+  { key: 'protected-views', label: 'Protected Views', to:'/admin/protected-views'}
 ];
 
 export function AdminLayout() {
-  const { logout, user } = useAuth();
+  const { logout, user } = useAuth(); 
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
