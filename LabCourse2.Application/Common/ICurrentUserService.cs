@@ -6,5 +6,6 @@
         string? Username { get; }
         string? ProfileType { get; }
         bool IsAuthenticated { get; }
+        bool IsAdmin { get; }
     }
 }
