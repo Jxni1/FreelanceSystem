@@ -5,7 +5,7 @@ import { useProjects } from '../../hooks/useProjects';
 import { useContracts } from '../../hooks/useContracts';
 import { useFreelancers } from '../../hooks/useFreelancers';
 import { useCategories } from '../../hooks/useCategories';
-import { PlusCircle, Search, FileText, Star, Heart, ArrowRight } from 'lucide-react';
+import { PlusCircle, Search, FileText, Heart, BarChart2, ArrowRight } from 'lucide-react';
 
 const CATEGORY_COLORS = [
   'bg-violet-50 border-violet-200 text-violet-700',
@@ -200,6 +200,7 @@ export default function ClientHomePage() {
               { Icon: Search,      label: 'Find Freelancers',  sub: 'Browse talent',        to: '/freelancers',   bg: 'bg-white hover:bg-slate-50 border border-slate-200', text: 'text-slate-800' },
               { Icon: FileText,    label: 'My Contracts',      sub: 'Track agreements',     to: '/contracts',     bg: 'bg-white hover:bg-slate-50 border border-slate-200', text: 'text-slate-800' },
               { Icon: Heart,       label: 'Saved Freelancers', sub: 'Your shortlist',       to: '/favorite-freelancers', bg: 'bg-white hover:bg-slate-50 border border-slate-200', text: 'text-slate-800' },
+              { Icon: BarChart2,   label: 'Spending',         sub: 'View spend overview',   to: '/spending',     bg: 'bg-white hover:bg-slate-50 border border-slate-200', text: 'text-slate-800' },
             ].map(({ Icon, label, sub, to, bg, text }) => (
               <Link key={label} to={to}
                 className={`rounded-2xl p-5 flex items-center gap-4 font-semibold text-sm transition-all shadow-sm ${bg} ${text}`}>

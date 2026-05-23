@@ -9,6 +9,7 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
 import { SecurityAlertPage } from "./pages/auth/SecurityAlertPage";
 import { ROLES } from "./constants/roles";
+import ClientSpendingDashboard from "./pages/dashboard/ClientSpendingDashboard";
 
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AdminPanelPage = lazy(() => import("./pages/admin/AdminPanelPage"));
@@ -115,6 +116,7 @@ export default function App() {
                   <Route path="/reviews/:id/edit" element={<ReviewFormPage />} />
                   <Route path="/favorite-freelancers" element={<FavoriteFreelancersPage />} />
                   <Route path="/projects/:id/stats" element={<ProtectedViewStatsPage />} />
+                  <Route path="/spending" element={<ClientSpendingDashboard />} />   {/* ← add this */}
                 </Route>
 
                 {/* Client + Freelancer: their own contracts */}
