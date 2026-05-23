@@ -18,5 +18,6 @@ namespace LabCourse2.Domain.Entities
 
 
         public ICollection<Contract> Contracts { get; set; } = new List<Contract>();
+        public ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
     }
 }

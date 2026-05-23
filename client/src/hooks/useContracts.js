@@ -6,31 +6,37 @@ export function useContracts() {
     items: [],
     totalCount: 0,
     page: 1,
-    pageSize: 10
+    pageSize: 10,
   });
-  const [contract, setContract] = useState(null);
+  const [selectedContract, setSelectedContract] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const normalizeContract = (item = {}) => ({
+  const normalizeContract = useCallback((item = {}) => ({
     ...item,
     contractID: item.contractID ?? item.contractId ?? item.ContractID,
+    description: item.description ?? item.Description,
+    clientID: item.clientID ?? item.clientId ?? item.ClientID,
     clientName: item.clientName ?? item.client_name ?? item.ClientName,
+    freelancerID: item.freelancerID ?? item.freelancerId ?? item.FreelancerID,
     freelancerName: item.freelancerName ?? item.freelancer_name ?? item.FreelancerName,
     projectID: item.projectID ?? item.projectId ?? item.ProjectID,
     projectTitle: item.projectTitle ?? item.project_title ?? item.ProjectTitle,
+    proposalID: item.proposalID ?? item.proposalId ?? item.ProposalID,
     agreedPrice: item.agreedPrice ?? item.agreed_Price ?? item.Agreed_Price ?? item.agreed_price,
-    price: item.price ?? item.Price,
     start_Date: item.start_Date ?? item.startDate ?? item.Start_Date,
     end_Date: item.end_Date ?? item.endDate ?? item.End_Date,
-  });
+    status: item.status ?? item.Status,
+  }), []);
 
-  const normalizeContractsPayload = (data, params = {}) => {
+  const normalizeContractsPayload = useCallback((data, params = {}) => {
     const rawItems = Array.isArray(data)
       ? data
       : Array.isArray(data?.items)
         ? data.items
         : [];
+
     const items = rawItems.map(normalizeContract);
 
     return {
@@ -39,93 +45,156 @@ export function useContracts() {
       page: data?.page ?? params.page ?? 1,
       pageSize: data?.pageSize ?? params.pageSize ?? 10,
     };
-  };
+  }, [normalizeContract]);
+
+  const getErrorMessage = useCallback((err, fallback) => {
+    const raw = err?.response?.data;
+    return typeof raw === 'string' ? raw : raw?.message || fallback;
+  }, []);
 
   const fetchContracts = useCallback(async (params = {}) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await contractService.getAll(params);
-      const normalizedData = normalizeContractsPayload(data, params);
-      setContracts(normalizedData);
-      return data;
+      const normalized = normalizeContractsPayload(data, params);
+      setContracts(normalized);
+      return normalized;
     } catch (err) {
-      console.error('Failed to fetch contracts', err);
-      setError(err?.response?.data?.message || err?.response?.data || 'Failed to load contracts.');
+      const message = getErrorMessage(err, 'Failed to load contracts.');
+      setError(message);
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [normalizeContractsPayload, getErrorMessage]);
 
-  const fetchContractById = useCallback(async (id) => {
-    setIsLoading(true);
+  const fetchContractById = useCallback(async (contractId) => {
+    setIsDetailsLoading(true);
     setError(null);
     try {
-      const data = await contractService.getById(id);
-      setContract(normalizeContract(data));
+      const data = await contractService.getById(contractId);
+      const normalized = normalizeContract(data);
+      setSelectedContract(normalized);
+      return normalized;
     } catch (err) {
-      console.error('Failed to fetch contract', err);
-      setError(err?.response?.data?.message || err?.response?.data || 'Failed to load contract.');
+      const message = getErrorMessage(err, 'Failed to load contract details.');
+      setError(message);
+      throw err;
     } finally {
-      setIsLoading(false);
+      setIsDetailsLoading(false);
     }
-  }, []);
+  }, [normalizeContract, getErrorMessage]);
 
-  const createContract = async (data) => {
+  const createContract = useCallback(async (payload) => {
     setIsLoading(true);
     setError(null);
     try {
-      const newContract = await contractService.create(data);
-      return newContract;
+      const data = await contractService.create(payload);
+      const normalized = normalizeContract(data);
+
+      setContracts((prev) => ({
+        ...prev,
+        items: [normalized, ...prev.items],
+        totalCount: (prev.totalCount || 0) + 1,
+      }));
+
+      return normalized;
     } catch (err) {
-      console.error('Failed to create contract', err);
-      setError(err?.response?.data?.message || err?.response?.data || 'Failed to create contract.');
+      const message = getErrorMessage(err, 'Failed to create contract.');
+      setError(message);
       throw err;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [normalizeContract, getErrorMessage]);
 
-  const updateContract = async (id, data) => {
+  const updateContract = useCallback(async (contractId, payload) => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedContract = await contractService.update(id, data);
-      return updatedContract;
+      const data = await contractService.update(contractId, payload);
+      const normalized = normalizeContract(data);
+
+      setContracts((prev) => ({
+        ...prev,
+        items: prev.items.map((contract) =>
+          contract.contractID === contractId ? normalized : contract
+        ),
+      }));
+
+      setSelectedContract((prev) =>
+        prev?.contractID === contractId ? normalized : prev
+      );
+
+      return normalized;
     } catch (err) {
-      console.error('Failed to update contract', err);
-      setError(err?.response?.data?.message || err?.response?.data || 'Failed to update contract.');
+      const message = getErrorMessage(err, 'Failed to update contract.');
+      setError(message);
       throw err;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [normalizeContract, getErrorMessage]);
 
-  const deleteContract = async (id) => {
-    setIsLoading(true);
+  const deleteContract = useCallback(async (contractId) => {
     setError(null);
     try {
-      await contractService.delete(id);
+      await contractService.delete(contractId);
+
+      setContracts((prev) => ({
+        ...prev,
+        items: prev.items.filter((contract) => contract.contractID !== contractId),
+        totalCount: Math.max((prev.totalCount || 0) - 1, 0),
+      }));
+
+      setSelectedContract((prev) =>
+        prev?.contractID === contractId ? null : prev
+      );
+
       return true;
     } catch (err) {
-      console.error('Failed to delete contract', err);
-      setError(err?.response?.data?.message || err?.response?.data || 'Failed to delete contract.');
+      const message = getErrorMessage(err, 'Failed to delete contract.');
+      setError(message);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [getErrorMessage]);
+
+  const exportContracts = useCallback(async (params = {}, format = 'csv') => {
+    setError(null);
+    try {
+      return await contractService.exportContracts(params, format);
+    } catch (err) {
+      const message = getErrorMessage(err, 'Failed to export contracts.');
+      setError(message);
+      throw err;
+    }
+  }, [getErrorMessage]);
+
+  const importContracts = useCallback(async (file, format = 'csv') => {
+    setError(null);
+    try {
+      return await contractService.importContracts(file, format);
+    } catch (err) {
+      const message = getErrorMessage(err, 'Failed to import contracts.');
+      setError(message);
+      throw err;
+    }
+  }, [getErrorMessage]);
 
   return {
     contracts,
-    contract,
+    selectedContract,
     isLoading,
+    isDetailsLoading,
     error,
     fetchContracts,
     fetchContractById,
     createContract,
     updateContract,
-    deleteContract
+    deleteContract,
+    setSelectedContract,
+    exportContracts,
+    importContracts,
   };
 }

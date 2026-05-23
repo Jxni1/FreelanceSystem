@@ -37,7 +37,8 @@ namespace LabCourse2.Application.Common
         DbSet<Audit_Logs> Audit_Logs { get; }
         DbSet<Notification> Notifications { get; }
         DbSet<Setting> Settings { get; }
-
+        DbSet<Conversation> Conversations { get; }
+        DbSet<Message> Messages { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

@@ -37,7 +37,10 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<SavedProjects> SavedProjects => Set<SavedProjects>();
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<Transactions> Transactions => Set<Transactions>();
+        public DbSet<Conversation> Conversations { get; set; }
+        public DbSet<Message> Messages { get; set; }
 
+        
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Role>(e => e.HasKey(r => r.RoleID));
@@ -48,6 +51,49 @@ namespace LabCourse2.Infrastructure.Persistence
                 e.HasIndex(u => u.Email).IsUnique();
                 e.HasIndex(u => u.Username).IsUnique();
                 e.HasQueryFilter(u => !u.Is_Deleted);
+            });
+            modelBuilder.Entity<Conversation>(entity =>
+            {
+                entity.HasKey(e => e.ConversationID);
+
+                entity.HasOne(e => e.Contract)
+                    .WithMany()
+                    .HasForeignKey(e => e.ContractID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Client)
+                    .WithMany(c => c.Conversations)
+                    .HasForeignKey(e => e.ClientID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Freelancer)
+                    .WithMany(f => f.Conversations)
+                    .HasForeignKey(e => e.FreelancerID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(e => e.Created_by).HasMaxLength(100);
+                entity.Property(e => e.Updated_by).HasMaxLength(100);
+            });
+            modelBuilder.Entity<Message>(entity =>
+            {
+                entity.HasKey(e => e.MessageID);
+
+                entity.HasOne(e => e.Conversation)
+                    .WithMany(c => c.Messages)
+                    .HasForeignKey(e => e.ConversationID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.SenderUser)
+                    .WithMany(u => u.MessagesSent)
+                    .HasForeignKey(e => e.SenderUserID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(e => e.Content)
+                    .HasMaxLength(2000)
+                    .IsRequired();
+
+                entity.Property(e => e.Created_by).HasMaxLength(100);
+                entity.Property(e => e.Updated_by).HasMaxLength(100);
             });
 
             modelBuilder.Entity<FreelancerProfile>(e =>

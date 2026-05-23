@@ -1,6 +1,9 @@
 using FluentValidation;
+using LabCourse2.API.Hubs;
 using LabCourse2.API.Middleware;
+using LabCourse2.API.Services.Chat;
 using LabCourse2.Application.Common;
+using LabCourse2.Application.DTOs.Categories;
 using LabCourse2.Application.DTOs.Deliverables;
 using LabCourse2.Application.DTOs.Files;
 using LabCourse2.Application.DTOs.Milestones;
@@ -11,32 +14,39 @@ using LabCourse2.Application.DTOs.Reports;
 using LabCourse2.Application.DTOs.Reviews;
 using LabCourse2.Application.DTOs.Skills;
 using LabCourse2.Application.Interfaces;
+using LabCourse2.Application.Interfaces.Categories;
 using LabCourse2.Application.Interfaces.Contracts;
 using LabCourse2.Application.Interfaces.Deliverables;
 using LabCourse2.Application.Interfaces.Files;
+using LabCourse2.Application.Interfaces.Messages;
 using LabCourse2.Application.Interfaces.Milestones;
 using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Interfaces.Payments;
 using LabCourse2.Application.Interfaces.Projects;
 using LabCourse2.Application.Interfaces.Proposals;
+using LabCourse2.Application.Interfaces.ProtectedViews;
 using LabCourse2.Application.Interfaces.Reports;
 using LabCourse2.Application.Interfaces.Reviews;
 using LabCourse2.Application.Interfaces.Skills;
 using LabCourse2.Application.Interfaces.Users;
 using LabCourse2.Application.Services;
+using LabCourse2.Application.Services.Categories;
 using LabCourse2.Application.Services.Contracts;
 using LabCourse2.Application.Services.Deliverables;
 using LabCourse2.Application.Services.Files;
+using LabCourse2.Application.Services.Messages;
 using LabCourse2.Application.Services.Milestones;
 using LabCourse2.Application.Services.Notifications;
 using LabCourse2.Application.Services.Payments;
 using LabCourse2.Application.Services.Projects;
 using LabCourse2.Application.Services.Proposals;
+using LabCourse2.Application.Services.ProtectedViews;
 using LabCourse2.Application.Services.Reports;
 using LabCourse2.Application.Services.Reviews;
 using LabCourse2.Application.Services.Skills;
 using LabCourse2.Application.Services.User;
 using LabCourse2.Application.Validators;
+using LabCourse2.Application.Validators.Categories;
 using LabCourse2.Application.Validators.Deliverables;
 using LabCourse2.Application.Validators.Files;
 using LabCourse2.Application.Validators.Milestones;
@@ -55,12 +65,6 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using System.IO;
 using System.Text;
-using LabCourse2.Application.DTOs.Categories;
-using LabCourse2.Application.Interfaces.Categories;
-using LabCourse2.Application.Services.Categories;
-using LabCourse2.Application.Validators.Categories;
-using LabCourse2.Application.Interfaces.ProtectedViews;
-using LabCourse2.Application.Services.ProtectedViews;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,7 +72,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
-
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
@@ -170,6 +175,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddScoped<IFreelancerService, FreelancerService>();
 
+builder.Services.AddScoped<IChatNotifier, ChatNotifier>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IValidator<CreateCategoryRequest>, CreateCategoryRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateCategoryRequest>, UpdateCategoryRequestValidator>();
@@ -203,6 +209,8 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/uploads"
 });
 
+
+app.MapHub<ChatHub>("/hubs/chat");
 app.UseAuthentication();
 
 app.UseActiveUserCheck();

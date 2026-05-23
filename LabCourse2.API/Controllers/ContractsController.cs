@@ -90,5 +90,27 @@ namespace LabCourse2.API.Controllers
             var result = await _contractService.DeleteAsync(id);
             return ToActionResult(result);
         }
+        [HttpGet("export")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ExportContracts([FromQuery] ContractQueryParams query, [FromQuery] string format = "csv")
+        {
+            var result = await _contractService.ExportContractsAsync(query, format);
+
+            if (!result.IsSuccess || result.Data is null)
+                return ToActionResult(result);
+
+            return File(result.Data.Content, result.Data.ContentType, result.Data.FileName);
+        }
+
+        [HttpPost("import")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ImportContracts([FromForm] IFormFile file, [FromQuery] string format = "csv")
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("File is required.");
+
+            var result = await _contractService.ImportContractsAsync(file, format);
+            return ToActionResult(result);
+        }
     }
 }

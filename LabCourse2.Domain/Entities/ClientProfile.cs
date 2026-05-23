@@ -18,5 +18,7 @@ namespace LabCourse2.Domain.Entities
         public ICollection<Favorite_Freelancer> FavoriteFreelancers { get; set; } = new List<Favorite_Freelancer>();
 
         public ICollection<Contract> Contracts { get; set; } = new List<Contract>();
+
+        public ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
     }
 }
