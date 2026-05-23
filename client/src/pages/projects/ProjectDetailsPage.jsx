@@ -5,6 +5,7 @@ import { useContracts } from '../../hooks/useContracts';
 import { useProposals } from '../../hooks/useProposals';
 import { useAuthorization } from '../../hooks/useAuthorization';
 import { SmartBackButton } from '../../components/SmartBackButton';
+import { useProtectedViews } from '../../hooks/useProtectedViews';
 
 export default function ProjectDetailsPage() {
   const { id } = useParams();
@@ -13,6 +14,7 @@ export default function ProjectDetailsPage() {
   const { contracts, fetchContracts, isLoading: contractLoading } = useContracts();
   const { proposals, fetchProposals, createProposal, acceptProposal, rejectProposal, deleteProposal } = useProposals();
   const { isClient, isFreelancer } = useAuthorization();
+  const { logView } = useProtectedViews();
 
   const [proposalForm, setProposalForm] = useState({ message: '', bidAmount: '', deliveryDays: '' });
   const [proposalError, setProposalError] = useState(null);
@@ -24,6 +26,7 @@ export default function ProjectDetailsPage() {
     const loadProjectContext = async () => {
       if (!id) return;
       await fetchProjectById(id);
+      logView(id);   
 
       try {
         await fetchContracts({ projectID: id, page: 1, pageSize: 10 });
@@ -41,7 +44,7 @@ export default function ProjectDetailsPage() {
     return () => {
       isMounted = false;
     };
-  }, [id, fetchProjectById, fetchContracts, fetchProposals]);
+  }, [id, fetchProjectById, fetchContracts, fetchProposals, logView]);   
 
   const handleCreateProposal = async (e) => {
     e.preventDefault();

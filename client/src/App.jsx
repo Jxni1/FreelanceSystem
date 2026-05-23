@@ -47,6 +47,9 @@ const ReviewFormPage = lazy(()=> import("./pages/reviews/ReviewFormPage"));
 const CategoriesListPage = lazy(() => import("./pages/admin/categories/CategoriesListPage"));
 const CategoryFormPage = lazy(() => import("./pages/admin/categories/CategoryFormPage"));
 
+const ProtectedViewsDashboard = lazy(()=>import("./pages/admin/protectedViews/ProtectedViewsDashboard"));
+const ProtectedViewStatsPage = lazy(()=>import("./pages/projects/ProjectViewStatsPage"));
+
 const GlobalSuspenseLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
     <div className="flex flex-col items-center gap-4">
@@ -104,6 +107,7 @@ export default function App() {
                   <Route path="/reviews/new" element={<ReviewFormPage />} />
                   <Route path="/reviews/:id/edit" element={<ReviewFormPage />} />
                   <Route path="/favorite-freelancers" element={<FavoriteFreelancersPage />} />
+                  <Route path="/projects/:id/stats" element={<ProtectedViewStatsPage />} />
                 </Route>
 
                 {/* Client + Freelancer: their own contracts */}
@@ -135,6 +139,8 @@ export default function App() {
                     <Route path="categories" element={<CategoriesListPage />} />
                     <Route path="categories/new" element={<CategoryFormPage />} />
                     <Route path="categories/:id/edit" element={<CategoryFormPage />} />
+                    <Route path="protected-views" element={<ProtectedViewsDashboard />}/>
+ 
                    
                   </Route>
                 </Route>

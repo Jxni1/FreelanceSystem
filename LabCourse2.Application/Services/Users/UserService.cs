@@ -469,6 +469,7 @@ namespace LabCourse2.Application.Services.User
         public string? Username => _user?.FindFirstValue(ClaimTypes.Name);
         public string? ProfileType => _user?.FindFirstValue("profileType");
         public bool IsAuthenticated => _user?.Identity?.IsAuthenticated ?? false;
+        public bool IsAdmin => _user?.IsInRole("Admin") ?? false;
 
         public async Task<UserProfileDto?> GetCurrentUserProfileAsync() =>
             await GetUserByIdAsync(UserId);

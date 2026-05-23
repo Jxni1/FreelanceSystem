@@ -28,6 +28,7 @@ export function useReports() {
           ? raw
           : raw?.message || 'Failed to load reports.';
       setError(message);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -47,6 +48,7 @@ export function useReports() {
           ? raw
           : raw?.message || 'Failed to load report details.';
       setError(message);
+      throw err;
     } finally {
       setIsDetailsLoading(false);
     }
@@ -81,6 +83,7 @@ export function useReports() {
           ? raw
           : raw?.message || 'Failed to update report status.';
       setError(message);
+      throw err;
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -107,6 +110,31 @@ export function useReports() {
           ? raw
           : raw?.message || 'Failed to delete report.';
       setError(message);
+      throw err;
+    }
+  }, []);
+
+  const exportReports = useCallback(async (params = {}, format = 'csv') => {
+    try {
+      return await reportService.exportReports(params, format);
+    } catch (err) {
+      setError('Failed to export reports.');
+      throw err;
+    }
+  }, []);
+
+  const importReports = useCallback(async (file, format = 'csv') => {
+    setError(null);
+    try {
+      return await reportService.importReports(file, format);
+    } catch (err) {
+      const raw = err?.response?.data;
+      const message =
+        typeof raw === 'string'
+          ? raw
+          : raw?.message || 'Failed to import reports.';
+      setError(message);
+      throw err;
     }
   }, []);
 
@@ -122,5 +150,7 @@ export function useReports() {
     updateReportStatus,
     deleteReport,
     setSelectedReport,
+    exportReports,
+    importReports,
   };
 }

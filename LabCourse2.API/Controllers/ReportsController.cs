@@ -59,10 +59,35 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
+
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _reportService.DeleteAsync(id);
+            return ToActionResult(result);
+        }
+        [HttpGet("export")]
+        public async Task<IActionResult> Export([FromQuery] ReportQueryParams query, [FromQuery] string format = "csv")
+        {
+            var result = await _reportService.ExportReportsAsync(query, format);
+
+            if (!result.IsSuccess)
+                return ToActionResult(result);
+
+            // Replace Data with the real property name from your Result<T>
+            var fileResult = result.Data;
+
+            return File(fileResult.Content, fileResult.ContentType, fileResult.FileName);
+        }
+
+        [HttpPost("import")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Import([FromForm] IFormFile file, [FromForm] string format = "csv")
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Please upload a file.");
+
+            var result = await _reportService.ImportReportsAsync(file, format);
             return ToActionResult(result);
         }
     }
