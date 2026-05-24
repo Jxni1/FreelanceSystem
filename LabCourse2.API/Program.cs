@@ -115,12 +115,13 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+                     ?? new[] { "http://localhost:3000", "http://localhost:5173" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
-        policy.WithOrigins(
-                builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-                ?? new[] { "http://localhost:3000", "http://localhost:5173" })
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
@@ -221,18 +222,31 @@ app.UseAuthentication();
 app.UseActiveUserCheck();
 app.UseAuthorization();
 
-app.UseWebSockets();
+var webSocketOptions = new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromSeconds(30)
+};
+
+foreach (var origin in allowedOrigins)
+{
+    webSocketOptions.AllowedOrigins.Add(origin);
+}
+
+app.UseWebSockets(webSocketOptions);
 
 app.Map("/ws/chat", async context =>
 {
-    Console.WriteLine($"[WS] Incoming request. IsWebSocket={context.WebSockets.IsWebSocketRequest}");
-    Console.WriteLine($"[WS] Authenticated={context.User.Identity?.IsAuthenticated}");
-    Console.WriteLine($"[WS] Username={context.User.Identity?.Name}");
-
     if (!context.WebSockets.IsWebSocketRequest)
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
         await context.Response.WriteAsync("WebSocket requests only.");
+        return;
+    }
+
+    if (context.User.Identity?.IsAuthenticated != true)
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await context.Response.WriteAsync("Unauthorized.");
         return;
     }
 

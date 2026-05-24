@@ -29,6 +29,13 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
+        [HttpGet("requests")]
+        public async Task<IActionResult> GetPendingRequests()
+        {
+            var result = await _messageService.GetPendingRequestsAsync();
+            return ToActionResult(result);
+        }
+
         [HttpGet("{conversationId:guid}/messages")]
         public async Task<IActionResult> GetMessages(Guid conversationId, [FromQuery] MessageQueryParams query)
         {
@@ -47,6 +54,19 @@ namespace LabCourse2.API.Controllers
         public async Task<IActionResult> MarkAsRead(Guid conversationId)
         {
             var result = await _messageService.MarkConversationAsReadAsync(conversationId);
+            return ToActionResult(result);
+        }
+
+        [HttpGet("unread-count")]
+        public async Task<IActionResult> GetUnreadConversationCount()
+        {
+            var result = await _messageService.GetUnreadConversationCountAsync();
+            return ToActionResult(result);
+        }
+        [HttpPatch("{conversationId:guid}/respond")]
+        public async Task<IActionResult> Respond(Guid conversationId, [FromBody] ConversationDecisionRequest request)
+        {
+            var result = await _messageService.RespondToConversationRequestAsync(conversationId, request.Accept);
             return ToActionResult(result);
         }
     }

@@ -8,7 +8,17 @@ export default function ContractFormPage() {
   const { id } = useParams();
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
-  const { contract, isLoading, fetchContractById, createContract, updateContract } = useContracts();
+
+  const {
+    selectedContract,
+    isDetailsLoading,
+    fetchContractById,
+    createContract,
+    updateContract,
+  } = useContracts();
+
+  const contract = selectedContract;
+  const isLoading = isDetailsLoading;
 
   const [formData, setFormData] = useState({
     description: '',
@@ -29,22 +39,31 @@ export default function ContractFormPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isEditMode && id) fetchContractById(id);
+    if (isEditMode && id) {
+      fetchContractById(id);
+    }
   }, [id, isEditMode, fetchContractById]);
 
   useEffect(() => {
-    if (isEditMode && contract) {
-      setFormData({
-        description: contract.description || '',
-        start_Date: contract.start_Date?.split('T')[0] || '',
-        end_Date: contract.end_Date?.split('T')[0] || '',
-        price: contract.price || '',
-        agreed_Price: contract.agreed_Price || '',
-        status: contract.status || 'Pending',
-        freelancerID: contract.freelancerID || '',
-        projectID: contract.projectID || '',
-      });
-    }
+    if (!isEditMode || !contract) return;
+
+    setFormData({
+      description: contract.description ?? '',
+      start_Date: contract.start_Date
+        ? String(contract.start_Date).split('T')[0]
+        : '',
+      end_Date: contract.end_Date
+        ? String(contract.end_Date).split('T')[0]
+        : '',
+      price: contract.price ?? '',
+      agreed_Price:
+        contract.agreed_Price ??
+        contract.agreedPrice ??
+        '',
+      status: contract.status ?? 'Pending',
+      freelancerID: contract.freelancerID ?? '',
+      projectID: contract.projectID ?? '',
+    });
   }, [contract, isEditMode]);
 
   useEffect(() => {
@@ -103,8 +122,11 @@ export default function ContractFormPage() {
     try {
       const payload = {
         ...formData,
-        price: parseFloat(formData.price),
-        agreed_Price: parseFloat(formData.agreed_Price),
+        price: formData.price === '' ? null : parseFloat(formData.price),
+        agreed_Price:
+          formData.agreed_Price === ''
+            ? null
+            : parseFloat(formData.agreed_Price),
       };
 
       if (isEditMode) {
@@ -115,7 +137,12 @@ export default function ContractFormPage() {
         navigate(`/admin/contracts/${created.contractID}`);
       }
     } catch (err) {
-      setFormError(err?.response?.data?.error || 'Something went wrong. Please try again.');
+      setFormError(
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.response?.data?.title ||
+          'Something went wrong. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -132,6 +159,7 @@ export default function ContractFormPage() {
 
   const inputClass =
     'w-full px-4 py-2.5 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent';
+
   const labelClass =
     'block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1.5';
 
@@ -189,6 +217,7 @@ export default function ContractFormPage() {
                   className={inputClass}
                 />
               </div>
+
               <div>
                 <label className={labelClass}>End Date</label>
                 <input
@@ -217,6 +246,7 @@ export default function ContractFormPage() {
                   placeholder="0.00"
                 />
               </div>
+
               <div>
                 <label className={labelClass}>Agreed Price</label>
                 <input
@@ -300,16 +330,21 @@ export default function ContractFormPage() {
                     <option value="">
                       {projectsLoading ? 'Loading projects...' : 'Select project'}
                     </option>
-                    {projects.map((project) => (
-                      <option
-                        key={project.projectID ?? project.projectId ?? project.id}
-                        value={project.projectID ?? project.projectId ?? project.id}
-                      >
-                        {project.title ??
-                          project.name ??
-                          `Project ${project.projectID ?? project.projectId ?? project.id}`}
-                      </option>
-                    ))}
+                    {projects.map((project) => {
+                      const projectId =
+                        project.projectID ?? project.projectId ?? project.id;
+
+                      const projectTitle =
+                        project.title ??
+                        project.name ??
+                        `Project ${projectId}`;
+
+                      return (
+                        <option key={projectId} value={projectId}>
+                          {projectTitle}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </>

@@ -56,10 +56,14 @@ namespace LabCourse2.Infrastructure.Persistence
             {
                 entity.HasKey(e => e.ConversationID);
 
+                entity.Property(e => e.Status)
+                    .HasMaxLength(20)
+                    .IsRequired();
+
                 entity.HasOne(e => e.Contract)
                     .WithMany()
                     .HasForeignKey(e => e.ContractID)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasOne(e => e.Client)
                     .WithMany(c => c.Conversations)

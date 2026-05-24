@@ -7,14 +7,18 @@ namespace LabCourse2.Domain.Entities
     {
         public Guid ConversationID { get; set; }
 
-        public Guid ContractID { get; set; }
-        public Contract Contract { get; set; } = null!;
+        public Guid? ContractID { get; set; }
+        public Contract? Contract { get; set; }
 
         public Guid ClientID { get; set; }
         public ClientProfile Client { get; set; } = null!;
 
         public Guid FreelancerID { get; set; }
         public FreelancerProfile Freelancer { get; set; } = null!;
+
+        public string Status { get; set; } = "Pending"; // Pending, Accepted, Rejected
+        public Guid RequestedByUserID { get; set; }
+        public DateTime? RespondedAt { get; set; }
 
         public DateTime Created_at { get; set; }
         public string Created_by { get; set; } = string.Empty;

@@ -29,7 +29,12 @@ namespace LabCourse2.API.WebSockets
         public async Task HandleAsync(HttpContext httpContext, WebSocket socket)
         {
             var socketId = _connectionManager.AddSocket(socket);
-            Console.WriteLine($"[WS] Socket connected: {socketId}");
+            var currentUserId = GetCurrentUserId(httpContext);
+
+            if (currentUserId.HasValue)
+            {
+                _connectionManager.RegisterUserSocket(currentUserId.Value, socketId);
+            }
 
             try
             {
@@ -38,12 +43,7 @@ namespace LabCourse2.API.WebSockets
                     var request = await ReceiveAsync(socket);
 
                     if (request == null)
-                    {
-                        Console.WriteLine($"[WS] Null request, closing socket: {socketId}");
                         break;
-                    }
-
-                    Console.WriteLine($"[WS] Event={request.Type}, ConversationId={request.ConversationId}");
 
                     switch (request.Type)
                     {
@@ -53,6 +53,18 @@ namespace LabCourse2.API.WebSockets
 
                         case "send_message":
                             await SendMessageAsync(httpContext, socket, request);
+                            break;
+
+                        case "create_conversation":
+                            await CreateConversationAsync(httpContext, socket, request);
+                            break;
+
+                        case "respond_conversation":
+                            await RespondConversationAsync(httpContext, socket, request);
+                            break;
+
+                        case "get_unread_count":
+                            await SendUnreadCountToCurrentSocketAsync(httpContext, socket);
                             break;
 
                         default:
@@ -67,17 +79,14 @@ namespace LabCourse2.API.WebSockets
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[WS] Handler exception: {ex.Message}");
-
                 await SendToSocketAsync(socket, new WebSocketEventResponse
                 {
                     Type = "error",
-                    Error = "Internal server error."
+                    Error = $"Internal server error: {ex.Message}"
                 });
             }
             finally
             {
-                Console.WriteLine($"[WS] Removing socket: {socketId}");
                 await _connectionManager.RemoveSocketAsync(socketId);
             }
         }
@@ -99,22 +108,14 @@ namespace LabCourse2.API.WebSockets
         {
             if (!request.ConversationId.HasValue)
             {
-                await SendToSocketAsync(socket, new WebSocketEventResponse
-                {
-                    Type = "error",
-                    Error = "ConversationId is required."
-                });
+                await SendErrorAsync(socket, "ConversationId is required.");
                 return;
             }
 
             var userId = GetCurrentUserId(httpContext);
             if (!userId.HasValue)
             {
-                await SendToSocketAsync(socket, new WebSocketEventResponse
-                {
-                    Type = "error",
-                    Error = "Unauthorized."
-                });
+                await SendErrorAsync(socket, "Unauthorized.");
                 return;
             }
 
@@ -128,11 +129,7 @@ namespace LabCourse2.API.WebSockets
 
             if (conversation == null)
             {
-                await SendToSocketAsync(socket, new WebSocketEventResponse
-                {
-                    Type = "error",
-                    Error = "Conversation not found."
-                });
+                await SendErrorAsync(socket, "Conversation not found.");
                 return;
             }
 
@@ -142,17 +139,11 @@ namespace LabCourse2.API.WebSockets
 
             if (!isParticipant)
             {
-                await SendToSocketAsync(socket, new WebSocketEventResponse
-                {
-                    Type = "error",
-                    Error = "Access denied."
-                });
+                await SendErrorAsync(socket, "Access denied.");
                 return;
             }
 
             _connectionManager.AddToRoom(conversationId, socketId);
-
-            Console.WriteLine($"[WS] Socket {socketId} joined room {conversationId}");
 
             await SendToSocketAsync(socket, new WebSocketEventResponse
             {
@@ -161,19 +152,55 @@ namespace LabCourse2.API.WebSockets
             });
         }
 
+        private async Task CreateConversationAsync(HttpContext httpContext, WebSocket socket, WebSocketEventRequest request)
+        {
+            var result = await _messageService.CreateConversationAsync(new CreateConversationRequest
+            {
+                ContractID = request.ContractId,
+                ClientID = request.ClientId,
+                FreelancerID = request.FreelancerId,
+                InitialMessage = request.Content
+            });
+
+            if (!result.IsSuccess || result.Data == null)
+            {
+                await SendErrorAsync(socket, result.Error ?? "Failed to create conversation.");
+                return;
+            }
+
+            var createdConversation = result.Data;
+            var participants = await GetConversationParticipantUserIds(createdConversation.ConversationID);
+
+            await SendToSocketAsync(socket, new WebSocketEventResponse
+            {
+                Type = "conversation_created",
+                Payload = createdConversation
+            });
+
+            foreach (var participant in participants)
+            {
+                foreach (var userSocket in _connectionManager.GetUserSockets(participant))
+                {
+                    await SendToSocketAsync(userSocket, new WebSocketEventResponse
+                    {
+                        Type = createdConversation.Status == "Pending"
+                            ? "message_request_received"
+                            : "conversation_created",
+                        Payload = createdConversation
+                    });
+                }
+
+                await PushUnreadCountToUserAsync(participant);
+            }
+        }
+
         private async Task SendMessageAsync(HttpContext httpContext, WebSocket socket, WebSocketEventRequest request)
         {
             if (!request.ConversationId.HasValue || string.IsNullOrWhiteSpace(request.Content))
             {
-                await SendToSocketAsync(socket, new WebSocketEventResponse
-                {
-                    Type = "error",
-                    Error = "ConversationId and content are required."
-                });
+                await SendErrorAsync(socket, "ConversationId and content are required.");
                 return;
             }
-
-            Console.WriteLine($"[WS] Saving message for conversation {request.ConversationId.Value}");
 
             var result = await _messageService.SendMessageAsync(new SendMessageRequest
             {
@@ -183,32 +210,140 @@ namespace LabCourse2.API.WebSockets
 
             if (!result.IsSuccess || result.Data == null)
             {
-                Console.WriteLine($"[WS] Message save failed: {result.Error}");
-
-                await SendToSocketAsync(socket, new WebSocketEventResponse
-                {
-                    Type = "error",
-                    Error = result.Error ?? "Failed to send message."
-                });
+                await SendErrorAsync(socket, result.Error ?? "Failed to send message.");
                 return;
             }
 
-            Console.WriteLine($"[WS] Message saved: {result.Data.MessageID}");
-
-            var response = new WebSocketEventResponse
+            await BroadcastToRoomAsync(request.ConversationId.Value, new WebSocketEventResponse
             {
                 Type = "message_created",
                 Payload = result.Data
-            };
+            });
 
-            await BroadcastToRoomAsync(request.ConversationId.Value, response);
+            var participants = await GetConversationParticipantUserIds(request.ConversationId.Value);
+
+            foreach (var participant in participants)
+            {
+                foreach (var userSocket in _connectionManager.GetUserSockets(participant))
+                {
+                    await SendToSocketAsync(userSocket, new WebSocketEventResponse
+                    {
+                        Type = "conversation_updated",
+                        Payload = new { conversationId = request.ConversationId.Value }
+                    });
+                }
+
+                await PushUnreadCountToUserAsync(participant);
+            }
+        }
+
+        private async Task RespondConversationAsync(HttpContext httpContext, WebSocket socket, WebSocketEventRequest request)
+        {
+            if (!request.ConversationId.HasValue || !request.Accept.HasValue)
+            {
+                await SendErrorAsync(socket, "ConversationId and accept are required.");
+                return;
+            }
+
+            var result = await _messageService.RespondToConversationRequestAsync(
+                request.ConversationId.Value,
+                request.Accept.Value);
+
+            if (!result.IsSuccess || result.Data == null)
+            {
+                await SendErrorAsync(socket, result.Error ?? "Failed to respond to request.");
+                return;
+            }
+
+            var responseType = request.Accept.Value
+                ? "conversation_request_accepted"
+                : "conversation_request_rejected";
+
+            var participants = await GetConversationParticipantUserIds(request.ConversationId.Value);
+
+            foreach (var participant in participants)
+            {
+                foreach (var userSocket in _connectionManager.GetUserSockets(participant))
+                {
+                    await SendToSocketAsync(userSocket, new WebSocketEventResponse
+                    {
+                        Type = responseType,
+                        Payload = result.Data
+                    });
+                }
+
+                await PushUnreadCountToUserAsync(participant);
+            }
+        }
+
+        private async Task SendUnreadCountToCurrentSocketAsync(HttpContext httpContext, WebSocket socket)
+        {
+            var userId = GetCurrentUserId(httpContext);
+
+            if (!userId.HasValue)
+            {
+                await SendErrorAsync(socket, "Unauthorized.");
+                return;
+            }
+
+            var unreadCount = await GetUnreadConversationCountForUserAsync(userId.Value);
+
+            await SendToSocketAsync(socket, new WebSocketEventResponse
+            {
+                Type = "inbox_unread_count_updated",
+                Payload = new
+                {
+                    unreadCount
+                }
+            });
+        }
+
+        private async Task PushUnreadCountToUserAsync(Guid userId)
+        {
+            var unreadCount = await GetUnreadConversationCountForUserAsync(userId);
+
+            foreach (var userSocket in _connectionManager.GetUserSockets(userId))
+            {
+                await SendToSocketAsync(userSocket, new WebSocketEventResponse
+                {
+                    Type = "inbox_unread_count_updated",
+                    Payload = new
+                    {
+                        unreadCount
+                    }
+                });
+            }
+        }
+
+        private async Task<int> GetUnreadConversationCountForUserAsync(Guid userId)
+        {
+            return await _context.Conversations
+                .AsNoTracking()
+                .Include(c => c.Client).ThenInclude(c => c.User)
+                .Include(c => c.Freelancer).ThenInclude(c => c.User)
+                .CountAsync(c =>
+                    (c.Client.UserID == userId || c.Freelancer.UserID == userId) &&
+                    c.Messages.Any(m => m.SenderUserID != userId && !m.IsRead));
+        }
+
+        private async Task<List<Guid>> GetConversationParticipantUserIds(Guid conversationId)
+        {
+            var conversation = await _context.Conversations
+                .AsNoTracking()
+                .Include(c => c.Client).ThenInclude(c => c.User)
+                .Include(c => c.Freelancer).ThenInclude(c => c.User)
+                .FirstAsync(c => c.ConversationID == conversationId);
+
+            return new List<Guid>
+            {
+                conversation.Client.UserID,
+                conversation.Freelancer.UserID
+            };
         }
 
         private async Task BroadcastToRoomAsync(Guid conversationId, WebSocketEventResponse response)
         {
             var sockets = _connectionManager.GetRoomSockets(conversationId);
-
-            Console.WriteLine($"[WS] Broadcasting to {sockets.Count} sockets in room {conversationId}");
 
             foreach (var socket in sockets)
             {
@@ -235,7 +370,6 @@ namespace LabCourse2.API.WebSockets
             while (!result.EndOfMessage);
 
             var json = Encoding.UTF8.GetString(ms.ToArray());
-            Console.WriteLine($"[WS] Raw message: {json}");
 
             return JsonSerializer.Deserialize<WebSocketEventRequest>(
                 json,
@@ -255,6 +389,15 @@ namespace LabCourse2.API.WebSockets
                 WebSocketMessageType.Text,
                 true,
                 CancellationToken.None);
+        }
+
+        private Task SendErrorAsync(WebSocket socket, string error)
+        {
+            return SendToSocketAsync(socket, new WebSocketEventResponse
+            {
+                Type = "error",
+                Error = error
+            });
         }
     }
 }

@@ -24,7 +24,8 @@ import ClientProjectsPage from "./pages/freelancer/ClientsProjectsPage";
 import FavoriteFreelancersPage from "./pages/client/FavoriteFreelancersPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 
-import ContractChatPage from "./pages/contracts/ContractChatPage";
+import ConversationPage from "./pages/chat/ConversationPage";
+import InboxPage from "./pages/chat/InboxPage";
 
 const ProjectsListPage = lazy(() => import("./pages/projects/ProjectsListPage"));
 const ProjectDetailsPage = lazy(() => import("./pages/projects/ProjectDetailsPage"));
@@ -81,6 +82,7 @@ export default function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
+              
 
                 {/* Role-aware landing: freelancers go to /discover, others to /dashboard */}
                 <Route path="/dashboard" element={<RoleRedirect freelancerTo="/discover" />} />
@@ -95,9 +97,12 @@ export default function App() {
                 <Route path="/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 
-                <Route path="/contracts/:contractId/chat" element={<ContractChatPage />} />
                 <Route path="/contracts/:id" element={<ContractDetailsPage />} />
-                <Route path="/admin/contracts/:contractId/chat" element={<ContractChatPage />} />
+               
+
+            <Route path="/chat/new" element={<ConversationPage />} />
+            <Route path="/chat/:conversationId" element={<ConversationPage />} />
+            <Route path="/inbox" element={<InboxPage />} />
 
 
                 {/* Freelancer only */}

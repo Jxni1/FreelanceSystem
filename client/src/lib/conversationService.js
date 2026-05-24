@@ -1,13 +1,18 @@
 import { apiClient } from './apiClient';
 
 export const conversationService = {
-  async create(contractID) {
-    const result = await apiClient.post('/api/conversations', { contractID });
+  async create(payload) {
+    const result = await apiClient.post('/api/conversations', payload);
     return result.data;
   },
 
   async getMyConversations() {
     const result = await apiClient.get('/api/conversations');
+    return result.data;
+  },
+
+  async getPendingRequests() {
+    const result = await apiClient.get('/api/conversations/requests');
     return result.data;
   },
 
@@ -37,4 +42,16 @@ export const conversationService = {
     const result = await apiClient.patch(`/api/conversations/${conversationId}/read`);
     return result.data;
   },
+
+  
+  async respondToRequest(conversationId, accept) {
+    const result = await apiClient.patch(`/api/conversations/${conversationId}/respond`, {
+      accept,
+    });
+    return result.data;
+  },
+  async getUnreadCount() {
+  const result = await apiClient.get('/api/conversations/unread-count');
+  return result.data;
+}
 };
