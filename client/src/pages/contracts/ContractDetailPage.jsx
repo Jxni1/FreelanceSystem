@@ -12,21 +12,39 @@ const STATUS_STYLES = {
 };
 
 export default function ContractDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id || params.contractId || '';
   const navigate = useNavigate();
-  const { contract, isLoading, error, fetchContractById, deleteContract } = useContracts();
-  const { isAdmin } = useAuthorization();
 
+  const {
+    selectedContract,
+    isDetailsLoading,
+    error,
+    fetchContractById,
+    deleteContract,
+  } = useContracts();
+
+  const contract = selectedContract;
+  const isLoading = isDetailsLoading;
+
+  const { isAdmin } = useAuthorization();
   const contractsPath = isAdmin ? '/admin/contracts' : '/contracts';
 
   useEffect(() => {
-    if (id) fetchContractById(id);
+    if (!id) return;
+    fetchContractById(id);
   }, [id, fetchContractById]);
 
   const handleDelete = async () => {
+    if (!id) return;
+
     if (window.confirm('Are you sure you want to delete this contract?')) {
-      await deleteContract(id);
-      navigate(contractsPath);
+      try {
+        await deleteContract(id);
+        navigate(contractsPath);
+      } catch (err) {
+        console.error('Delete failed:', err);
+      }
     }
   };
 
@@ -43,7 +61,7 @@ export default function ContractDetailsPage() {
     return (
       <div className="max-w-4xl mx-auto mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">
         <h2 className="text-xl font-bold mb-2">Error</h2>
-        <p>{typeof error === 'string' ? error : 'Contract not found.'}</p>
+        <p>{typeof error === 'string' ? error : error?.message || 'Contract not found.'}</p>
         <Link
           to={contractsPath}
           className="mt-4 inline-block text-rose-600 hover:text-rose-700 font-semibold"
@@ -53,6 +71,14 @@ export default function ContractDetailsPage() {
       </div>
     );
   }
+
+  const editPath = isAdmin
+    ? `/admin/contracts/${contract.contractID}/edit`
+    : `/contracts/${contract.contractID}/edit`;
+
+  const workflowPath = isAdmin
+    ? `/admin/contracts/${contract.contractID}/workflow`
+    : `/contracts/${contract.contractID}/workflow`;
 
   return (
     <div className="max-w-4xl mx-auto text-slate-900 space-y-6">
@@ -82,23 +108,37 @@ export default function ContractDetailsPage() {
 
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Link
-                to={`/admin/contracts/${contract.contractID}/edit`}
+                to={editPath}
                 className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold text-center transition-colors"
               >
                 Edit
               </Link>
+
               <Link
-                to={`/contracts/${contract.contractID}/workflow`}
+                to={workflowPath}
                 className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold text-center transition-colors"
               >
                 Workflow
               </Link>
-              <button
-                onClick={handleDelete}
-                className="flex-1 md:flex-none px-5 py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm font-semibold transition-colors"
+
+              <Link
+                to={{
+                  pathname: '/inbox',
+                  search: `?contractId=${contract.contractID}`,
+                }}
+                className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold text-center transition-colors"
               >
-                Delete
-              </button>
+                Chat
+              </Link>
+
+              {isAdmin && (
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 md:flex-none px-5 py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm font-semibold transition-colors"
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -110,7 +150,7 @@ export default function ContractDetailsPage() {
                 Description
               </h3>
               <p className="text-sm text-slate-700 leading-relaxed">
-                {contract.description}
+                {contract.description || 'No description available.'}
               </p>
             </section>
 
@@ -124,15 +164,16 @@ export default function ContractDetailsPage() {
                     Client
                   </p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {contract.clientName}
+                    {contract.clientName || 'N/A'}
                   </p>
                 </div>
+
                 <div className="p-4 rounded-xl bg-white border border-slate-200">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">
                     Freelancer
                   </p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {contract.freelancerName}
+                    {contract.freelancerName || 'N/A'}
                   </p>
                 </div>
               </div>
@@ -142,12 +183,17 @@ export default function ContractDetailsPage() {
               <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500 mb-3">
                 Project
               </h3>
-              <Link
-                to={`/projects/${contract.projectID}`}
-                className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:underline"
-              >
-                {contract.projectTitle ?? 'View Project'}
-              </Link>
+
+              {contract.projectID ? (
+                <Link
+                  to={`/projects/${contract.projectID}`}
+                  className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:underline"
+                >
+                  {contract.projectTitle ?? 'View Project'}
+                </Link>
+              ) : (
+                <p className="text-sm text-slate-500">No project linked.</p>
+              )}
             </section>
           </div>
 
@@ -181,6 +227,7 @@ export default function ContractDetailsPage() {
                     : 'N/A'}
                 </p>
               </div>
+
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">
                   End Date
@@ -189,6 +236,15 @@ export default function ContractDetailsPage() {
                   {contract.end_Date
                     ? new Date(contract.end_Date).toLocaleDateString()
                     : 'N/A'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">
+                  Proposal
+                </p>
+                <p className="text-slate-700 font-mono break-all">
+                  {contract.proposalID || 'N/A'}
                 </p>
               </div>
             </div>

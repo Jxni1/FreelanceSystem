@@ -3,9 +3,10 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAuthorization } from '../hooks/useAuthorization';
 import { useNotifications } from '../hooks/useNotifications';
+import { useInboxUnread } from '../hooks/useInboxUnread';
 
 export function AppShell() {
-  const { logout } = useAuth();
+  const { logout, accessToken, user } = useAuth();
   const { isAdmin, isClient, isFreelancer } = useAuthorization();
   const navigate = useNavigate();
 
@@ -19,12 +20,20 @@ export function AppShell() {
     markAllAsRead,
   } = useNotifications();
 
+  const {
+    unreadCount: inboxUnreadCount,
+    setUnreadCount: setInboxUnreadCount,
+    fetchUnreadCount: fetchInboxUnreadCount,
+  } = useInboxUnread();
+
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationMenuRef = useRef(null);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     fetchUnreadCount().catch(() => {});
-  }, [fetchUnreadCount]);
+    fetchInboxUnreadCount().catch(() => {});
+  }, [fetchUnreadCount, fetchInboxUnreadCount]);
 
   useEffect(() => {
     if (!isNotificationsOpen) return;
@@ -45,6 +54,69 @@ export function AppShell() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const socket = new WebSocket(
+      `${protocol}://${window.location.host}/ws/chat?access_token=${encodeURIComponent(accessToken)}`
+    );
+
+    socketRef.current = socket;
+
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ type: 'get_unread_count' }));
+    };
+
+    socket.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'inbox_unread_count_updated') {
+          setInboxUnreadCount(data.payload?.unreadCount ?? 0);
+          return;
+        }
+
+        if (
+          data.type === 'message_created' &&
+          data.payload?.senderUserID &&
+          user?.userID &&
+          data.payload.senderUserID !== user.userID
+        ) {
+          fetchInboxUnreadCount().catch(() => {});
+          return;
+        }
+
+        if (
+          data.type === 'message_request_received' ||
+          data.type === 'conversation_created' ||
+          data.type === 'conversation_request_accepted' ||
+          data.type === 'conversation_request_rejected' ||
+          data.type === 'conversation_updated'
+        ) {
+          fetchInboxUnreadCount().catch(() => {});
+        }
+      } catch {
+      }
+    };
+
+    socket.onerror = () => {
+    };
+
+    socket.onclose = () => {
+      socketRef.current = null;
+    };
+
+    return () => {
+      if (
+        socket.readyState === WebSocket.OPEN ||
+        socket.readyState === WebSocket.CONNECTING
+      ) {
+        socket.close();
+      }
+    };
+  }, [accessToken, user?.userID, fetchInboxUnreadCount, setInboxUnreadCount]);
 
   const toggleNotifications = async () => {
     const nextOpen = !isNotificationsOpen;
@@ -123,7 +195,12 @@ export function AppShell() {
                 <NavItem to="/admin">Admin Panel</NavItem>
               </>
             )}
-<NavItem to="/notifications">Notifications</NavItem>
+
+            <InboxNavItem to="/inbox" unreadCount={inboxUnreadCount}>
+              Inbox
+            </InboxNavItem>
+
+            <NavItem to="/notifications">Notifications</NavItem>
             <NavItem to="/profile">Profile</NavItem>
 
             <div className="relative ml-2" ref={notificationMenuRef}>
@@ -148,7 +225,7 @@ export function AppShell() {
                 </svg>
 
                 {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-amber-400 text-amber-950 text-[11px] font-bold flex items-center justify-center shadow ring-2 ring-white">
+                  <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-amber-400 text-amber-950 text-[11px] font-bold flex items-center justify-center shadow ring-2 ring-white">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -223,7 +300,11 @@ export function AppShell() {
                             }`}
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`mt-1 h-2.5 w-2.5 rounded-full flex-shrink-0 ${!item.isRead ? 'bg-teal-500' : 'bg-slate-300'}`} />
+                              <div
+                                className={`mt-1 h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                                  !item.isRead ? 'bg-teal-500' : 'bg-slate-300'
+                                }`}
+                              />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-3">
                                   <p className="truncate text-sm font-semibold text-slate-900">
@@ -296,6 +377,29 @@ function NavItem({ to, children }) {
       }
     >
       {children}
+    </NavLink>
+  );
+}
+
+function InboxNavItem({ to, children, unreadCount }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `relative inline-flex items-center px-3 py-1.5 rounded-md text-sm transition-colors ${
+          isActive
+            ? 'bg-teal-600 text-white'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`
+      }
+    >
+      <span>{children}</span>
+
+      {unreadCount > 0 && (
+        <span className="ml-2 inline-flex min-w-[20px] h-5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold items-center justify-center">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      )}
     </NavLink>
   );
 }

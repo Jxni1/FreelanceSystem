@@ -165,6 +165,31 @@ export default function ContractsListPage() {
     }
   };
 
+  const getViewContractPath = (contractId) => {
+    return isAdmin
+      ? `/admin/contracts/${contractId}`
+      : `/contracts/${contractId}`;
+  };
+
+  const getEditContractPath = (contractId) => {
+    return isAdmin
+      ? `/admin/contracts/${contractId}/edit`
+      : `/contracts/${contractId}/edit`;
+  };
+
+  const getWorkflowPath = (contractId) => {
+    return isAdmin
+      ? `/admin/contracts/${contractId}/workflow`
+      : `/contracts/${contractId}/workflow`;
+  };
+
+  const getChatPath = (contractId) => {
+    return {
+      pathname: '/inbox',
+      search: `?contractId=${contractId}`,
+    };
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-6 text-slate-900 md:p-8">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
@@ -353,45 +378,33 @@ export default function ContractsListPage() {
                       <td className="px-5 py-3">
                         <div className="flex justify-end gap-2">
                           <Link
-                            to={
-                              isAdmin
-                                ? `/admin/contracts/${contract.contractID}`
-                                : `/contracts/${contract.contractID}`
-                            }
+                            to={getViewContractPath(contract.contractID)}
                             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            View
+                            View Contract
                           </Link>
+
                           <Link
-                            to={
-                              isAdmin
-                                ? `/admin/contracts/${contract.contractID}/edit`
-                                : `/contracts/${contract.contractID}/edit`
-                            }
+                            to={getEditContractPath(contract.contractID)}
                             className="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700"
                           >
                             Edit
                           </Link>
+
                           <Link
-                            to={
-                              isAdmin
-                                ? `/admin/contracts/${contract.contractID}/workflow`
-                                : `/contracts/${contract.contractID}/workflow`
-                            }
+                            to={getWorkflowPath(contract.contractID)}
                             className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
                           >
                             Workflow
                           </Link>
+
                           <Link
-                            to={
-                              isAdmin
-                                ? `/admin/contracts/${contract.contractID}/chat`
-                                : `/contracts/${contract.contractID}/chat`
-                            }
+                            to={getChatPath(contract.contractID)}
                             className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
                           >
                             Chat
                           </Link>
+
                           <button
                             onClick={() => handleDelete(contract.contractID)}
                             className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100"
