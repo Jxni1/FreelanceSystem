@@ -26,6 +26,7 @@ import NotificationsPage from "./pages/notifications/NotificationsPage";
 
 import ConversationPage from "./pages/chat/ConversationPage";
 import InboxPage from "./pages/chat/InboxPage";
+import RecommendedProjectsTestPage from "./pages/ai/RecommendedProjectsTestPage";
 
 const ProjectsListPage = lazy(() => import("./pages/projects/ProjectsListPage"));
 const ProjectDetailsPage = lazy(() => import("./pages/projects/ProjectDetailsPage"));
@@ -99,6 +100,7 @@ export default function App() {
                 
                 <Route path="/contracts/:id" element={<ContractDetailsPage />} />
                
+               <Route path="/ai-test" element={<RecommendedProjectsTestPage />} />
 
             <Route path="/chat/new" element={<ConversationPage />} />
             <Route path="/chat/:conversationId" element={<ConversationPage />} />
