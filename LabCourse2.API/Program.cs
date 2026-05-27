@@ -1,6 +1,8 @@
 using FluentValidation;
 using LabCourse2.API.Middleware;
 using LabCourse2.API.WebSockets;
+using LabCourse2.Application.Interfaces.AI;
+using LabCourse2.Infrastructure.Services;
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Categories;
 using LabCourse2.Application.DTOs.Deliverables;
@@ -71,6 +73,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
+
+builder.Services.AddHttpClient<IAIMatchingPredictionService, AIMatchingPredictionService>(client =>
+{
+    client.BaseAddress = new Uri("http://127.0.0.1:8000/");
+});
+
+builder.Services.AddScoped<IAIRecommendationService, AIRecommendationService>();
+
+
+builder.Services.AddScoped<IAIMatchingExportService, AIMatchingExportService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();

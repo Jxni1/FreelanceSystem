@@ -1,0 +1,21 @@
+{
+  "embedding_model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "rows_trained": 8,
+  "feature_order": [
+    "cosine_similarity",
+    "hourly_rate",
+    "project_budget",
+    "category_match",
+    "skill_overlap",
+    "skill_level_score",
+    "proposal_bid_ratio",
+    "delivery_days",
+    "experience_encoded"
+  ],
+  "experience_classes": [
+    "Beginner",
+    "Junior",
+    "Mid",
+    "Senior"
+  ]
+}

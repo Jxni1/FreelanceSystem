@@ -9,6 +9,8 @@ const navItems = [
   { key: 'reports', label: 'Reports & Analytics', to: '/admin/reports' },
   { key: 'settings', label: 'Settings Management', to: '/admin/settings' },
   { key: 'protected-views', label: 'Protected Views', to:'/admin/protected-views'}
+  ,
+  { key: 'ai-test', label: 'ML Model', to: '/admin/ai-test' }
 ];
 
 export function AdminLayout() {

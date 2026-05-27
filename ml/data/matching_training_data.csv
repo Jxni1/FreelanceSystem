@@ -1,0 +1,13 @@
+ExperienceLevel,HourlyRate,ProjectBudget,CategoryMatch,SkillOverlap,SkillLevelScore,ProposalBidRatio,DeliveryDays,Label
+Senior,45,2500,1,0.75,0.95,0.0,0,1
+Senior,45,900,1,0.75,0.95,0.0,0,1
+Senior,45,1100,0,0.20,0.95,0.0,0,0
+Senior,45,4000,0,0.25,0.95,0.0,0,0
+Mid,30,3200,1,0.67,0.85,0.0,0,1
+Mid,30,1400,1,0.50,0.85,0.0,0,1
+Mid,30,1100,0,0.10,0.85,0.0,0,0
+Mid,30,900,1,0.20,0.85,0.0,0,0
+Junior,18,1100,1,0.80,0.80,0.0,0,1
+Junior,18,900,1,0.60,0.80,0.0,0,1
+Junior,18,2500,1,0.40,0.80,0.0,0,0
+Junior,18,3200,0,0.10,0.80,0.0,0,0
