@@ -1,177 +1,113 @@
 import os
-import json
 import joblib
-import numpy as np
 import pandas as pd
 
-from sentence_transformers import SentenceTransformer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, roc_auc_score
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-MODELS_DIR = os.path.join(BASE_DIR, "models")
+DATA_PATH = os.path.join(BASE_DIR, "data", "matching_training_data.csv")
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+MODEL_PATH = os.path.join(MODEL_DIR, "matching_model.pkl")
 
-TRAINING_FILE = os.path.join(DATA_DIR, "matching_training_data.csv")
-MODEL_FILE = os.path.join(MODELS_DIR, "matching_model.pkl")
-META_FILE = os.path.join(MODELS_DIR, "matching_model_meta.json")
+os.makedirs(MODEL_DIR, exist_ok=True)
 
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+df = pd.read_csv(DATA_PATH)
 
+feature_cols = [
+    "ExperienceLevel",
+    "HourlyRate",
+    "ProjectBudget",
+    "CategoryMatch",
+    "SkillOverlap",
+    "SkillLevelScore",
+    "ProposalBidRatio",
+    "DeliveryDays",
+]
 
-def ensure_dirs():
-    os.makedirs(DATA_DIR, exist_ok=True)
-    os.makedirs(MODELS_DIR, exist_ok=True)
+target_col = "Label"
 
+df["ExperienceLevel"] = df["ExperienceLevel"].fillna("Unknown")
+df["ProposalBidRatio"] = pd.to_numeric(df["ProposalBidRatio"], errors="coerce")
+df["DeliveryDays"] = pd.to_numeric(df["DeliveryDays"], errors="coerce")
+df["HourlyRate"] = pd.to_numeric(df["HourlyRate"], errors="coerce")
+df["ProjectBudget"] = pd.to_numeric(df["ProjectBudget"], errors="coerce")
+df["CategoryMatch"] = pd.to_numeric(df["CategoryMatch"], errors="coerce")
+df["SkillOverlap"] = pd.to_numeric(df["SkillOverlap"], errors="coerce")
+df["SkillLevelScore"] = pd.to_numeric(df["SkillLevelScore"], errors="coerce")
+df = df.dropna(subset=[target_col])
 
-def safe_float(series, default=0.0):
-    return pd.to_numeric(series, errors="coerce").fillna(default).astype(float)
+X = df[feature_cols]
+y = df[target_col].astype(int)
 
+categorical_features = ["ExperienceLevel"]
+numeric_features = [
+    "HourlyRate",
+    "ProjectBudget",
+    "CategoryMatch",
+    "SkillOverlap",
+    "SkillLevelScore",
+    "ProposalBidRatio",
+    "DeliveryDays",
+]
 
-def build_features(df, encoder):
-    freelancer_texts = df["FreelancerText"].fillna("").astype(str).tolist()
-    project_texts = df["ProjectText"].fillna("").astype(str).tolist()
-
-    freelancer_embeddings = encoder.encode(
-        freelancer_texts,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-        show_progress_bar=True
-    )
-
-    project_embeddings = encoder.encode(
-        project_texts,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-        show_progress_bar=True
-    )
-
-    cosine_similarity = np.sum(freelancer_embeddings * project_embeddings, axis=1)
-
-    experience_encoder = LabelEncoder()
-    experience_encoded = experience_encoder.fit_transform(
-        df["ExperienceLevel"].fillna("Unknown").astype(str)
-    )
-
-    numeric_features = np.column_stack([
-        cosine_similarity,
-        safe_float(df["HourlyRate"]),
-        safe_float(df["ProjectBudget"]),
-        safe_float(df["CategoryMatch"]),
-        safe_float(df["SkillOverlap"]),
-        safe_float(df["SkillLevelScore"]),
-        safe_float(df["ProposalBidRatio"]),
-        safe_float(df["DeliveryDays"]),
-        experience_encoded
-    ])
-
-    return numeric_features, experience_encoder
-
-
-def main():
-    ensure_dirs()
-
-    if not os.path.exists(TRAINING_FILE):
-        raise FileNotFoundError(
-            f"Training file not found at: {TRAINING_FILE}\n"
-            f"Export matching_training_data.csv from your .NET backend first."
-        )
-
-    df = pd.read_csv(TRAINING_FILE)
-
-    required_columns = [
-        "FreelancerText",
-        "ProjectText",
-        "ExperienceLevel",
-        "HourlyRate",
-        "ProjectBudget",
-        "CategoryMatch",
-        "SkillOverlap",
-        "SkillLevelScore",
-        "ProposalBidRatio",
-        "DeliveryDays",
-        "Label"
+numeric_transformer = Pipeline(
+    steps=[
+        ("imputer", SimpleImputer(strategy="constant", fill_value=0)),
+        ("scaler", StandardScaler()),
     ]
+)
 
-    missing = [c for c in required_columns if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing required columns in CSV: {missing}")
+categorical_transformer = Pipeline(
+    steps=[
+        ("imputer", SimpleImputer(strategy="constant", fill_value="Unknown")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore")),
+    ]
+)
 
-    df = df.dropna(subset=["FreelancerText", "ProjectText", "Label"]).copy()
-    df["Label"] = pd.to_numeric(df["Label"], errors="coerce").fillna(0).astype(int)
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", numeric_transformer, numeric_features),
+        ("cat", categorical_transformer, categorical_features),
+    ]
+)
 
-    print(f"Loaded dataset with {len(df)} rows.")
+pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", LogisticRegression(max_iter=1000, class_weight="balanced")),
+    ]
+)
 
-    encoder = SentenceTransformer(EMBEDDING_MODEL_NAME)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
 
-    X, experience_encoder = build_features(df, encoder)
-    y = df["Label"].values
+pipeline.fit(X_train, y_train)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.2,
-        random_state=42,
-        stratify=y if len(np.unique(y)) > 1 else None
-    )
+y_pred = pipeline.predict(X_test)
+y_proba = pipeline.predict_proba(X_test)[:, 1]
 
-    model = RandomForestClassifier(
-        n_estimators=300,
-        max_depth=12,
-        min_samples_split=4,
-        min_samples_leaf=2,
-        random_state=42,
-        class_weight="balanced"
-    )
+print("Classification report:")
+print(classification_report(y_test, y_pred))
 
-    model.fit(X_train, y_train)
+try:
+    auc = roc_auc_score(y_test, y_proba)
+    print(f"ROC AUC: {auc:.3f}")
+except ValueError:
+    print("ROC AUC could not be computed.")
 
-    y_pred = model.predict(X_test)
-    y_prob = model.predict_proba(X_test)[:, 1] if len(np.unique(y)) > 1 else np.zeros(len(y_test))
+joblib.dump(
+    {
+        "model": pipeline
+    },
+    MODEL_PATH
+)
 
-    print("\nAccuracy:", accuracy_score(y_test, y_pred))
-    if len(np.unique(y_test)) > 1:
-        print("ROC-AUC:", roc_auc_score(y_test, y_prob))
-    print("\nClassification report:\n")
-    print(classification_report(y_test, y_pred, zero_division=0))
-
-    artifact = {
-        "model": model,
-        "experience_classes": experience_encoder.classes_.tolist(),
-        "embedding_model_name": EMBEDDING_MODEL_NAME,
-        "feature_order": [
-            "cosine_similarity",
-            "hourly_rate",
-            "project_budget",
-            "category_match",
-            "skill_overlap",
-            "skill_level_score",
-            "proposal_bid_ratio",
-            "delivery_days",
-            "experience_encoded"
-        ]
-    }
-
-    joblib.dump(artifact, MODEL_FILE)
-
-    with open(META_FILE, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "embedding_model_name": EMBEDDING_MODEL_NAME,
-                "rows_trained": int(len(df)),
-                "feature_order": artifact["feature_order"],
-                "experience_classes": artifact["experience_classes"]
-            },
-            f,
-            indent=2
-        )
-
-    print(f"\nSaved model to: {MODEL_FILE}")
-    print(f"Saved metadata to: {META_FILE}")
-
-
-if __name__ == "__main__":
-    main()
+print(f"Model saved to: {MODEL_PATH}")

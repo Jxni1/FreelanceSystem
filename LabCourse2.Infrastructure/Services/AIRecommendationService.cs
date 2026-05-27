@@ -36,11 +36,18 @@ namespace LabCourse2.Infrastructure.Services
             var projects = await _context.Projects
                 .AsNoTracking()
                 .Include(p => p.Category)
+                .Where(p => p.Status == "Open" && p.Visibility == "Public")
                 .ToListAsync();
 
             var projectSkills = await _context.ProjectSkills
                 .AsNoTracking()
                 .Include(ps => ps.Skill)
+                .ToListAsync();
+
+            var contractedProjectIds = await _context.Contracts
+                .AsNoTracking()
+                .Where(c => c.FreelancerID == freelancerId)
+                .Select(c => c.ProjectID)
                 .ToListAsync();
 
             var fSkillNames = freelancerSkills
@@ -73,6 +80,9 @@ namespace LabCourse2.Infrastructure.Services
 
             foreach (var project in projects)
             {
+                if (contractedProjectIds.Contains(project.ProjectID))
+                    continue;
+
                 var pSkills = projectSkills
                     .Where(ps => ps.ProjectID == project.ProjectID)
                     .ToList();
@@ -97,6 +107,10 @@ namespace LabCourse2.Infrastructure.Services
                     $"Budget: {project.Budget}. " +
                     $"Skills: {string.Join(", ", pSkillNames)}.";
 
+                var categoryMatch = skillOverlap >= 0.5 ? 1 : 0;
+
+                var budgetFit = project.Budget >= freelancer.Hourly_Rate * 10 ? 1.0 : 0.0;
+
                 var request = new MatchPredictionRequest
                 {
                     FreelancerText = freelancerText,
@@ -104,7 +118,7 @@ namespace LabCourse2.Infrastructure.Services
                     ExperienceLevel = freelancer.Experience_Level,
                     HourlyRate = (double)freelancer.Hourly_Rate,
                     ProjectBudget = (double)project.Budget,
-                    CategoryMatch = 1,
+                    CategoryMatch = categoryMatch,
                     SkillOverlap = skillOverlap,
                     SkillLevelScore = skillLevelScore,
                     ProposalBidRatio = 0,
@@ -112,8 +126,17 @@ namespace LabCourse2.Infrastructure.Services
                 };
 
                 var prediction = await _predictionService.PredictAsync(request);
+                if (prediction == null)
+                    continue;
 
-                if (prediction == null) continue;
+                var hybridScore =
+                    (prediction.MatchScore * 0.35) +
+                    (skillOverlap * 100.0 * 0.50) +
+                    (categoryMatch * 10.0) +
+                    (budgetFit * 5.0);
+
+                if (hybridScore > 100)
+                    hybridScore = 100;
 
                 results.Add(new RecommendedProjectDto
                 {
@@ -122,14 +145,15 @@ namespace LabCourse2.Infrastructure.Services
                     Description = project.Description,
                     Budget = project.Budget,
                     CategoryName = project.Category.Name,
-                    MatchScore = prediction.MatchScore,
-                    CosineSimilarity = prediction.CosineSimilarity,
+                    MatchScore = Math.Round(hybridScore, 2),
+                    CosineSimilarity = Math.Round(skillOverlap, 4),
                     Prediction = prediction.Prediction
                 });
             }
 
             return results
                 .OrderByDescending(x => x.MatchScore)
+                .ThenByDescending(x => x.CosineSimilarity)
                 .ToList();
         }
     }

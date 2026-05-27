@@ -1,14 +1,86 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { freelancerService } from '../../lib/freelancerService';
+
 
 export default function RecommendedProjectsTestPage() {
+  const [freelancers, setFreelancers] = useState([]);
   const [freelancerId, setFreelancerId] = useState('');
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingFreelancers, setIsLoadingFreelancers] = useState(false);
   const [error, setError] = useState('');
+
+  const formatPercent = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+      return 'N/A';
+    }
+
+    const num = Number(value);
+    return `${num.toFixed(1)}%`;
+  };
+
+  const getMatchLabel = (score) => {
+    const numericScore = Number(score ?? 0);
+
+    if (numericScore >= 70) return 'Good match';
+    if (numericScore >= 50) return 'Moderate match';
+    return 'Low match';
+  };
+
+  const getMatchBadgeClasses = (score) => {
+    const numericScore = Number(score ?? 0);
+
+    if (numericScore >= 70) return 'bg-emerald-50 text-emerald-700';
+    if (numericScore >= 50) return 'bg-blue-50 text-blue-700';
+    return 'bg-amber-50 text-amber-700';
+  };
+
+  useEffect(() => {
+    const loadFreelancers = async () => {
+      try {
+        setIsLoadingFreelancers(true);
+        setError('');
+
+        const result = await freelancerService.getAll({
+          page: 1,
+          pageSize: 100
+        });
+
+        const items =
+          result?.items ||
+          result?.data ||
+          result?.results ||
+          result?.value ||
+          result ||
+          [];
+
+        const freelancerList = Array.isArray(items) ? items : [];
+
+        setFreelancers(freelancerList);
+
+        if (freelancerList.length > 0) {
+          const firstId =
+            freelancerList[0].freelancerID ||
+            freelancerList[0].freelancerId ||
+            freelancerList[0].id ||
+            '';
+
+          setFreelancerId(firstId);
+        }
+      } catch (err) {
+        setError(err?.message || 'Failed to load freelancers.');
+        setFreelancers([]);
+      } finally {
+        setIsLoadingFreelancers(false);
+      }
+    };
+
+    loadFreelancers();
+  }, []);
 
   const loadRecommendations = async () => {
     if (!freelancerId.trim()) {
-      setError('Please enter a freelancer ID.');
+      setError('Please select a freelancer.');
       return;
     }
 
@@ -17,10 +89,18 @@ export default function RecommendedProjectsTestPage() {
       setError('');
       setProjects([]);
 
+      const token =
+        localStorage.getItem('token') ||
+        localStorage.getItem('accessToken') ||
+        localStorage.getItem('jwtToken');
+
       const url = `https://localhost:7244/api/ai-recommendations/${freelancerId}`;
 
       const response = await fetch(url, {
         method: 'GET',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         credentials: 'include',
       });
 
@@ -47,6 +127,17 @@ export default function RecommendedProjectsTestPage() {
     }
   };
 
+  const getFreelancerValue = (freelancer) =>
+    freelancer.freelancerID || freelancer.freelancerId || freelancer.id || '';
+
+  const getFreelancerLabel = (freelancer) =>
+    freelancer.fullName ||
+    freelancer.name ||
+    freelancer.username ||
+    freelancer.email ||
+    freelancer.title ||
+    'Unnamed freelancer';
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -55,24 +146,38 @@ export default function RecommendedProjectsTestPage() {
         </h1>
 
         <p className="mt-2 text-sm text-slate-500">
-          Test your Python + .NET recommendation flow from the React app.
+         Select a freelancer and load recommended projects. Logistic Regression model predicts the match of projects based on the freelancer
         </p>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <input
-            type="text"
+          <select
             value={freelancerId}
             onChange={(e) => setFreelancerId(e.target.value)}
-            placeholder="Enter freelancer ID"
-            className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-teal-500"
-          />
+            disabled={isLoadingFreelancers}
+            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+          >
+            <option value="">
+              {isLoadingFreelancers ? 'Loading freelancers...' : 'Select a freelancer'}
+            </option>
+
+            {freelancers.map((freelancer) => {
+              const value = getFreelancerValue(freelancer);
+              const label = getFreelancerLabel(freelancer);
+
+              return (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              );
+            })}
+          </select>
 
           <button
             onClick={loadRecommendations}
-            disabled={isLoading}
+            disabled={isLoading || isLoadingFreelancers || !freelancerId}
             className="rounded-2xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? 'Loading...' : 'Test AI Recommendations'}
+            {isLoading ? 'Loading...' : 'Load Recommendations'}
           </button>
         </div>
 
@@ -81,7 +186,7 @@ export default function RecommendedProjectsTestPage() {
         </p>
 
         {error && (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 whitespace-pre-wrap">
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm whitespace-pre-wrap text-rose-700">
             {error}
           </div>
         )}
@@ -116,21 +221,17 @@ export default function RecommendedProjectsTestPage() {
                 </span>
 
                 <span className="rounded-full bg-teal-50 px-3 py-1 font-semibold text-teal-700">
-                  Match: {project.matchScore}%
+                  Match: {formatPercent(project.matchScore)}
                 </span>
 
                 <span className="rounded-full bg-indigo-50 px-3 py-1 font-semibold text-indigo-700">
-                  Similarity: {project.cosineSimilarity}
+                  Similarity: {Number(project.cosineSimilarity ?? 0).toFixed(3)}
                 </span>
 
                 <span
-                  className={`rounded-full px-3 py-1 font-semibold ${
-                    project.prediction === 1
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-amber-50 text-amber-700'
-                  }`}
+                  className={`rounded-full px-3 py-1 font-semibold ${getMatchBadgeClasses(project.matchScore)}`}
                 >
-                  Prediction: {project.prediction === 1 ? 'Good match' : 'Low match'}
+                  Prediction: {getMatchLabel(project.matchScore)}
                 </span>
               </div>
             </div>

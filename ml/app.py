@@ -1,84 +1,46 @@
 import os
 import joblib
-import numpy as np
+import pandas as pd
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer
+from pydantic import BaseModel, Field, ConfigDict
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
-
 MODEL_FILE = os.path.join(MODELS_DIR, "matching_model.pkl")
 
 
 class MatchRequest(BaseModel):
-    freelancerText: str
-    projectText: str
-    experienceLevel: str = "Unknown"
-    hourlyRate: float = 0.0
-    projectBudget: float = 0.0
-    categoryMatch: int = 0
-    skillOverlap: float = 0.0
-    skillLevelScore: float = 0.0
-    proposalBidRatio: float = 0.0
-    deliveryDays: int = 0
+    model_config = ConfigDict(populate_by_name=True)
+
+    freelancer_text: str = Field(default="", alias="FreelancerText")
+    project_text: str = Field(default="", alias="ProjectText")
+    experience_level: str = Field(default="Unknown", alias="ExperienceLevel")
+    hourly_rate: float = Field(default=0.0, alias="HourlyRate")
+    project_budget: float = Field(default=0.0, alias="ProjectBudget")
+    category_match: int = Field(default=0, alias="CategoryMatch")
+    skill_overlap: float = Field(default=0.0, alias="SkillOverlap")
+    skill_level_score: float = Field(default=0.0, alias="SkillLevelScore")
+    proposal_bid_ratio: float = Field(default=0.0, alias="ProposalBidRatio")
+    delivery_days: int = Field(default=0, alias="DeliveryDays")
 
 
 app = FastAPI(title="Freelance Matching Model API")
 
 artifact = None
-embedding_model = None
-
-
-def build_feature_vector(req: MatchRequest):
-    freelancer_embedding = embedding_model.encode(
-        [req.freelancerText],
-        convert_to_numpy=True,
-        normalize_embeddings=True
-    )[0]
-
-    project_embedding = embedding_model.encode(
-        [req.projectText],
-        convert_to_numpy=True,
-        normalize_embeddings=True
-    )[0]
-
-    cosine_similarity = float(np.dot(freelancer_embedding, project_embedding))
-
-    experience_classes = artifact["experience_classes"]
-    try:
-        experience_encoded = experience_classes.index(req.experienceLevel)
-    except ValueError:
-        experience_encoded = 0
-
-    features = np.array([[
-        cosine_similarity,
-        float(req.hourlyRate),
-        float(req.projectBudget),
-        float(req.categoryMatch),
-        float(req.skillOverlap),
-        float(req.skillLevelScore),
-        float(req.proposalBidRatio),
-        float(req.deliveryDays),
-        float(experience_encoded)
-    ]])
-
-    return features, cosine_similarity
+model = None
 
 
 @app.on_event("startup")
 def startup_event():
-    global artifact, embedding_model
+    global artifact, model
 
     if not os.path.exists(MODEL_FILE):
-        raise RuntimeError(
-            f"Model file not found at {MODEL_FILE}. Train the model first."
-        )
+        raise RuntimeError(f"Model file not found at {MODEL_FILE}. Train the model first.")
 
     artifact = joblib.load(MODEL_FILE)
-    embedding_model = SentenceTransformer(artifact["embedding_model_name"])
+    model = artifact["model"]
 
 
 @app.get("/health")
@@ -88,21 +50,25 @@ def health():
 
 @app.post("/predict")
 def predict(req: MatchRequest):
-    if artifact is None or embedding_model is None:
+    if artifact is None or model is None:
         raise HTTPException(status_code=500, detail="Model not loaded.")
 
-    features, cosine_similarity = build_feature_vector(req)
+    input_df = pd.DataFrame([{
+        "ExperienceLevel": req.experience_level,
+        "HourlyRate": req.hourly_rate,
+        "ProjectBudget": req.project_budget,
+        "CategoryMatch": req.category_match,
+        "SkillOverlap": req.skill_overlap,
+        "SkillLevelScore": req.skill_level_score,
+        "ProposalBidRatio": req.proposal_bid_ratio,
+        "DeliveryDays": req.delivery_days,
+    }])
 
-    model = artifact["model"]
-    prediction = int(model.predict(features)[0])
-
-    if hasattr(model, "predict_proba"):
-        probability = float(model.predict_proba(features)[0][1])
-    else:
-        probability = float(prediction)
+    probability = float(model.predict_proba(input_df)[0][1])
+    prediction = 1 if probability >= 0.60 else 0
 
     return {
         "prediction": prediction,
         "matchScore": round(probability * 100, 2),
-        "cosineSimilarity": round(cosine_similarity, 4)
+        "cosineSimilarity": round(float(req.skill_overlap), 4)
     }

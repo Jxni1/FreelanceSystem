@@ -1,0 +1,20 @@
+column_name,type,description
+job_id,integer,Unique job identifier
+job_category,string,Job category or domain
+job_budget,integer,Total job budget
+job_required_experience,integer,Minimum years of experience required
+job_required_skill_count,integer,Number of skills required by the job
+freelancer_id,integer,Unique freelancer identifier
+freelancer_category,string,Freelancer main category
+freelancer_hourly_rate,integer,Freelancer hourly rate
+freelancer_years_experience,integer,Freelancer years of experience
+freelancer_rating,float,Freelancer average rating
+freelancer_completed_jobs,integer,Completed jobs count
+skill_overlap_count,integer,Count of shared skills between job and freelancer
+skill_overlap_ratio,float,Shared skills divided by required skills
+same_category,binary,"1 if categories match, else 0"
+budget_fit,binary,1 if estimated freelancer cost fits job budget
+budget_difference,integer,Job budget minus estimated freelancer cost
+experience_gap,integer,Freelancer experience minus required experience
+experience_fit,binary,1 if freelancer meets experience requirement
+label,binary,"Target variable: 1 good match, 0 bad match"

@@ -1,9 +1,13 @@
-FreelancerId,ProjectId,FreelancerText,ProjectText,ExperienceLevel,HourlyRate,ProjectBudget,CategoryMatch,SkillOverlap,SkillLevelScore,ProposalBidRatio,DeliveryDays,Label
-1,101,"Experience level: Senior. Hourly rate: 35. Skills: React, .NET, SQL. Skill levels: React:Advanced, .NET:Advanced, SQL:Intermediate.","Title: Build admin dashboard. Description: Need React and ASP.NET Core developer. Category: Web Development. Budget: 800. Skills: React, .NET, SQL.","Senior",35,800,1,1.0,0.9,0.95,7,1
-2,102,"Experience level: Junior. Hourly rate: 12. Skills: HTML, CSS. Skill levels: HTML:Intermediate, CSS:Intermediate.","Title: Build machine learning API. Description: Need Python ML engineer. Category: AI. Budget: 1500. Skills: Python, TensorFlow, NLP.","Junior",12,1500,0,0.0,0.5,0.20,30,0
-3,103,"Experience level: Mid. Hourly rate: 25. Skills: Python, FastAPI, Pandas. Skill levels: Python:Advanced, FastAPI:Intermediate, Pandas:Advanced.","Title: Create data processing backend. Description: Need Python backend developer with FastAPI. Category: Backend Development. Budget: 1000. Skills: Python, FastAPI, PostgreSQL.","Mid",25,1000,1,0.66,0.8,0.90,10,1
-4,104,"Experience level: Senior. Hourly rate: 45. Skills: UI/UX, Figma, Adobe XD. Skill levels: UI/UX:Advanced, Figma:Advanced, Adobe XD:Intermediate.","Title: Build e-commerce backend API. Description: Need .NET backend developer. Category: Backend Development. Budget: 1200. Skills: C#, .NET, SQL Server.","Senior",45,1200,0,0.0,0.8,0.00,0,0
-5,105,"Experience level: Mid. Hourly rate: 22. Skills: JavaScript, React, Tailwind. Skill levels: JavaScript:Advanced, React:Intermediate, Tailwind:Intermediate.","Title: Frontend redesign for freelance platform. Description: Need React frontend developer. Category: Frontend Development. Budget: 700. Skills: React, JavaScript, Tailwind.","Mid",22,700,1,1.0,0.75,0.85,5,1
-6,106,"Experience level: Beginner. Hourly rate: 10. Skills: Data Entry, Excel. Skill levels: Data Entry:Intermediate, Excel:Beginner.","Title: Build mobile banking app. Description: Need Flutter developer. Category: Mobile Development. Budget: 3000. Skills: Flutter, Dart, Firebase.","Beginner",10,3000,0,0.0,0.4,0.10,25,0
-7,107,"Experience level: Senior. Hourly rate: 40. Skills: Python, Machine Learning, NLP. Skill levels: Python:Advanced, Machine Learning:Advanced, NLP:Advanced.","Title: Resume ranking engine. Description: Need ML engineer for text similarity and ranking. Category: AI. Budget: 2000. Skills: Python, NLP, Scikit-learn.","Senior",40,2000,1,0.66,1.0,0.95,14,1
-8,108,"Experience level: Junior. Hourly rate: 14. Skills: WordPress, SEO. Skill levels: WordPress:Intermediate, SEO:Beginner.","Title: Develop ERP backend in .NET. Description: Need senior C# backend engineer. Category: Enterprise Software. Budget: 2500. Skills: C#, .NET, SQL, Architecture.","Junior",14,2500,0,0.0,0.4,0.10,40,0
+ExperienceLevel,HourlyRate,ProjectBudget,CategoryMatch,SkillOverlap,SkillLevelScore,ProposalBidRatio,DeliveryDays,Label
+Senior,45,2500,1,0.75,0.95,0.0,0,1
+Senior,45,900,1,0.75,0.95,0.0,0,1
+Senior,45,1100,0,0.20,0.95,0.0,0,0
+Senior,45,4000,0,0.25,0.95,0.0,0,0
+Mid,30,3200,1,0.67,0.85,0.0,0,1
+Mid,30,1400,1,0.50,0.85,0.0,0,1
+Mid,30,1100,0,0.10,0.85,0.0,0,0
+Mid,30,900,1,0.20,0.85,0.0,0,0
+Junior,18,1100,1,0.80,0.80,0.0,0,1
+Junior,18,900,1,0.60,0.80,0.0,0,1
+Junior,18,2500,1,0.40,0.80,0.0,0,0
+Junior,18,3200,0,0.10,0.80,0.0,0,0

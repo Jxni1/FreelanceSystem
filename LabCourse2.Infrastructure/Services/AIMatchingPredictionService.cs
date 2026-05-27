@@ -15,7 +15,7 @@ namespace LabCourse2.Infrastructure.Services
 
         public async Task<MatchPredictionResponse?> PredictAsync(MatchPredictionRequest request)
         {
-            var response = await _httpClient.PostAsJsonAsync("/predict", request);
+            var response = await _httpClient.PostAsJsonAsync("predict", request);
 
             if (!response.IsSuccessStatusCode)
             {
