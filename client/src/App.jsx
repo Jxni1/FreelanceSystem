@@ -11,6 +11,9 @@ import { SecurityAlertPage } from "./pages/auth/SecurityAlertPage";
 import { ROLES } from "./constants/roles";
 import ClientSpendingDashboard from "./pages/dashboard/ClientSpendingDashboard";
 import FreelancerPortfolioPage from './pages/freelancer/FreelancerPortfolioPage';
+import PaymentSuccessPage from "./pages/payments/PaymentSuccessPage";
+import PaymentCancelPage from "./pages/payments/PaymentCancelPage";
+import PayoutSetupPage from "./pages/payments/PayoutSetupPage";
 
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AdminPanelPage = lazy(() => import("./pages/admin/AdminPanelPage"));
@@ -98,7 +101,9 @@ export default function App() {
                 <Route path="/projects/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
-                
+                <Route path="/payments/success" element={<PaymentSuccessPage />} />
+                <Route path="/payments/cancel" element={<PaymentCancelPage />} />
+
                 <Route path="/contracts/:id" element={<ContractDetailsPage />} />
                
               
@@ -115,6 +120,7 @@ export default function App() {
                   <Route path="/clients" element={<ClientsPage/>}/>
                   <Route path="/clients/:clientId/projects" element={<ClientProjectsPage/>} />
                   <Route path="/portfolio" element={<FreelancerPortfolioPage />} />
+                  <Route path="/payouts" element={<PayoutSetupPage />} />
                 </Route>
 
                 {/* Client only */}

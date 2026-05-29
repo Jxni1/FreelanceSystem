@@ -2,6 +2,7 @@ using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Milestones;
 using LabCourse2.Application.DTOs.Payments;
 using LabCourse2.Application.Interfaces.Milestones;
+using LabCourse2.Application.Interfaces.Payments;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Constants;
 using LabCourse2.Domain.Entities;
@@ -14,11 +15,13 @@ namespace LabCourse2.Application.Services.Milestones
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly IStripeService _stripe;
 
-        public MilestoneService(IAppDbContext context, ICurrentUserService currentUser)
+        public MilestoneService(IAppDbContext context, ICurrentUserService currentUser, IStripeService stripe)
         {
             _context = context;
             _currentUser = currentUser;
+            _stripe = stripe;
         }
 
         private async Task<ClientProfile?> GetClientProfileAsync() =>
@@ -146,62 +149,91 @@ namespace LabCourse2.Application.Services.Milestones
             return Result<MilestoneResponse>.Success(milestone.ToResponse());
         }
 
-        public async Task<Result<PaymentResponse>> FundAsync(
+        public async Task<Result<FundMilestoneResponse>> FundAsync(
             Guid milestoneId, FundMilestoneRequest request)
         {
             var client = await GetClientProfileAsync();
             if (client is null)
-                return Result<PaymentResponse>.Forbidden("Only clients can fund milestones.");
+                return Result<FundMilestoneResponse>.Forbidden("Only clients can fund milestones.");
 
             var milestone = await _context.Milestones
-                .Include(m => m.Deliverables)
                 .FirstOrDefaultAsync(m => m.MilestoneID == milestoneId);
 
             if (milestone is null)
-                return Result<PaymentResponse>
+                return Result<FundMilestoneResponse>
                     .NotFound($"Milestone with ID {milestoneId} was not found.");
 
             var contract = await GetContractForClientAsync(milestone.ContractID, client.ClientID);
             if (contract is null)
-                return Result<PaymentResponse>
+                return Result<FundMilestoneResponse>
                     .Forbidden("You do not own the contract of this milestone.");
 
-            if (milestone.status != MilestoneStatus.Draft)
-                return Result<PaymentResponse>
+            if (milestone.status != MilestoneStatus.Draft && milestone.status != MilestoneStatus.PendingPayment)
+                return Result<FundMilestoneResponse>
                     .Conflict($"Milestone must be in Draft status to fund. Current status: {milestone.status}.");
 
-            var payment = new Payment
+            var freelancer = await _context.FreelancerProfiles
+                .FirstOrDefaultAsync(f => f.FreelancerID == contract.FreelancerID);
+
+            if (freelancer is null || string.IsNullOrEmpty(freelancer.StripeAccountId))
+                return Result<FundMilestoneResponse>
+                    .Conflict("The freelancer hasn't connected a Stripe payout account yet.");
+
+            try
             {
-                PaymentID = Guid.NewGuid(),
-                Payment_method = request.PaymentMethod,
-                Status = PaymentStatus.Pending,
-                Payment_Date = DateTime.UtcNow,
-                Amount = milestone.Amount,
-                ContractID = milestone.ContractID,
-                MilestoneID = milestone.MilestoneID
-            };
+                var accountStatus = await _stripe.GetAccountStatusAsync(freelancer.StripeAccountId);
+                if (!accountStatus.TransfersEnabled)
+                    return Result<FundMilestoneResponse>
+                        .Conflict("The freelancer's payout account can't receive transfers yet.");
 
-            await _context.Payments.AddAsync(payment);
+                var payment = await _context.Payments
+                    .FirstOrDefaultAsync(p => p.MilestoneID == milestoneId
+                                           && p.Status == PaymentStatus.RequiresPayment);
 
-            var transaction = new Transactions
+                if (payment is null)
+                {
+                    payment = new Payment
+                    {
+                        PaymentID = Guid.NewGuid(),
+                        Payment_method = "stripe_checkout",
+                        Status = PaymentStatus.RequiresPayment,
+                        Payment_Date = DateTime.UtcNow,
+                        Amount = milestone.Amount,
+                        ContractID = milestone.ContractID,
+                        MilestoneID = milestone.MilestoneID
+                    };
+
+                    await _context.Payments.AddAsync(payment);
+                }
+
+                var session = await _stripe.CreateCheckoutSessionAsync(new CheckoutSessionRequest
+                {
+                    PaymentId = payment.PaymentID,
+                    MilestoneId = milestone.MilestoneID,
+                    Amount = milestone.Amount,
+                    ProductName = $"Milestone: {milestone.Title}"
+                });
+
+                payment.StripeCheckoutSessionId = session.SessionId;
+                payment.StripePaymentIntentId = session.PaymentIntentId;
+                payment.Currency = session.Currency;
+
+                milestone.status = MilestoneStatus.PendingPayment;
+
+                await _context.SaveChangesAsync();
+
+                return Result<FundMilestoneResponse>.Created(new FundMilestoneResponse
+                {
+                    PaymentId = payment.PaymentID,
+                    CheckoutUrl = session.Url,
+                    CheckoutSessionId = session.SessionId,
+                    Status = payment.Status
+                });
+            }
+            catch (PaymentProviderException ex)
             {
-                TransactionsID = Guid.NewGuid(),
-                Type = TransactionType.Deposit,
-                Amount = milestone.Amount,
-                Status = "completed",
-                Reference = $"TXN-{Guid.NewGuid():N}",
-                PaymentID = payment.PaymentID,
-                MilestoneID = milestone.MilestoneID
-            };
-
-            await _context.Transactions.AddAsync(transaction);
-
-            milestone.status = MilestoneStatus.Funded;
-            milestone.Funded_at = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return Result<PaymentResponse>.Created(payment.ToResponse());
+                return Result<FundMilestoneResponse>.Failure(ex.Message);
+            }
         }
 
         public async Task<Result<MilestoneResponse>> SubmitAsync(
@@ -293,49 +325,71 @@ namespace LabCourse2.Application.Services.Milestones
                     .Conflict($"Milestone must be in Submitted status to approve. Current status: {milestone.status}.");
 
             var payment = await _context.Payments
-                .FirstOrDefaultAsync(p => p.MilestoneID == milestoneId);
+                .FirstOrDefaultAsync(p => p.MilestoneID == milestoneId && p.Status == PaymentStatus.Held);
 
             if (payment is null)
                 return Result<MilestoneResponse>
-                    .Failure("No payment found for this milestone.");
+                    .Failure("No held payment found for this milestone.");
 
-            var releaseTransaction = new Transactions
+            var freelancer = await _context.FreelancerProfiles
+                .FirstOrDefaultAsync(f => f.FreelancerID == contract.FreelancerID);
+
+            if (freelancer is null || string.IsNullOrEmpty(freelancer.StripeAccountId))
+                return Result<MilestoneResponse>
+                    .Conflict("The freelancer doesn't have a connected payout account.");
+
+            try
             {
-                TransactionsID = Guid.NewGuid(),
-                Type = TransactionType.Release,
-                Amount = milestone.Amount,
-                Status = "completed",
-                Reference = $"TXN-{Guid.NewGuid():N}",
-                PaymentID = payment.PaymentID,
-                MilestoneID = milestone.MilestoneID
-            };
+                var transfer = await _stripe.CreateTransferAsync(new TransferRequest
+                {
+                    DestinationAccountId = freelancer.StripeAccountId,
+                    Amount = payment.Amount,
+                    PaymentId = payment.PaymentID,
+                    MilestoneId = milestone.MilestoneID,
+                    PaymentIntentId = payment.StripePaymentIntentId
+                });
 
-            await _context.Transactions.AddAsync(releaseTransaction);
+                payment.Status = PaymentStatus.Released;
+                payment.StripeTransferId = transfer.TransferId;
 
-            payment.Status = PaymentStatus.Released;
+                _context.Transactions.Add(new Transactions
+                {
+                    TransactionsID = Guid.NewGuid(),
+                    Type = TransactionType.Release,
+                    Amount = transfer.Amount,
+                    Status = "completed",
+                    Reference = transfer.TransferId,
+                    PaymentID = payment.PaymentID,
+                    MilestoneID = milestone.MilestoneID
+                });
 
-            milestone.status = MilestoneStatus.Approved;
-            milestone.Approved_at = DateTime.UtcNow;
+                milestone.status = MilestoneStatus.Approved;
+                milestone.Approved_at = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-
-            var allApproved = await _context.Milestones
-                .Where(m => m.ContractID == milestone.ContractID)
-                .AllAsync(m => m.status == MilestoneStatus.Approved);
-
-            if (allApproved)
-            {
-                contract.Status = ContractStatus.Completed;
-                contract.Project.Status = ProjectStatus.Completed;
                 await _context.SaveChangesAsync();
+
+                var allApproved = await _context.Milestones
+                    .Where(m => m.ContractID == milestone.ContractID)
+                    .AllAsync(m => m.status == MilestoneStatus.Approved);
+
+                if (allApproved)
+                {
+                    contract.Status = ContractStatus.Completed;
+                    contract.Project.Status = ProjectStatus.Completed;
+                    await _context.SaveChangesAsync();
+                }
+
+                var updated = await _context.Milestones
+                    .Include(m => m.Deliverables)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.MilestoneID == milestoneId);
+
+                return Result<MilestoneResponse>.Success(updated!.ToResponse());
             }
-
-            var updated = await _context.Milestones
-                .Include(m => m.Deliverables)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.MilestoneID == milestoneId);
-
-            return Result<MilestoneResponse>.Success(updated!.ToResponse());
+            catch (PaymentProviderException ex)
+            {
+                return Result<MilestoneResponse>.Failure(ex.Message);
+            }
         }
 
         public async Task<Result<bool>> DeleteAsync(Guid milestoneId)

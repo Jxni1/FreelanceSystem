@@ -10,6 +10,9 @@ namespace LabCourse2.Domain.Entities
         public string Experience_Level { get; set; } = null!;
         public decimal Hourly_Rate { get; set; }
 
+        public string? StripeAccountId { get; set; }
+        public bool StripePayoutsEnabled { get; set; }
+
         public Guid UserID { get; set; }
         public User User { get; set; } = null!;
 

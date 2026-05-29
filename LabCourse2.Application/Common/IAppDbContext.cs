@@ -27,6 +27,7 @@ namespace LabCourse2.Application.Common
         DbSet<Milestone> Milestones { get; }
         DbSet<Payment> Payments { get; }
         DbSet<Transactions> Transactions { get; }
+        DbSet<ProcessedStripeEvent> ProcessedStripeEvents { get; }
         DbSet<Deliverables> Deliverables { get; }
 
         DbSet<Review> Reviews { get; }

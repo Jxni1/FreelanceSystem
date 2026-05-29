@@ -37,6 +37,7 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<SavedProjects> SavedProjects => Set<SavedProjects>();
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<Transactions> Transactions => Set<Transactions>();
+        public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<Message> Messages { get; set; }
 
@@ -107,6 +108,8 @@ namespace LabCourse2.Infrastructure.Persistence
                  .WithOne(u => u.FreelancerProfile)
                  .HasForeignKey<FreelancerProfile>(f => f.UserID)
                  .OnDelete(DeleteBehavior.Cascade);
+                e.Property(f => f.StripeAccountId).HasMaxLength(255);
+                e.Property(f => f.StripePayoutsEnabled).HasDefaultValue(false);
             });
 
             modelBuilder.Entity<ClientProfile>(e =>
@@ -258,6 +261,12 @@ namespace LabCourse2.Infrastructure.Persistence
                 e.Property(p => p.Payment_method).IsRequired().HasMaxLength(50);
                 e.Property(p => p.Status).IsRequired().HasMaxLength(20);
                 e.Property(p => p.Amount).IsRequired().HasPrecision(18, 2);
+                e.Property(p => p.Currency).HasMaxLength(10);
+                e.Property(p => p.StripePaymentIntentId).HasMaxLength(255);
+                e.Property(p => p.StripeCheckoutSessionId).HasMaxLength(255);
+                e.Property(p => p.StripeChargeId).HasMaxLength(255);
+                e.Property(p => p.StripeTransferId).HasMaxLength(255);
+                e.Property(p => p.StripeRefundId).HasMaxLength(255);
                 e.HasOne<Contract>()
                  .WithMany(c => c.Payment)
                  .HasForeignKey(p => p.ContractID)
@@ -288,6 +297,13 @@ namespace LabCourse2.Infrastructure.Persistence
                  .WithMany(m => m.Transactions)
                  .HasForeignKey(t => t.MilestoneID)
                  .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<ProcessedStripeEvent>(e =>
+            {
+                e.HasKey(p => p.EventId);
+                e.Property(p => p.EventId).HasMaxLength(255);
+                e.Property(p => p.Type).IsRequired().HasMaxLength(100);
             });
 
             modelBuilder.Entity<Review>(e =>
