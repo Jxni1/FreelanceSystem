@@ -60,6 +60,7 @@ using LabCourse2.Application.Validators.Skills;
 using LabCourse2.Application.Validators.Users;
 using LabCourse2.Infrastructure.Persistence;
 using LabCourse2.Infrastructure.Services;
+using LabCourse2.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -194,6 +195,13 @@ builder.Services.AddScoped<IValidator<CreateNotificationRequest>, CreateNotifica
 builder.Services.AddScoped<IValidator<UpdateNotificationRequest>, UpdateNotificationRequestValidator>();
 builder.Services.AddScoped<INotificationCreator, NotificationCreator>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+builder.Services.Configure<StripeSettings>(
+    builder.Configuration.GetSection(StripeSettings.SectionName));
+Stripe.StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"] ?? string.Empty;
+builder.Services.AddScoped<IStripeService, StripeService>();
+builder.Services.AddScoped<IStripeConnectService, StripeConnectService>();
+builder.Services.AddScoped<IStripeWebhookService, StripeWebhookService>();
 
 builder.Services.AddScoped<IFreelancerService, FreelancerService>();
 

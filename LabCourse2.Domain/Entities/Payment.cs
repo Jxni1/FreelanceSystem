@@ -15,6 +15,14 @@ namespace LabCourse2.Domain.Entities
 
         public decimal Amount { get; set; }
 
+        public string? Currency { get; set; }
+
+        public string? StripePaymentIntentId { get; set; }
+        public string? StripeCheckoutSessionId { get; set; }
+        public string? StripeChargeId { get; set; }
+        public string? StripeTransferId { get; set; }
+        public string? StripeRefundId { get; set; }
+
         public Guid ContractID { get; set; }
 
         public Guid? MilestoneID { get; set; }

@@ -6,21 +6,15 @@ import { useAuthorization } from '../../hooks/useAuthorization';
 import { SmartBackButton } from '../../components/SmartBackButton';
 import { reviewService } from '../../lib/reviewService';
 
-const PAYMENT_METHODS = [
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'credit_card', label: 'Credit Card' },
-  { value: 'paypal', label: 'PayPal' },
-  { value: 'stripe', label: 'Stripe' },
-];
-
 function statusBadgeClass(status) {
   switch (status) {
-    case 'Draft':     return 'bg-slate-100 text-slate-600';
-    case 'Funded':    return 'bg-blue-100 text-blue-700';
-    case 'Submitted': return 'bg-amber-100 text-amber-700';
-    case 'Approved':  return 'bg-teal-100 text-teal-700';
-    case 'Cancelled': return 'bg-rose-100 text-rose-700';
-    default:          return 'bg-slate-100 text-slate-600';
+    case 'Draft':          return 'bg-slate-100 text-slate-600';
+    case 'PendingPayment': return 'bg-violet-100 text-violet-700';
+    case 'Funded':         return 'bg-blue-100 text-blue-700';
+    case 'Submitted':      return 'bg-amber-100 text-amber-700';
+    case 'Approved':       return 'bg-teal-100 text-teal-700';
+    case 'Cancelled':      return 'bg-rose-100 text-rose-700';
+    default:               return 'bg-slate-100 text-slate-600';
   }
 }
 
@@ -58,7 +52,6 @@ export default function ProjectWorkflowPage() {
   const [editingMilestoneId, setEditingMilestoneId] = useState('');
   const [editMilestoneForm, setEditMilestoneForm] = useState({ title: '', description: '', amount: '', dueDate: '' });
 
-  const [fundForms, setFundForms] = useState({});
   const [submitForms, setSubmitForms] = useState({});
 
   const [reviewForm, setReviewForm] = useState({ comment: '', rating: 5 });
@@ -173,15 +166,15 @@ export default function ProjectWorkflowPage() {
   };
 
   const handleFund = async (milestoneId) => {
-    const method = fundForms[milestoneId]?.paymentMethod || '';
-    if (!method) { setWorkflowError('Please select a payment method to fund this milestone.'); return; }
     setActionLoadingKey(`fund-${milestoneId}`);
     setWorkflowError(null);
     try {
-      const res = await fundMilestone(milestoneId, { paymentMethod: method });
+      const res = await fundMilestone(milestoneId, {});
       if (!res?.success) { setWorkflowError(res?.error || 'Failed to fund milestone.'); return; }
-      setFundForms(prev => { const n = { ...prev }; delete n[milestoneId]; return n; });
-      await refreshMilestones();
+      const url = res.data?.checkoutUrl;
+      if (!url) { setWorkflowError('Stripe did not return a checkout URL.'); return; }
+      sessionStorage.setItem('postPaymentReturn', location.pathname);
+      window.location.href = url;
     } finally {
       setActionLoadingKey('');
     }
@@ -475,32 +468,43 @@ export default function ProjectWorkflowPage() {
                         </button>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <select
-                          value={fundForms[m.milestoneID]?.paymentMethod || ''}
-                          onChange={e =>
-                            setFundForms(p => ({ ...p, [m.milestoneID]: { paymentMethod: e.target.value } }))
-                          }
-                          className="border rounded-lg px-3 py-2 text-sm text-slate-900 bg-white"
-                        >
-                          <option value="">Select payment method</option>
-                          {PAYMENT_METHODS.map(pm => (
-                            <option key={pm.value} value={pm.value}>{pm.label}</option>
-                          ))}
-                        </select>
                         <button
                           type="button"
                           onClick={() => handleFund(m.milestoneID)}
                           disabled={actionLoadingKey === `fund-${m.milestoneID}`}
                           className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60"
                         >
-                          {actionLoadingKey === `fund-${m.milestoneID}` ? 'Funding...' : 'Fund Milestone'}
+                          {actionLoadingKey === `fund-${m.milestoneID}` ? 'Redirecting to Stripe...' : 'Fund with Stripe'}
                         </button>
-                        <span className="text-xs text-slate-500">${m.amount?.toLocaleString()} held in escrow</span>
+                        <span className="text-xs text-slate-500">${m.amount?.toLocaleString()} held in escrow via Stripe</span>
                       </div>
                     </>
                   )}
                   {isFreelancer && (
                     <p className="text-xs text-slate-500 italic">Waiting for client to fund this milestone.</p>
+                  )}
+                </div>
+              )}
+
+              {m.status === 'PendingPayment' && (
+                <div className="border-t pt-3">
+                  {isClient && (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <p className="text-xs text-violet-600 font-medium">
+                        Awaiting payment — finish checkout to fund this milestone.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleFund(m.milestoneID)}
+                        disabled={actionLoadingKey === `fund-${m.milestoneID}`}
+                        className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60"
+                      >
+                        {actionLoadingKey === `fund-${m.milestoneID}` ? 'Redirecting to Stripe...' : 'Resume payment'}
+                      </button>
+                    </div>
+                  )}
+                  {isFreelancer && (
+                    <p className="text-xs text-slate-500 italic">Client is completing payment for this milestone.</p>
                   )}
                 </div>
               )}
