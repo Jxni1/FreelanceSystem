@@ -12,6 +12,14 @@ services:
       - "1433:1433"
     volumes:
       - sqlvolume:/var/opt/mssql
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
 volumes:
   sqlvolume:
+  redis_data:
+

@@ -1,5 +1,6 @@
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Categories;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Categories;
 using LabCourse2.Application.Mappings;
 using Microsoft.EntityFrameworkCore;
@@ -9,14 +10,23 @@ namespace LabCourse2.Application.Services.Categories
     public class CategoryService : ICategoryService
     {
         private readonly IAppDbContext _context;
+        private readonly ICacheService _cacheService;
 
-        public CategoryService(IAppDbContext context)
+        public CategoryService(IAppDbContext context, ICacheService cacheService)
         {
             _context = context;
+            _cacheService = cacheService;
         }
 
         public async Task<Result<PagedResult<CategoryResponse>>> GetAllAsync(CategoryQueryParams query)
         {
+            var search = query.Search ?? "null";
+            var cacheKey = $"categories_all_{query.Page}_{query.PageSize}_{search}";
+            
+            var cached = await _cacheService.GetAsync<PagedResult<CategoryResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<CategoryResponse>>.Success(cached);
+
             var q = _context.Categories.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.Search))
@@ -31,17 +41,27 @@ namespace LabCourse2.Application.Services.Categories
                 .Select(c => c.ToResponse())
                 .ToListAsync();
 
-            return Result<PagedResult<CategoryResponse>>.Success(new PagedResult<CategoryResponse>
+            var result = new PagedResult<CategoryResponse>
             {
                 Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            });
+            };
+
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(2));
+
+            return Result<PagedResult<CategoryResponse>>.Success(result);
         }
 
         public async Task<Result<CategoryResponse>> GetByIdAsync(Guid id)
         {
+            var cacheKey = $"category_{id}";
+            
+            var cached = await _cacheService.GetAsync<CategoryResponse>(cacheKey);
+            if (cached != null)
+                return Result<CategoryResponse>.Success(cached);
+
             var category = await _context.Categories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CategoryID == id);
@@ -49,7 +69,10 @@ namespace LabCourse2.Application.Services.Categories
             if (category is null)
                 return Result<CategoryResponse>.NotFound($"Category with ID {id} was not found.");
 
-            return Result<CategoryResponse>.Success(category.ToResponse());
+            var response = category.ToResponse();
+            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromHours(2));
+
+            return Result<CategoryResponse>.Success(response);
         }
 
         public async Task<Result<CategoryResponse>> CreateAsync(CreateCategoryRequest request)
@@ -65,6 +88,8 @@ namespace LabCourse2.Application.Services.Categories
             var created = await _context.Categories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CategoryID == category.CategoryID);
+
+            await _cacheService.RemoveAsync("categories_all");
 
             return Result<CategoryResponse>.Created(created!.ToResponse());
         }
@@ -89,6 +114,9 @@ namespace LabCourse2.Application.Services.Categories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CategoryID == id);
 
+            await _cacheService.RemoveAsync("categories_all");
+            await _cacheService.RemoveAsync($"category_{id}");
+
             return Result<CategoryResponse>.Success(updated!.ToResponse());
         }
 
@@ -102,6 +130,9 @@ namespace LabCourse2.Application.Services.Categories
 
             _context.Categories.Remove(category);
             await _context.SaveChangesAsync();
+
+            await _cacheService.RemoveAsync("categories_all");
+            await _cacheService.RemoveAsync($"category_{id}");
 
             return Result<bool>.Success(true);
         }

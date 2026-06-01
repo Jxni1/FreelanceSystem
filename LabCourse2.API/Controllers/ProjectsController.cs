@@ -1,8 +1,6 @@
 ﻿using FluentValidation;
 using LabCourse2.Application.DTOs.Projects;
 using LabCourse2.Application.Interfaces.Projects;
-using LabCourse2.Application.DTOs.Projects;
-using LabCourse2.Application.Interfaces.Projects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -2,7 +2,6 @@ using FluentValidation;
 using LabCourse2.API.Middleware;
 using LabCourse2.API.WebSockets;
 using LabCourse2.Application.Interfaces.AI;
-using LabCourse2.Infrastructure.Services;
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Categories;
 using LabCourse2.Application.DTOs.Deliverables;
@@ -68,6 +67,15 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Redis Caching
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.InstanceName = builder.Configuration["Redis:InstanceName"] ?? "LabCourse2_";
+});
+
+builder.Services.AddScoped<ICacheService, CacheService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -217,7 +225,15 @@ builder.Services.AddScoped<ChatWebSocketHandler>();
 
 var app = builder.Build();
 
-await DbSeeder.SeedAsync(app.Services);
+try
+{
+    await DbSeeder.SeedAsync(app.Services);
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning(ex, "Database seeding failed. The API will continue running, but the database may not be initialized.");
+}
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
