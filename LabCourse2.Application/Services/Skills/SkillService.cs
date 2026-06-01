@@ -1,5 +1,6 @@
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Skills;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Skills;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Entities;
@@ -10,14 +11,23 @@ namespace LabCourse2.Application.Services.Skills
     public class SkillService : ISkillService
     {
         private readonly IAppDbContext _context;
+        private readonly ICacheService _cacheService;
 
-        public SkillService(IAppDbContext context)
+        public SkillService(IAppDbContext context, ICacheService cacheService)
         {
             _context = context;
+            _cacheService = cacheService;
         }
 
         public async Task<Result<PagedResult<SkillResponse>>> GetAllAsync(SkillQueryParams query)
         {
+            var search = query.Search ?? "null";
+            var cacheKey = $"skills_all_{query.Page}_{query.PageSize}_{search}";
+            
+            var cached = await _cacheService.GetAsync<PagedResult<SkillResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<SkillResponse>>.Success(cached);
+
             var q = _context.Skills.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.Search))
@@ -32,17 +42,27 @@ namespace LabCourse2.Application.Services.Skills
                 .Select(s => s.ToResponse())
                 .ToListAsync();
 
-            return Result<PagedResult<SkillResponse>>.Success(new PagedResult<SkillResponse>
+            var result = new PagedResult<SkillResponse>
             {
                 Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            });
+            };
+
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(2));
+
+            return Result<PagedResult<SkillResponse>>.Success(result);
         }
 
         public async Task<Result<SkillResponse>> GetByIdAsync(Guid id)
         {
+            var cacheKey = $"skill_{id}";
+            
+            var cached = await _cacheService.GetAsync<SkillResponse>(cacheKey);
+            if (cached != null)
+                return Result<SkillResponse>.Success(cached);
+
             var skill = await _context.Skills
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SkillsID == id);
@@ -50,7 +70,10 @@ namespace LabCourse2.Application.Services.Skills
             if (skill is null)
                 return Result<SkillResponse>.NotFound($"Skill with ID {id} was not found.");
 
-            return Result<SkillResponse>.Success(skill.ToResponse());
+            var response = skill.ToResponse();
+            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromHours(2));
+
+            return Result<SkillResponse>.Success(response);
         }
 
         public async Task<Result<SkillResponse>> CreateAsync(CreateSkillRequest request)
@@ -63,6 +86,8 @@ namespace LabCourse2.Application.Services.Skills
             var created = await _context.Skills
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SkillsID == skill.SkillsID);
+
+            await _cacheService.RemoveAsync("skills_all");
 
             return Result<SkillResponse>.Created(created!.ToResponse());
         }
@@ -82,6 +107,9 @@ namespace LabCourse2.Application.Services.Skills
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SkillsID == skill.SkillsID);
 
+            await _cacheService.RemoveAsync("skills_all");
+            await _cacheService.RemoveAsync($"skill_{id}");
+
             return Result<SkillResponse>.Success(updated!.ToResponse());
         }
 
@@ -95,6 +123,9 @@ namespace LabCourse2.Application.Services.Skills
 
             _context.Skills.Remove(skill);
             await _context.SaveChangesAsync();
+
+            await _cacheService.RemoveAsync("skills_all");
+            await _cacheService.RemoveAsync($"skill_{id}");
 
             return Result<bool>.Success(true);
         }

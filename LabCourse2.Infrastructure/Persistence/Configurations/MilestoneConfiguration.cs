@@ -56,12 +56,6 @@ namespace LabCourse2.Infrastructure.Persistence.Configurations
             builder.HasIndex(m => new { m.ContractID, m.Order_Index }).IsUnique();
             builder.HasIndex(m => new { m.ContractID, m.DueDate });
 
-            builder.HasCheckConstraint("CK_Milestone_Amount", "[Amount] >= 0");
-            builder.HasCheckConstraint(
-                "CK_Milestone_Status",
-                "[status] IN ('Draft','Funded','Submitted','Approved','Cancelled')"
-            );
-
             builder.ToTable("Milestones");
         }
     }

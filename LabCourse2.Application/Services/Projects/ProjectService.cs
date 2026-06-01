@@ -1,5 +1,6 @@
 ﻿using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Projects;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Projects;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Entities;
@@ -11,11 +12,13 @@ namespace LabCourse2.Application.Services.Projects
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly ICacheService _cacheService;
 
-        public ProjectService(IAppDbContext context, ICurrentUserService currentUser)
+        public ProjectService(IAppDbContext context, ICurrentUserService currentUser, ICacheService cacheService)
         {
             _context = context;
             _currentUser = currentUser;
+            _cacheService = cacheService;
         }
 
         private async Task<ClientProfile?> GetClientProfileAsync() =>
@@ -24,6 +27,16 @@ namespace LabCourse2.Application.Services.Projects
 
         public async Task<Result<PagedResult<ProjectResponse>>> GetAllAsync(ProjectQueryParams query)
         {
+            var search = query.Search ?? "null";
+            var categoryId = query.CategoryID?.ToString() ?? "null";
+            var status = query.Status ?? "null";
+            var visibility = query.Visibility ?? "null";
+            var cacheKey = $"projects_all_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}";
+            
+            var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<ProjectResponse>>.Success(cached);
+
             var q = _context.Projects
                 .Include(p => p.Category)
                 .AsNoTracking()
@@ -79,17 +92,27 @@ namespace LabCourse2.Application.Services.Projects
                 .Select(p => p.ToResponse(skillsMap.GetValueOrDefault(p.ProjectID)))
                 .ToList();
 
-            return Result<PagedResult<ProjectResponse>>.Success(new PagedResult<ProjectResponse>
+            var result = new PagedResult<ProjectResponse>
             {
                 Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            });
+            };
+
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
+
+            return Result<PagedResult<ProjectResponse>>.Success(result);
         }
 
         public async Task<Result<ProjectResponse>> GetByIdAsync(Guid id)
         {
+            var cacheKey = $"project_{id}";
+            
+            var cached = await _cacheService.GetAsync<ProjectResponse>(cacheKey);
+            if (cached != null)
+                return Result<ProjectResponse>.Success(cached);
+
             var project = await _context.Projects
                 .Include(p => p.Category)
                 .AsNoTracking()
@@ -103,7 +126,11 @@ namespace LabCourse2.Application.Services.Projects
                 .Select(ps => ps.Skill.Name)
                 .ToListAsync();
 
-            return Result<ProjectResponse>.Success(project.ToResponse(skills));
+            var response = project.ToResponse(skills);
+            
+            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromHours(1));
+
+            return Result<ProjectResponse>.Success(response);
         }
 
         public async Task<Result<ProjectResponse>> CreateAsync(CreateProjectRequest request)
@@ -158,6 +185,8 @@ namespace LabCourse2.Application.Services.Projects
                 .Include(p => p.Category)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
+
+            await _cacheService.RemoveAsync("projects_all");
 
             return Result<ProjectResponse>.Created(created!.ToResponse());
         }
@@ -233,6 +262,9 @@ namespace LabCourse2.Application.Services.Projects
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
 
+            await _cacheService.RemoveAsync("projects_all");
+            await _cacheService.RemoveAsync($"project_{id}");
+
             return Result<ProjectResponse>.Success(updated!.ToResponse());
         }
 
@@ -254,6 +286,9 @@ namespace LabCourse2.Application.Services.Projects
 
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
+
+            await _cacheService.RemoveAsync("projects_all");
+            await _cacheService.RemoveAsync($"project_{id}");
 
             return Result<bool>.Success(true);
         }
