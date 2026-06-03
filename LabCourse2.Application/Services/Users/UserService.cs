@@ -3,6 +3,7 @@ using CsvHelper.Configuration;
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.DTOs.Users;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -18,11 +19,13 @@ namespace LabCourse2.Application.Services.User
     {
         private readonly IAppDbContext _db;
         private readonly ClaimsPrincipal? _user;
+        private readonly IAuditLogService _auditLog;
 
-        public UserService(IAppDbContext db, IHttpContextAccessor httpContextAccessor)
+        public UserService(IAppDbContext db, IHttpContextAccessor httpContextAccessor, IAuditLogService auditLog)
         {
             _db = db;
             _user = httpContextAccessor.HttpContext?.User;
+            _auditLog = auditLog;
         }
         public async Task<Result<bool>> DeleteCurrentUserAsync(DeleteUserRequest request)
         {
@@ -722,7 +725,19 @@ namespace LabCourse2.Application.Services.User
                 }
             }
 
+            var oldRoles = string.Join(", ", existingRoles.Select(r => r.Role?.Name ?? r.RoleID.ToString()));
+            var newRoles = string.Join(", ", request.Roles);
+
             await _db.SaveChangesAsync();
+
+            await _auditLog.LogAsync(
+                action: "UserRoleChanged",
+                entity: "User",
+                oldValue: oldRoles,
+                newValue: newRoles,
+                entityId: userId,
+                userId: UserId  // the admin performing the action
+            );
 
             var updatedUser = await _db.Users
                 .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)

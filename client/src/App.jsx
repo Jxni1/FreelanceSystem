@@ -30,7 +30,7 @@ import NotificationsPage from "./pages/notifications/NotificationsPage";
 import ConversationPage from "./pages/chat/ConversationPage";
 import InboxPage from "./pages/chat/InboxPage";
 import RecommendedProjectsTestPage from "./pages/ai/RecommendedProjectsTestPage";
-
+import AdminAuditLogsPage from "./pages/admin/AdminAuditLogsPage";
 
 const ProjectsListPage = lazy(() => import("./pages/projects/ProjectsListPage"));
 const ProjectDetailsPage = lazy(() => import("./pages/projects/ProjectDetailsPage"));
@@ -166,6 +166,7 @@ export default function App() {
                     <Route path="categories/:id/edit" element={<CategoryFormPage />} />
                     <Route path="protected-views" element={<ProtectedViewsDashboard />}/>
                     <Route path="ai-test" element={<RecommendedProjectsTestPage />} />
+                    <Route path="audit-logs" element={<AdminAuditLogsPage />} />
  
                    
                   </Route>

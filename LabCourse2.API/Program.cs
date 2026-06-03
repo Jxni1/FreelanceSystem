@@ -223,6 +223,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ChatWebSocketConnectionManager>();
 builder.Services.AddScoped<ChatWebSocketHandler>();
 
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
 var app = builder.Build();
 
 try
