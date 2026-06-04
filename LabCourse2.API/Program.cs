@@ -17,6 +17,7 @@ using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Categories;
 using LabCourse2.Application.Interfaces.Contracts;
 using LabCourse2.Application.Interfaces.Deliverables;
+using LabCourse2.Application.Interfaces.Emails;
 using LabCourse2.Application.Interfaces.Files;
 using LabCourse2.Application.Interfaces.Messages;
 using LabCourse2.Application.Interfaces.Milestones;
@@ -203,6 +204,12 @@ builder.Services.AddScoped<IValidator<CreateNotificationRequest>, CreateNotifica
 builder.Services.AddScoped<IValidator<UpdateNotificationRequest>, UpdateNotificationRequestValidator>();
 builder.Services.AddScoped<INotificationCreator, NotificationCreator>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection(EmailSettings.SectionName));
+builder.Services.AddSingleton<IEmailQueue, EmailQueue>();
+builder.Services.AddSingleton<IEmailService, EmailService>();
+builder.Services.AddHostedService<EmailBackgroundService>();
 
 builder.Services.Configure<StripeSettings>(
     builder.Configuration.GetSection(StripeSettings.SectionName));
