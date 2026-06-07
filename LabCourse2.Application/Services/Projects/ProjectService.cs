@@ -33,9 +33,10 @@ namespace LabCourse2.Application.Services.Projects
             var visibility = query.Visibility ?? "null";
             var cacheKey = $"projects_all_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}";
             
-            var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
-            if (cached != null)
-                return Result<PagedResult<ProjectResponse>>.Success(cached);
+            // TEMPORARILY DISABLED CACHING TO DEBUG ISSUE
+            // var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
+            // if (cached != null)
+            //     return Result<PagedResult<ProjectResponse>>.Success(cached);
 
             var q = _context.Projects
                 .Include(p => p.Category)
@@ -47,6 +48,7 @@ namespace LabCourse2.Application.Services.Projects
             {
                 q = q.Where(p => p.ClientID == clientProfile.ClientID);
             }
+
 
             if (!string.IsNullOrWhiteSpace(query.Search))
                 q = q.Where(p => p.Title.Contains(query.Search));
@@ -100,7 +102,8 @@ namespace LabCourse2.Application.Services.Projects
                 PageSize = query.PageSize
             };
 
-            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
+            // TEMPORARILY DISABLED CACHING
+            // await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
 
             return Result<PagedResult<ProjectResponse>>.Success(result);
         }
@@ -186,7 +189,7 @@ namespace LabCourse2.Application.Services.Projects
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
 
-            await _cacheService.RemoveAsync("projects_all");
+            await _cacheService.RemoveByPatternAsync("projects_all_*");
 
             return Result<ProjectResponse>.Created(created!.ToResponse());
         }
@@ -262,7 +265,7 @@ namespace LabCourse2.Application.Services.Projects
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
 
-            await _cacheService.RemoveAsync("projects_all");
+            await _cacheService.RemoveByPatternAsync("projects_all_*");
             await _cacheService.RemoveAsync($"project_{id}");
 
             return Result<ProjectResponse>.Success(updated!.ToResponse());
@@ -287,7 +290,7 @@ namespace LabCourse2.Application.Services.Projects
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
 
-            await _cacheService.RemoveAsync("projects_all");
+            await _cacheService.RemoveByPatternAsync("projects_all_*");
             await _cacheService.RemoveAsync($"project_{id}");
 
             return Result<bool>.Success(true);

@@ -87,7 +87,8 @@ namespace LabCourse2.Application.Services.Skills
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SkillsID == skill.SkillsID);
 
-            await _cacheService.RemoveAsync("skills_all");
+            await _cacheService.RemoveByPatternAsync("skills_all_*");
+            
 
             return Result<SkillResponse>.Created(created!.ToResponse());
         }
@@ -107,7 +108,7 @@ namespace LabCourse2.Application.Services.Skills
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SkillsID == skill.SkillsID);
 
-            await _cacheService.RemoveAsync("skills_all");
+            await _cacheService.RemoveByPatternAsync("skills_all_*");
             await _cacheService.RemoveAsync($"skill_{id}");
 
             return Result<SkillResponse>.Success(updated!.ToResponse());
@@ -124,7 +125,7 @@ namespace LabCourse2.Application.Services.Skills
             _context.Skills.Remove(skill);
             await _context.SaveChangesAsync();
 
-            await _cacheService.RemoveAsync("skills_all");
+            await _cacheService.RemoveByPatternAsync("skills_all_*");
             await _cacheService.RemoveAsync($"skill_{id}");
 
             return Result<bool>.Success(true);

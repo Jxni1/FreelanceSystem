@@ -89,7 +89,7 @@ namespace LabCourse2.Application.Services.Categories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CategoryID == category.CategoryID);
 
-            await _cacheService.RemoveAsync("categories_all");
+            await _cacheService.RemoveByPatternAsync("categories_all_*");
 
             return Result<CategoryResponse>.Created(created!.ToResponse());
         }
@@ -114,7 +114,7 @@ namespace LabCourse2.Application.Services.Categories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CategoryID == id);
 
-            await _cacheService.RemoveAsync("categories_all");
+            await _cacheService.RemoveByPatternAsync("categories_all_*");
             await _cacheService.RemoveAsync($"category_{id}");
 
             return Result<CategoryResponse>.Success(updated!.ToResponse());
@@ -131,7 +131,7 @@ namespace LabCourse2.Application.Services.Categories
             _context.Categories.Remove(category);
             await _context.SaveChangesAsync();
 
-            await _cacheService.RemoveAsync("categories_all");
+            await _cacheService.RemoveByPatternAsync("categories_all_*");
             await _cacheService.RemoveAsync($"category_{id}");
 
             return Result<bool>.Success(true);

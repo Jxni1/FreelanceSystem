@@ -66,6 +66,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System.Text;
 using System.Text.Json;
 
@@ -76,6 +77,13 @@ builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
     options.InstanceName = builder.Configuration["Redis:InstanceName"] ?? "LabCourse2_";
+});
+
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var connection = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    return ConnectionMultiplexer.Connect(connection);
 });
 
 builder.Services.AddScoped<ICacheService, CacheService>();
