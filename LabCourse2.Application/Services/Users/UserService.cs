@@ -18,13 +18,15 @@ namespace LabCourse2.Application.Services.User
     public class UserService : IUserService
     {
         private readonly IAppDbContext _db;
-        private readonly ClaimsPrincipal? _user;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuditLogService _auditLog;
+
+        private ClaimsPrincipal? _user => _httpContextAccessor.HttpContext?.User;
 
         public UserService(IAppDbContext db, IHttpContextAccessor httpContextAccessor, IAuditLogService auditLog)
         {
             _db = db;
-            _user = httpContextAccessor.HttpContext?.User;
+            _httpContextAccessor = httpContextAccessor;
             _auditLog = auditLog;
         }
         public async Task<Result<bool>> DeleteCurrentUserAsync(DeleteUserRequest request)

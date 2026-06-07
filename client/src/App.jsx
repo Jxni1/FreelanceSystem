@@ -1,10 +1,11 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { ProfileProvider } from "./context/ProfileContext";
 import { AuthEventHandler } from "./components/AuthEventHandler";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleRedirect } from "./components/RoleRedirect";
-import { AppShell } from "./components/AppShell";
+import { AppShell } from "./components/layout/AppShell";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
 import { SecurityAlertPage } from "./pages/auth/SecurityAlertPage";
@@ -61,10 +62,10 @@ const ProtectedViewsDashboard = lazy(()=>import("./pages/admin/protectedViews/Pr
 const ProtectedViewStatsPage = lazy(()=>import("./pages/projects/ProjectViewStatsPage"));
 
 const GlobalSuspenseLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50">
+  <div className="min-h-screen flex items-center justify-center bg-canvas">
     <div className="flex flex-col items-center gap-4">
       <div
-        className="w-10 h-10 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin"
+        className="w-10 h-10 border-4 border-brand-100 border-t-brand-700 rounded-full animate-spin"
         aria-hidden="true"
       />
       <span className="text-sm font-medium text-slate-500 uppercase tracking-widest animate-pulse">
@@ -78,106 +79,94 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AuthEventHandler />
-        <Suspense fallback={<GlobalSuspenseLoader />}>
-          <Routes>
-            <Route path="/auth/login" element={<LoginPage />} />
-            <Route path="/auth/register" element={<RegisterPage />} />
-            <Route path="/auth/security-alert" element={<SecurityAlertPage />} />
+        <ProfileProvider>
+          <AuthEventHandler />
+          <Suspense fallback={<GlobalSuspenseLoader />}>
+            <Routes>
+              <Route path="/auth/login" element={<LoginPage />} />
+              <Route path="/auth/register" element={<RegisterPage />} />
+              <Route path="/auth/security-alert" element={<SecurityAlertPage />} />
 
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppShell />}>
-              
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppShell />}>
+                  <Route path="/dashboard" element={<RoleRedirect />} />
 
-                {/* Role-aware landing: freelancers go to /discover, others to /dashboard */}
-                <Route path="/dashboard" element={<RoleRedirect freelancerTo="/discover" />} />
+                  <Route path="/home" element={<DashboardPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/profile/edit" element={<EditProfilePage />} />
+                  <Route path="/projects" element={<ProjectsListPage />} />
+                  <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+                  <Route path="/projects/:id/workflow" element={<ProjectWorkflowPage />} />
+                  <Route path="/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
+                  <Route path="/payments/success" element={<PaymentSuccessPage />} />
+                  <Route path="/payments/cancel" element={<PaymentCancelPage />} />
 
-                {/* All authenticated users */}
-                <Route path="/home" element={<DashboardPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/profile/edit" element={<EditProfilePage />} />
-                <Route path="/projects" element={<ProjectsListPage />} />
-                <Route path="/projects/:id" element={<ProjectDetailsPage />} />
-                <Route path="/projects/:id/workflow" element={<ProjectWorkflowPage />} />
-                <Route path="/contracts/:id/workflow" element={<ProjectWorkflowPage />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/payments/success" element={<PaymentSuccessPage />} />
-                <Route path="/payments/cancel" element={<PaymentCancelPage />} />
-
-                <Route path="/contracts/:id" element={<ContractDetailsPage />} />
-               
-              
-
-            <Route path="/chat/new" element={<ConversationPage />} />
-            <Route path="/chat/:conversationId" element={<ConversationPage />} />
-            <Route path="/inbox" element={<InboxPage />} />
-
-
-                {/* Freelancer only */}
-                <Route element={<ProtectedRoute requiredRoles={[ROLES.FREELANCER]} />}>
-                  <Route path="/discover" element={<FreelancerDiscoverPage />} />
-                  <Route path="/my-work" element={<MyWorkPage />} />
-                  <Route path="/clients" element={<ClientsPage/>}/>
-                  <Route path="/clients/:clientId/projects" element={<ClientProjectsPage/>} />
-                  <Route path="/portfolio" element={<FreelancerPortfolioPage />} />
-                  <Route path="/payouts" element={<PayoutSetupPage />} />
-                </Route>
-
-                {/* Client only */}
-                <Route element={<ProtectedRoute requiredRoles={[ROLES.CLIENT]} />}>
-                  <Route path="/projects/new" element={<ProjectFormPage />} />
-                  <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
-                  <Route path="/freelancers" element={<FreelancersPage />} />
-                  <Route path="/reviews/new" element={<ReviewFormPage />} />
-                  <Route path="/reviews/:id/edit" element={<ReviewFormPage />} />
-                  <Route path="/favorite-freelancers" element={<FavoriteFreelancersPage />} />
-                  <Route path="/projects/:id/stats" element={<ProtectedViewStatsPage />} />
-                  <Route path="/spending" element={<ClientSpendingDashboard />} />   {/* ← add this */}
-                </Route>
-
-                {/* Client + Freelancer: their own contracts */}
-                <Route element={<ProtectedRoute requiredRoles={[ROLES.CLIENT, ROLES.FREELANCER]} />}>
-                  <Route path="/contracts" element={<ContractsListPage />} />
                   <Route path="/contracts/:id" element={<ContractDetailsPage />} />
-                  <Route path="/contracts/:id/edit" element={<ContractFormPage />} />
-                  <Route path="/reviews" element={<ReviewsListPage />} />
-                </Route>
 
-                {/* Admin only */}
-                <Route element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}>
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<AdminPanelPage />} />
-                    <Route path="users" element={<AdminUsersPage />} />
-                    <Route path="projects" element={<ProjectsListPage />} />
-                    <Route path="contracts" element={<ContractsListPage />} />
-                    <Route path="contracts/new" element={<ContractFormPage />} />
-                    <Route path="contracts/:id" element={<ContractDetailsPage />} />
-                    <Route path="contracts/:id/edit" element={<ContractFormPage />} />
-                    <Route path="contracts/:id/workflow" element={<ProjectWorkflowPage />} />
-                    <Route path="skills" element={<SkillsListPage />} />
-                    <Route path="skills/new" element={<SkillFormPage />} />
-                    <Route path="skills/:id/edit" element={<SkillFormPage />} />
-                    <Route path="settings" element={<AdminSettingsListPage />} />
-                    <Route path="settings/new" element={<AdminSettingFormPage />} />
-                    <Route path="settings/:id/edit" element={<AdminSettingFormPage />} />
-                    <Route path="reports" element={<AdminReportsPage />} />
-                    <Route path="categories" element={<CategoriesListPage />} />
-                    <Route path="categories/new" element={<CategoryFormPage />} />
-                    <Route path="categories/:id/edit" element={<CategoryFormPage />} />
-                    <Route path="protected-views" element={<ProtectedViewsDashboard />}/>
-                    <Route path="ai-test" element={<RecommendedProjectsTestPage />} />
-                    <Route path="audit-logs" element={<AdminAuditLogsPage />} />
- 
-                   
+                  <Route path="/chat/new" element={<ConversationPage />} />
+                  <Route path="/chat/:conversationId" element={<ConversationPage />} />
+                  <Route path="/inbox" element={<InboxPage />} />
+
+                  <Route element={<ProtectedRoute requiredRoles={[ROLES.FREELANCER]} />}>
+                    <Route path="/discover" element={<FreelancerDiscoverPage />} />
+                    <Route path="/my-work" element={<MyWorkPage />} />
+                    <Route path="/clients" element={<ClientsPage/>}/>
+                    <Route path="/clients/:clientId/projects" element={<ClientProjectsPage/>} />
+                    <Route path="/portfolio" element={<FreelancerPortfolioPage />} />
+                    <Route path="/payouts" element={<PayoutSetupPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute requiredRoles={[ROLES.CLIENT]} />}>
+                    <Route path="/projects/new" element={<ProjectFormPage />} />
+                    <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
+                    <Route path="/freelancers" element={<FreelancersPage />} />
+                    <Route path="/reviews/new" element={<ReviewFormPage />} />
+                    <Route path="/reviews/:id/edit" element={<ReviewFormPage />} />
+                    <Route path="/favorite-freelancers" element={<FavoriteFreelancersPage />} />
+                    <Route path="/projects/:id/stats" element={<ProtectedViewStatsPage />} />
+                    <Route path="/spending" element={<ClientSpendingDashboard />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute requiredRoles={[ROLES.CLIENT, ROLES.FREELANCER]} />}>
+                    <Route path="/contracts" element={<ContractsListPage />} />
+                    <Route path="/contracts/:id" element={<ContractDetailsPage />} />
+                    <Route path="/contracts/:id/edit" element={<ContractFormPage />} />
+                    <Route path="/reviews" element={<ReviewsListPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute requiredRoles={[ROLES.ADMIN]} />}>
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<AdminPanelPage />} />
+                      <Route path="users" element={<AdminUsersPage />} />
+                      <Route path="projects" element={<ProjectsListPage />} />
+                      <Route path="contracts" element={<ContractsListPage />} />
+                      <Route path="contracts/new" element={<ContractFormPage />} />
+                      <Route path="contracts/:id" element={<ContractDetailsPage />} />
+                      <Route path="contracts/:id/edit" element={<ContractFormPage />} />
+                      <Route path="contracts/:id/workflow" element={<ProjectWorkflowPage />} />
+                      <Route path="skills" element={<SkillsListPage />} />
+                      <Route path="skills/new" element={<SkillFormPage />} />
+                      <Route path="skills/:id/edit" element={<SkillFormPage />} />
+                      <Route path="settings" element={<AdminSettingsListPage />} />
+                      <Route path="settings/new" element={<AdminSettingFormPage />} />
+                      <Route path="settings/:id/edit" element={<AdminSettingFormPage />} />
+                      <Route path="reports" element={<AdminReportsPage />} />
+                      <Route path="categories" element={<CategoriesListPage />} />
+                      <Route path="categories/new" element={<CategoryFormPage />} />
+                      <Route path="categories/:id/edit" element={<CategoryFormPage />} />
+                      <Route path="protected-views" element={<ProtectedViewsDashboard />}/>
+                      <Route path="ai-test" element={<RecommendedProjectsTestPage />} />
+                      <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+                    </Route>
                   </Route>
                 </Route>
-
               </Route>
-            </Route>
 
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </Suspense>
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Suspense>
+        </ProfileProvider>
       </AuthProvider>
     </BrowserRouter>
   );
