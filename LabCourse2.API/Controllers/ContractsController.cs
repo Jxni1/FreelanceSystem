@@ -24,11 +24,10 @@ namespace LabCourse2.API.Controllers
         }
 
         /// <summary>
-        /// Superadmin only - gets all contracts with filtering
-        /// Use role-based authorization [Authorize(Roles = "SuperAdmin")]
+        /// Admin only - gets all contracts across the platform with filtering
         /// </summary>
         [HttpGet("all")]
-        [Authorize(Roles = "SuperAdmin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAll([FromQuery] ContractQueryParams query)
         {
             var result = await _contractService.GetAllAsync(query);

@@ -47,9 +47,12 @@ namespace LabCourse2.Application.Services.Reviews
             if (query.ContractID.HasValue)
                 q = q.Where(r => r.ContractID == query.ContractID.Value);
 
-            var freelancer = await GetFreelancerProfileAsync();
-            if (freelancer is not null)
-                q = q.Where(r => r.FreelancerID == freelancer.FreelancerID);
+            if (!query.FreelancerID.HasValue && !query.ContractID.HasValue)
+            {
+                var freelancer = await GetFreelancerProfileAsync();
+                if (freelancer is not null)
+                    q = q.Where(r => r.FreelancerID == freelancer.FreelancerID);
+            }
 
             var totalCount = await q.CountAsync();
 

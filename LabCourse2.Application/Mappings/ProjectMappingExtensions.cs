@@ -18,6 +18,9 @@ namespace LabCourse2.Application.Mappings
                 CreatedAt = project.CreatedAt,
                 UpdatedAt = project.UpdatedAt,
                 ClientID = project.ClientID,
+                ClientName = project.Client?.User != null
+                    ? $"{project.Client.User.Name} {project.Client.User.Surname}".Trim()
+                    : string.Empty,
                 CategoryID = project.CategoryID,
                 CategoryName = project.Category?.Name ?? string.Empty,
                 Skills = skills ?? new List<string>()

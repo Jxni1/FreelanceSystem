@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 export function SmartBackButton({ fallbackTo = '/dashboard', label = 'Back' }) {
   const navigate = useNavigate();
@@ -15,9 +16,9 @@ export function SmartBackButton({ fallbackTo = '/dashboard', label = 'Back' }) {
     <button
       type="button"
       onClick={handleBack}
-      className="inline-flex items-center gap-2 mb-6 text-slate-300 hover:text-teal-300 font-medium transition-colors"
+      className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-brand-700"
     >
-      <span aria-hidden="true">&larr;</span>
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
       <span>{label}</span>
     </button>
   );

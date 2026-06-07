@@ -1,309 +1,193 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useFavoriteFreelancers } from '../../hooks/useFavoriteFreelancers';
-import { ReportModal } from '../admin/reports/ReportModal';
+import { Link } from 'react-router-dom';
+import { Users, Plus, Star, Bookmark, Search, UserSearch } from 'lucide-react';
 import { useFreelancers } from '../../hooks/useFreelancers';
-// import { useFavoriteFreelancers } from '../../hooks/useFavoriteFreelancers';
-// import { ReportModal } from '../admin/reports/ReportModal';
+import { useFavoriteFreelancers } from '../../hooks/useFavoriteFreelancers';
+import { PageHeading } from '../../components/ui/PageHeading';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Avatar } from '../../components/ui/Avatar';
+import { Button } from '../../components/ui/Button';
 
-const EXPERIENCE_LEVELS = ['Junior', 'Mid', 'Senior', 'Expert'];
+const EXPERIENCE_LEVELS = ['Entry', 'Intermediate', 'Expert'];
 
-function StarRating({ rating }) {
+function TalentCard({ person, isSaved, onToggleSave, saving }) {
   return (
-    <span className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span
-          key={i}
-          className={`text-xs ${
-            i <= Math.round(rating) ? 'text-amber-400' : 'text-slate-300'
+    <Card bodyClassName="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <Avatar name={person.name} size="lg" />
+          <div className="min-w-0">
+            <Link to={`/freelancers/${person.id}`} className="block truncate font-semibold text-slate-900 hover:text-brand-700">
+              {person.name}
+            </Link>
+            <p className="text-xs text-slate-500">{person.title}</p>
+            <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
+              <span className="font-medium text-slate-700">{person.rating > 0 ? person.rating.toFixed(1) : '—'}</span>
+              <span className="text-slate-400">({person.reviews})</span>
+            </div>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="font-semibold text-slate-900">{person.rate}</p>
+        </div>
+      </div>
+
+      {person.skills.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {person.skills.map((tag) => (
+            <Badge key={tag} tone="slate">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => onToggleSave(person.id)}
+          disabled={saving}
+          className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors disabled:opacity-50 ${
+            isSaved
+              ? 'border-brand-200 bg-brand-50 text-brand-600'
+              : 'border-line bg-white text-slate-400 hover:bg-slate-50 hover:text-brand-600'
           }`}
+          aria-label={isSaved ? 'Remove from shortlist' : 'Save to shortlist'}
+          aria-pressed={isSaved}
         >
-          ★
-        </span>
-      ))}
-      <span className="ml-1 text-xs text-slate-500">
-        {rating > 0 ? rating.toFixed(1) : 'No reviews'}
-      </span>
-    </span>
+          <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} aria-hidden="true" />
+        </button>
+        <Button to={`/freelancers/${person.id}`} variant="outline" size="sm">
+          View profile
+        </Button>
+      </div>
+    </Card>
   );
 }
 
 export default function FreelancersPage() {
-  const { freelancers, isLoading, error, fetchFreelancers } = useFreelancers();
-  const {
-    favorites,
-    fetchFavorites,
-    addFavorite,
-    removeFavorite,
-    isToggling,
-    error: favoritesError,
-  } = useFavoriteFreelancers();
-
+  const { freelancers, isLoading, fetchFreelancers } = useFreelancers();
+  const { favorites, fetchFavorites, addFavorite, removeFavorite, isToggling } = useFavoriteFreelancers();
   const [search, setSearch] = useState('');
-  const [skill, setSkill] = useState('');
-  const [experienceLevel, setExperienceLevel] = useState('');
-  const [page, setPage] = useState(1);
-  const [reportingFreelancer, setReportingFreelancer] = useState(null);
+  const [activeSearch, setActiveSearch] = useState('');
+  const [level, setLevel] = useState('');
 
-  const load = (overrides = {}) => {
+  useEffect(() => {
     fetchFreelancers({
-      page,
-      pageSize: 12,
-      search: search || undefined,
-      skill: skill || undefined,
-      experienceLevel: experienceLevel || undefined,
-      ...overrides,
+      page: 1,
+      pageSize: 24,
+      search: activeSearch || undefined,
+      experienceLevel: level || undefined,
     });
-  };
+  }, [fetchFreelancers, activeSearch, level]);
 
   useEffect(() => {
-    load();
-  }, [page]);
-
-  useEffect(() => {
-    fetchFavorites();
+    fetchFavorites().catch?.(() => {});
   }, [fetchFavorites]);
 
-  const favoriteIds = useMemo(
-    () => new Set(favorites.map((f) => f.freelancerID)),
-    [favorites]
+  const savedIds = useMemo(
+    () => new Set((favorites ?? []).map((f) => String(f.freelancerID))),
+    [favorites],
   );
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setPage(1);
-    load({ page: 1 });
+  const handleSearch = (event) => {
+    event.preventDefault();
+    setActiveSearch(search.trim());
   };
 
-  const handleFilterChange = (setter, value) => {
-    setter(value);
-    setPage(1);
-    setTimeout(() => load({ page: 1 }), 0);
+  const handleToggleSave = async (freelancerId) => {
+    if (savedIds.has(String(freelancerId))) await removeFavorite(freelancerId);
+    else await addFavorite(freelancerId);
+    fetchFavorites().catch?.(() => {});
   };
 
-  const openReportModal = (freelancer) => {
-    setReportingFreelancer(freelancer);
-  };
+  const people = useMemo(
+    () =>
+      (freelancers.items ?? []).map((freelancer) => ({
+        id: freelancer.freelancerID,
+        name: freelancer.name || freelancer.username || 'Freelancer',
+        title: freelancer.experienceLevel ? `${freelancer.experienceLevel} freelancer` : 'Freelancer',
+        rating: freelancer.averageRating || 0,
+        reviews: freelancer.reviewCount ?? 0,
+        rate: freelancer.hourlyRate ? `$${freelancer.hourlyRate}/hr` : '—',
+        skills: (freelancer.skills ?? []).slice(0, 4),
+      })),
+    [freelancers],
+  );
 
-  const closeReportModal = () => {
-    setReportingFreelancer(null);
-  };
-
-  const handleToggleFavorite = async (freelancerId) => {
-    if (!freelancerId) return;
-
-    if (favoriteIds.has(freelancerId)) {
-      await removeFavorite(freelancerId);
-      return;
-    }
-
-    const result = await addFavorite(freelancerId);
-    if (result?.success) {
-      await fetchFavorites();
-    }
-  };
-
-  const items = freelancers?.items ?? [];
-  const totalPages = Math.max(1, Math.ceil((freelancers?.totalCount ?? 0) / 12));
+  const total = freelancers.totalCount || 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6 text-slate-900">
-      <div className="flex items-start justify-between gap-4 flex-col sm:flex-row">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Find Freelancers
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Browse and search freelancers by skill or experience.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeading
+        title="Find talent"
+        subtitle={`${total.toLocaleString()} ${total === 1 ? 'freelancer' : 'freelancers'} available`}
+        actions={
+          <>
+            <Button to="/favorite-freelancers" variant="outline" icon={Users}>
+              My shortlists
+            </Button>
+            <Button to="/projects/new" icon={Plus}>
+              Post a job
+            </Button>
+          </>
+        }
+      />
 
-        <a
-          href="/favorite-freelancers"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
-        >
-          <span aria-hidden>♥</span>
-          <span>My Favorites</span>
-        </a>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <form onSubmit={handleSearch} className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <input
-            type="text"
-            placeholder="Search by name or username..."
+            type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name or username..."
+            className="h-10 w-full rounded-xl border border-line bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-sm font-semibold text-white transition-colors"
-          >
-            Search
-          </button>
         </form>
-
-        <input
-          type="text"
-          placeholder="Filter by skill..."
-          value={skill}
-          onChange={(e) => handleFilterChange(setSkill, e.target.value)}
-          className="px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 sm:w-48"
-        />
-
         <select
-          value={experienceLevel}
-          onChange={(e) => handleFilterChange(setExperienceLevel, e.target.value)}
-          className="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          value={level}
+          onChange={(event) => setLevel(event.target.value)}
+          className="h-10 rounded-xl border border-line bg-white px-3.5 text-sm text-slate-900 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
         >
-          <option value="">All levels</option>
-          {EXPERIENCE_LEVELS.map((l) => (
-            <option key={l} value={l}>
-              {l}
+          <option value="">All experience</option>
+          {EXPERIENCE_LEVELS.map((lvl) => (
+            <option key={lvl} value={lvl}>
+              {lvl}
             </option>
           ))}
         </select>
       </div>
 
-      {(error || favoritesError) && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700 text-sm">
-          {error || favoritesError}
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <div className="h-9 w-9 animate-spin rounded-full border-4 border-brand-100 border-t-brand-700" />
+        </div>
+      ) : people.length === 0 ? (
+        <Card bodyClassName="p-10">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+              <UserSearch className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <p className="font-semibold text-slate-900">No freelancers found</p>
+            <p className="text-sm text-slate-500">Try a different search or experience level.</p>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {people.map((person) => (
+            <TalentCard
+              key={person.id}
+              person={person}
+              isSaved={savedIds.has(String(person.id))}
+              onToggleSave={handleToggleSave}
+              saving={isToggling}
+            />
+          ))}
         </div>
       )}
-
-      {isLoading && (
-        <div className="flex justify-center py-16">
-          <div className="w-10 h-10 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin" />
-        </div>
-      )}
-
-      {!isLoading && items.length === 0 && (
-        <div className="text-center py-16 text-slate-500">
-          <p className="text-lg font-medium">No freelancers found</p>
-          <p className="text-sm mt-1">
-            Try adjusting your search or filters.
-          </p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((f) => {
-          const isFavorited = favoriteIds.has(f.freelancerID);
-
-          return (
-            <div
-              key={f.freelancerID}
-              className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600 text-lg font-semibold">
-                    {f.name?.[0] ?? '?'}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">{f.name}</p>
-                    <p className="text-xs text-slate-500">@{f.username}</p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={isToggling}
-                  onClick={() => handleToggleFavorite(f.freelancerID)}
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
-                    isFavorited
-                      ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
-                      : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-rose-500'
-                  }`}
-                  title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                >
-                  ♥
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
-                <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600">
-                  {f.experienceLevel}
-                </span>
-                <span className="text-teal-600 font-semibold">
-                  ${f.hourlyRate}/hr
-                </span>
-              </div>
-
-              <StarRating rating={f.averageRating} />
-
-              {f.skills?.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {f.skills.slice(0, 5).map((s) => (
-                    <span
-                      key={s}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 border border-teal-100 text-teal-700"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                  {f.skills.length > 5 && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400">
-                      +{f.skills.length - 5}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => openReportModal(f)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-700"
-                >
-                  <span aria-hidden>🚩</span>
-                  <span>Report</span>
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 pt-4">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="px-3 py-1.5 rounded-lg text-sm bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          <span className="px-3 py-1.5 text-sm text-slate-500">
-            {page} / {totalPages}
-          </span>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="px-3 py-1.5 rounded-lg text-sm bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
-      )}
-
-      <ReportModal
-        isOpen={!!reportingFreelancer}
-        onClose={closeReportModal}
-        initialEntity="Freelancer"
-        initialEntityId={
-          reportingFreelancer?.freelancerID || reportingFreelancer?.userID || ''
-        }
-        initialDisplayLabel={
-          reportingFreelancer
-            ? `${reportingFreelancer.name || 'Unknown'}${
-                reportingFreelancer.username
-                  ? ` (@${reportingFreelancer.username})`
-                  : ''
-              }`
-            : ''
-        }
-      />
     </div>
   );
 }

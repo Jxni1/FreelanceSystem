@@ -75,5 +75,38 @@ namespace LabCourse2.Application.Services
                 PageSize = query.PageSize
             });
         }
+
+        public async Task<Result<FreelancerResponse>> GetByIdAsync(Guid id)
+        {
+            var fp = await _context.FreelancerProfiles
+                .Include(f => f.User)
+                .Include(f => f.Reviews)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(f => f.FreelancerID == id);
+
+            if (fp is null)
+                return Result<FreelancerResponse>.NotFound($"Freelancer with ID {id} was not found.");
+
+            var skills = await _context.FreelancerSkills
+                .Where(fs => fs.FreelancerID == id)
+                .Select(fs => fs.Skill.Name)
+                .ToListAsync();
+
+            var response = new FreelancerResponse
+            {
+                FreelancerID = fp.FreelancerID,
+                Name = $"{fp.User.Name} {fp.User.Surname}".Trim(),
+                Username = fp.User.Username,
+                ExperienceLevel = fp.Experience_Level,
+                HourlyRate = fp.Hourly_Rate,
+                Skills = skills,
+                ReviewCount = fp.Reviews.Count,
+                AverageRating = fp.Reviews.Count > 0
+                    ? Math.Round(fp.Reviews.Average(r => r.Rating), 1)
+                    : 0
+            };
+
+            return Result<FreelancerResponse>.Success(response);
+        }
     }
 }

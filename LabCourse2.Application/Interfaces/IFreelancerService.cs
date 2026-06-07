@@ -6,5 +6,6 @@ namespace LabCourse2.Application.Interfaces
     public interface IFreelancerService
     {
         Task<Result<PagedResult<FreelancerResponse>>> GetAllAsync(FreelancerQueryParams query);
+        Task<Result<FreelancerResponse>> GetByIdAsync(Guid id);
     }
 }

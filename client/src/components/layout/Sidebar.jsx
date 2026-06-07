@@ -24,7 +24,6 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useAuthorization } from '../../hooks/useAuthorization';
 import { useProfileContext } from '../../context/ProfileContext';
-import { DEMO_NAV_BADGES } from '../../data/dashboardDemoData';
 import { Avatar } from '../ui/Avatar';
 
 const NAV = {
@@ -35,7 +34,7 @@ const NAV = {
         label: 'Workspace',
         items: [
           { label: 'Dashboard', icon: LayoutGrid, to: '/home', end: true },
-          { label: 'My job posts', icon: Briefcase, to: '/projects', badgeKey: 'jobPosts' },
+          { label: 'My job posts', icon: Briefcase, to: '/projects' },
           { label: 'Find talent', icon: Users, to: '/freelancers' },
           { label: 'Contracts', icon: FileText, to: '/contracts' },
           { label: 'Messages', icon: MessageSquare, to: '/inbox', badgeKey: 'inbox' },
@@ -58,7 +57,7 @@ const NAV = {
         items: [
           { label: 'Dashboard', icon: LayoutGrid, to: '/home', end: true },
           { label: 'Find work', icon: Search, to: '/discover' },
-          { label: 'My proposals', icon: Send, to: '/my-work', badgeKey: 'proposals' },
+          { label: 'My proposals', icon: Send, to: '/my-work' },
           { label: 'Contracts', icon: FileText, to: '/contracts' },
           { label: 'Messages', icon: MessageSquare, to: '/inbox', badgeKey: 'inbox' },
         ],
@@ -79,7 +78,7 @@ const NAV = {
         label: 'Overview',
         items: [
           { label: 'Dashboard', icon: LayoutGrid, to: '/admin', end: true },
-          { label: 'Moderation', icon: Shield, to: '/admin/reports', badgeKey: 'moderation' },
+          { label: 'Moderation', icon: Shield, to: '/admin/reports' },
         ],
       },
       {
@@ -92,7 +91,7 @@ const NAV = {
           { label: 'Audit logs', icon: ScrollText, to: '/admin/audit-logs' },
           { label: 'ML model', icon: Cpu, to: '/admin/ai-test' },
           { label: 'Protected views', icon: Eye, to: '/admin/protected-views' },
-          { label: 'Disputes', icon: Flag, disabled: true, badgeKey: 'disputes' },
+          { label: 'Disputes', icon: Flag, disabled: true },
           { label: 'Payouts', icon: Banknote, disabled: true },
         ],
       },
@@ -159,13 +158,7 @@ export function Sidebar({ open = false, onClose, inboxUnread = 0 }) {
   const role = isAdmin ? 'admin' : isFreelancer ? 'freelancer' : 'client';
   const config = NAV[role];
 
-  const badges = {
-    inbox: inboxUnread,
-    jobPosts: DEMO_NAV_BADGES.clientJobPosts,
-    proposals: DEMO_NAV_BADGES.freelancerProposals,
-    moderation: DEMO_NAV_BADGES.adminModeration,
-    disputes: DEMO_NAV_BADGES.adminDisputes,
-  };
+  const badges = { inbox: inboxUnread };
 
   const fullName = profile ? `${profile.name ?? ''} ${profile.surname ?? ''}`.trim() : '';
   const displayName = fullName || profile?.username || 'Your account';

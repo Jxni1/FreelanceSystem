@@ -1,46 +1,81 @@
 import { useEffect, useMemo } from 'react';
 import { useContracts } from './useContracts';
 import { useProposals } from './useProposals';
+import { useProjects } from './useProjects';
+import { useMilestones } from './useMilestones';
 import { useProfileContext } from '../context/ProfileContext';
-import { DEMO_FREELANCER } from '../data/dashboardDemoData';
 
-const ACTIVE_STATUSES = new Set(['Active', 'InProgress', 'In Progress', 'Ongoing']);
+const ACTIVE_STATUSES = new Set(['Active']);
 
 function formatDue(value) {
-  if (!value) return DEMO_FREELANCER.activeContract.due;
+  if (!value) return '—';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return DEMO_FREELANCER.activeContract.due;
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 export function useFreelancerDashboard() {
   const { profile } = useProfileContext();
   const { contracts, fetchContracts } = useContracts();
   const { proposals, fetchProposals, isLoading } = useProposals();
+  const { projects, fetchProjects } = useProjects();
+  const { milestones, fetchMilestonesByContract } = useMilestones();
 
   useEffect(() => {
     fetchContracts({ page: 1, pageSize: 100 }).catch(() => {});
     fetchProposals({ page: 1, pageSize: 1 });
-  }, [fetchContracts, fetchProposals]);
+    fetchProjects({ page: 1, pageSize: 3, status: 'Open' });
+  }, [fetchContracts, fetchProposals, fetchProjects]);
+
+  const liveContract = useMemo(
+    () => contracts.items.find((c) => ACTIVE_STATUSES.has(c.status)) || null,
+    [contracts],
+  );
+
+  useEffect(() => {
+    if (liveContract?.contractID) fetchMilestonesByContract(liveContract.contractID).catch(() => {});
+  }, [liveContract, fetchMilestonesByContract]);
 
   return useMemo(() => {
     const activeContracts = contracts.items.filter((c) => ACTIVE_STATUSES.has(c.status));
-    const liveContract = activeContracts[0];
+    const completed = contracts.items.filter((c) => c.status === 'Completed').length;
+    const activeValue = activeContracts.reduce((sum, c) => sum + (Number(c.agreedPrice) || 0), 0);
 
-    let activeContract;
+    let activeContract = null;
     if (liveContract) {
-      const total = liveContract.agreedPrice || DEMO_FREELANCER.activeContract.total;
+      const ms = milestones.filter((m) => String(m.contractID) === String(liveContract.contractID));
+      const total = Number(liveContract.agreedPrice) || 0;
+      const earned = ms.filter((m) => m.status === 'Approved').reduce((s, m) => s + (Number(m.amount) || 0), 0);
+      const approved = ms.filter((m) => m.status === 'Approved').length;
       activeContract = {
-        title: liveContract.projectTitle || DEMO_FREELANCER.activeContract.title,
-        milestoneCurrent: DEMO_FREELANCER.activeContract.milestoneCurrent,
-        milestoneTotal: DEMO_FREELANCER.activeContract.milestoneTotal,
+        id: liveContract.contractID,
+        title: liveContract.projectTitle || 'Active contract',
+        milestoneCurrent: approved,
+        milestoneTotal: ms.length,
         due: formatDue(liveContract.end_Date),
-        earned: Math.min(DEMO_FREELANCER.activeContract.earned, total),
+        earned,
         total,
       };
-    } else {
-      activeContract = DEMO_FREELANCER.activeContract;
     }
+
+    const latestProjects = (projects.items ?? []).map((p, i) => ({
+      id: p.projectID ?? `lp-${i}`,
+      title: p.title || 'Untitled project',
+      company: p.clientName || '',
+      rate: p.budget ? `$${Number(p.budget).toLocaleString()}` : '',
+      tags: (p.skills ?? []).slice(0, 3),
+    }));
+
+    const fp = profile?.freelancerProfile;
+    const checklist = [
+      { label: 'Add a profile photo', done: Boolean(profile?.profilePhoto) },
+      { label: 'Set your hourly rate', done: Number(fp?.hourlyRate) > 0 },
+      { label: 'Add your experience level', done: Boolean(fp?.experienceLevel) },
+    ];
+    const doneCount = checklist.filter((c) => c.done).length;
+    const profileStrength = {
+      percent: Math.round((doneCount / checklist.length) * 100),
+      checklist,
+    };
 
     const firstName = profile?.name?.split(' ')[0] || profile?.username || 'there';
 
@@ -48,25 +83,16 @@ export function useFreelancerDashboard() {
       isLoading,
       firstName,
       stats: {
-        earnings: { ...DEMO_FREELANCER.stats.earnings },
-        activeContracts: {
-          value: activeContracts.length || DEMO_FREELANCER.stats.activeContracts.value,
-          delta: DEMO_FREELANCER.stats.activeContracts.delta,
-          deltaDir: DEMO_FREELANCER.stats.activeContracts.deltaDir,
-        },
-        proposalsOut: {
-          value: proposals.totalCount || DEMO_FREELANCER.stats.proposalsOut.value,
-          delta: DEMO_FREELANCER.stats.proposalsOut.delta,
-          deltaDir: DEMO_FREELANCER.stats.proposalsOut.deltaDir,
-        },
-        profileViews: { ...DEMO_FREELANCER.stats.profileViews },
-        jobSuccess: { ...DEMO_FREELANCER.stats.jobSuccess },
+        activeContracts: activeContracts.length,
+        completed,
+        proposalsOut: proposals.totalCount || 0,
+        activeValue,
       },
-      matches: DEMO_FREELANCER.matches,
+      latestProjects,
       activeContract,
-      profileStrength: DEMO_FREELANCER.profileStrength,
+      profileStrength,
     };
-  }, [contracts, proposals, profile, isLoading]);
+  }, [contracts, proposals, projects, milestones, liveContract, profile, isLoading]);
 }
 
 export default useFreelancerDashboard;

@@ -1,553 +1,353 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { BadgeCheck, ShieldCheck, DollarSign, Clock, CheckCircle2, Tag } from 'lucide-react';
 import { useProjects } from '../../hooks/useProjects';
 import { useContracts } from '../../hooks/useContracts';
 import { useProposals } from '../../hooks/useProposals';
+import { useClients } from '../../hooks/useClients';
 import { useAuthorization } from '../../hooks/useAuthorization';
-import { SmartBackButton } from '../../components/SmartBackButton';
 import { useProtectedViews } from '../../hooks/useProtectedViews';
+import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { RatingStars } from '../../components/ui/RatingStars';
+import { Avatar } from '../../components/ui/Avatar';
+
+const STATUS_TONE = {
+  Open: 'emerald',
+  InProgress: 'sky',
+  Completed: 'slate',
+  Cancelled: 'rose',
+};
+
+function timeAgo(value) {
+  if (!value) return 'recently';
+  const diff = Date.now() - new Date(value).getTime();
+  const hrs = Math.floor(diff / 3600000);
+  if (hrs < 1) return 'just now';
+  if (hrs < 24) return `${hrs} hours ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? 'Yesterday' : `${days} days ago`;
+}
+
+function InfoChip({ icon, label, value }) {
+  const Icon = icon;
+  return (
+    <div className="rounded-xl border border-line bg-white px-4 py-3">
+      <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+        <Icon className="h-4 w-4 text-slate-400" aria-hidden="true" />
+        {label}
+      </div>
+      <p className="text-sm font-semibold text-slate-900">{value}</p>
+    </div>
+  );
+}
 
 export default function ProjectDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { project, isLoading, error, fetchProjectById, deleteProject } = useProjects();
-  const { contracts, fetchContracts, isLoading: contractLoading } = useContracts();
-  const { proposals, fetchProposals, createProposal, acceptProposal, rejectProposal, deleteProposal } = useProposals();
+  const { fetchContracts } = useContracts();
+  const { proposals, fetchProposals, createProposal, deleteProposal } = useProposals();
+  const { client, fetchClientById } = useClients();
   const { isClient, isFreelancer } = useAuthorization();
   const { logView } = useProtectedViews();
 
-  const [proposalForm, setProposalForm] = useState({ message: '', bidAmount: '', deliveryDays: '' });
-  const [proposalError, setProposalError] = useState(null);
-  const [proposalActionKey, setProposalActionKey] = useState('');
+  const [showApply, setShowApply] = useState(false);
+  const [form, setForm] = useState({ message: '', bidAmount: '', deliveryDays: '' });
+  const [formError, setFormError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
+    if (!id) return;
+    fetchProjectById(id);
+    logView(id);
+    fetchContracts({ projectID: id, page: 1, pageSize: 10 }).catch(() => {});
+    fetchProposals({ projectId: id, pageSize: 50 }).catch(() => {});
+  }, [id, fetchProjectById, fetchContracts, fetchProposals, logView]);
 
-    const loadProjectContext = async () => {
-      if (!id) return;
-      await fetchProjectById(id);
-      logView(id);   
+  useEffect(() => {
+    if (project?.clientID) fetchClientById(project.clientID).catch(() => {});
+  }, [project?.clientID, fetchClientById]);
 
-      try {
-        await fetchContracts({ projectID: id, page: 1, pageSize: 10 });
-      } catch {
-        if (!isMounted) return;
-      }
-
-      try {
-        await fetchProposals({ projectId: id, pageSize: 50 });
-      } catch {}
-    };
-
-    if (id) loadProjectContext();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id, fetchProjectById, fetchContracts, fetchProposals, logView]);   
-
-  const handleCreateProposal = async (e) => {
-    e.preventDefault();
-    setProposalError(null);
-    setProposalActionKey('create');
+  const handleApply = async (event) => {
+    event.preventDefault();
+    setFormError(null);
+    setSubmitting(true);
     try {
       const res = await createProposal({
         projectId: project.projectID,
-        message: proposalForm.message.trim(),
-        bidAmount: Number(proposalForm.bidAmount),
-        deliveryDays: Number(proposalForm.deliveryDays),
+        message: form.message.trim(),
+        bidAmount: Number(form.bidAmount),
+        deliveryDays: Number(form.deliveryDays),
       });
-      if (!res?.success) { setProposalError(res?.error || 'Failed to submit proposal.'); return; }
-      setProposalForm({ message: '', bidAmount: '', deliveryDays: '' });
+      if (!res?.success) {
+        setFormError(res?.error || 'Failed to submit proposal.');
+        return;
+      }
+      setForm({ message: '', bidAmount: '', deliveryDays: '' });
+      setShowApply(false);
       await fetchProposals({ projectId: id, pageSize: 50 });
     } finally {
-      setProposalActionKey('');
+      setSubmitting(false);
     }
   };
 
-  const handleAcceptProposal = async (proposalId) => {
-    setProposalError(null);
-    setProposalActionKey(`accept-${proposalId}`);
+  const handleWithdraw = async (proposalId) => {
+    setSubmitting(true);
     try {
-      const res = await acceptProposal(proposalId);
-      if (!res?.success) { setProposalError(res?.error || 'Failed to accept proposal.'); return; }
-      await Promise.all([
-        fetchProposals({ projectId: id, pageSize: 50 }),
-        fetchContracts({ projectID: id, page: 1, pageSize: 10 }),
-      ]);
-    } finally {
-      setProposalActionKey('');
-    }
-  };
-
-  const handleRejectProposal = async (proposalId) => {
-    setProposalError(null);
-    setProposalActionKey(`reject-${proposalId}`);
-    try {
-      const res = await rejectProposal(proposalId);
-      if (!res?.success) { setProposalError(res?.error || 'Failed to reject proposal.'); return; }
+      await deleteProposal(proposalId);
       await fetchProposals({ projectId: id, pageSize: 50 });
     } finally {
-      setProposalActionKey('');
-    }
-  };
-
-  const handleDeleteProposal = async (proposalId) => {
-    setProposalError(null);
-    setProposalActionKey(`delete-${proposalId}`);
-    try {
-      const res = await deleteProposal(proposalId);
-      if (!res?.success) { setProposalError(res?.error || 'Failed to withdraw proposal.'); return; }
-      await fetchProposals({ projectId: id, pageSize: 50 });
-    } finally {
-      setProposalActionKey('');
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+    if (window.confirm('Delete this job post? This cannot be undone.')) {
       await deleteProject(id);
       navigate('/projects');
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !project) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-500">
-        <div className="inline-block w-10 h-10 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin mb-4" />
-        <p>Loading project details...</p>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center text-slate-500">
+        <div className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-brand-100 border-t-brand-700" />
+        <p>Loading job…</p>
       </div>
     );
   }
 
   if (error || !project) {
     return (
-      <div className="max-w-4xl mx-auto rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">
-        <h2 className="text-xl font-bold mb-2">Error</h2>
-        <p>{typeof error === 'string' ? error : 'Project not found.'}</p>
-        <div className="mt-6">
-          <Link to="/projects" className="text-rose-600 font-semibold hover:text-rose-700">
-            &larr; Back to Projects
-          </Link>
-        </div>
-      </div>
+      <Card className="border-rose-200 bg-rose-50">
+        <h2 className="text-lg font-bold text-rose-700">Job not found</h2>
+        <Button to="/discover" variant="link" size="link" className="mt-2">
+          Back to Find work
+        </Button>
+      </Card>
     );
   }
 
-  const milestoneCount = project.milestones?.length ?? 0;
-  const deliverableCount = project.deliverables?.length ?? 0;
-  const linkedContract =
-    contracts?.items?.find(
-      (contract) => (contract.projectID || contract.projectId) === project.projectID
-    ) ??
-    contracts?.items?.[0] ??
-    null;
+  const myProposals = [...proposals.items].sort(
+    (a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0),
+  );
+  const latest = isFreelancer ? myProposals[0] : null;
+  const projectOpen = project.status === 'Open';
+  const ref = `#${String(project.projectID).slice(0, 8).toUpperCase()}`;
 
-  const statusClasses =
-    project.status === 'Open'
-      ? 'bg-amber-50 text-amber-700 border-amber-200'
-      : project.status === 'InProgress'
-      ? 'bg-teal-50 text-teal-700 border-teal-200'
-      : project.status === 'Completed'
-      ? 'bg-blue-50 text-blue-700 border-blue-200'
-      : 'bg-slate-100 text-slate-600 border-slate-200';
+  const clientName = project.clientName || client?.name || 'Client';
+  const clientRating = client?.averageRating || 0;
+  const clientReviews = client?.reviewCount ?? 0;
 
   return (
-    <div className="max-w-5xl mx-auto text-slate-900 space-y-6">
-      <SmartBackButton fallbackTo="/projects" label="Back to Projects" />
+    <div className="space-y-5">
+      <Breadcrumbs
+        items={[
+          { label: isFreelancer ? 'Find work' : 'My job posts', to: isFreelancer ? '/discover' : '/projects' },
+          { label: project.categoryName || 'Projects' },
+          { label: project.title },
+        ]}
+      />
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-teal-500 to-emerald-400" />
-
-        <div className="p-6 md:p-8 border-b border-slate-200 bg-slate-50">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-            <div>
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                  {project.title}
-                </h1>
-
-                <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusClasses}`}>
-                  {project.status || 'Open'}
-                </span>
-
-                <span className="px-3 py-1 text-xs font-semibold rounded-full border bg-purple-50 text-purple-700 border-purple-200">
-                  {project.visibility || 'Private'}
-                </span>
-              </div>
-
-              <p className="text-sm text-slate-500">
-                Project ID:{' '}
-                <span className="font-mono text-slate-700">{project.projectID}</span>
-              </p>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          <Card>
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <Badge tone={STATUS_TONE[project.status] ?? 'slate'}>{project.status}</Badge>
+              <span>{ref}</span>
+              <span>· Posted {timeAgo(project.createdAt)}</span>
             </div>
 
-            {isClient && (
-              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-                <Link
-                  to={`/projects/${project.projectID}/edit`}
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors"
-                >
-                  Edit Project
-                </Link>
-                <button
-                  onClick={handleDelete}
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{project.title}</h1>
 
-        <div className="p-6 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500 mb-3">
-                Description
-              </h3>
-              <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                {project.description || 'No description provided.'}
-              </div>
-            </section>
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1.5 font-medium text-slate-700">
+                {clientName}
+                <BadgeCheck className="h-4 w-4 text-brand-600" aria-hidden="true" />
+              </span>
+              {clientReviews > 0 ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <RatingStars rating={clientRating} size="sm" />
+                  <span className="text-slate-400">({clientReviews} reviews)</span>
+                </span>
+              ) : null}
+            </div>
 
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500 mb-3">
-                Category
-              </h3>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700">
-                <span>{project.categoryName || 'Uncategorized'}</span>
-              </div>
-            </section>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <InfoChip icon={DollarSign} label="Budget" value={`$${project.budget?.toLocaleString() ?? '—'}`} />
+              <InfoChip icon={Tag} label="Category" value={project.categoryName || '—'} />
+              <InfoChip icon={Clock} label="Posted" value={timeAgo(project.createdAt)} />
+              <InfoChip icon={CheckCircle2} label="Status" value={project.status} />
+            </div>
+          </Card>
 
-            {project.skills?.length > 0 && (
-              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500 mb-3">
-                  Required Skills
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {project.skills.map(skill => (
-                    <span
-                      key={skill}
-                      className="px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200"
-                    >
+          <Card title="About the project">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+              {project.description || 'No description provided.'}
+            </p>
+
+            {project.skills?.length ? (
+              <>
+                <h3 className="mt-5 mb-2 text-sm font-semibold text-slate-900">Skills &amp; expertise</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {project.skills.map((skill) => (
+                    <Badge key={skill} tone="slate">
                       {skill}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
-              </section>
-            )}
+              </>
+            ) : null}
+          </Card>
 
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600">
-                    ⚡
+          {isFreelancer && showApply && projectOpen && !latest ? (
+            <Card title="Submit your proposal">
+              {formError ? (
+                <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{formError}</div>
+              ) : null}
+              <form onSubmit={handleApply} className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-500">Bid amount ($)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.bidAmount}
+                      onChange={(e) => setForm((f) => ({ ...f, bidAmount: e.target.value }))}
+                      className="h-10 w-full rounded-xl border border-line bg-white px-3 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                      required
+                    />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900 mb-1">
-                      Project Workflow
-                    </h3>
-                    <p className="text-sm text-slate-500">
-                      Manage milestones, deliverables, and the connected contract workflow.
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-3 mt-3">
-                      <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        {milestoneCount} Milestones
-                      </span>
-                      <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                        {deliverableCount} Deliverables
-                      </span>
-                    </div>
+                    <label className="mb-1 block text-xs font-medium text-slate-500">Delivery days</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.deliveryDays}
+                      onChange={(e) => setForm((f) => ({ ...f, deliveryDays: e.target.value }))}
+                      className="h-10 w-full rounded-xl border border-line bg-white px-3 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                      required
+                    />
                   </div>
                 </div>
-
-                <div className="w-full md:w-auto">
-                  {linkedContract?.contractID ? (
-                    <Link
-                      to={`/contracts/${linkedContract.contractID}/workflow`}
-                      className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors"
-                    >
-                      <span>Open Workflow</span>
-                      <span>→</span>
-                    </Link>
-                  ) : (
-                    <Link
-                      to={`/projects/${project.projectID}/workflow`}
-                      className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-6 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold transition-colors"
-                    >
-                      <span>{contractLoading ? 'Preparing workflow...' : 'Open Workflow'}</span>
-                      <span>→</span>
-                    </Link>
-                  )}
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-500">Cover letter</label>
+                  <textarea
+                    rows={4}
+                    value={form.message}
+                    onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+                    placeholder="Describe your approach, relevant experience, and why you're the right fit…"
+                    className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                    required
+                  />
                 </div>
-              </div>
-            </section>
-          </div>
+                <div className="flex gap-2">
+                  <Button as="button" type="submit" variant="accent" disabled={submitting}>
+                    {submitting ? 'Submitting…' : 'Submit proposal'}
+                  </Button>
+                  <Button as="button" type="button" variant="outline" onClick={() => setShowApply(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          ) : null}
 
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-teal-200 bg-teal-50 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal-600 mb-2">
-                Total Budget
-              </p>
-              <div className="text-4xl font-bold text-teal-700">
-                ${project.budget?.toLocaleString() || '0'}
+          {isFreelancer && latest ? (
+            <Card title="Your proposal">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Badge tone={latest.status === 'Accepted' ? 'emerald' : latest.status === 'Rejected' ? 'rose' : 'amber'}>
+                    {latest.status}
+                  </Badge>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    ${latest.bidAmount?.toLocaleString()} · {latest.deliveryDays} days
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">{latest.message}</p>
+                </div>
+                {latest.status === 'Pending' ? (
+                  <Button as="button" type="button" variant="outline" size="sm" onClick={() => handleWithdraw(latest.proposalId)} disabled={submitting}>
+                    Withdraw
+                  </Button>
+                ) : null}
+              </div>
+            </Card>
+          ) : null}
+        </div>
+
+        <div className="space-y-5">
+          <Card>
+            <p className="text-xs text-slate-500">Project budget</p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">${project.budget?.toLocaleString() ?? '—'}</p>
+            <Badge tone="brand" icon={ShieldCheck} className="mt-2">Escrow protected</Badge>
+
+            <div className="mt-4 space-y-2">
+              {isFreelancer ? (
+                <Button
+                  as="button"
+                  type="button"
+                  variant="accent"
+                  className="w-full"
+                  onClick={() => setShowApply(true)}
+                  disabled={!projectOpen || Boolean(latest)}
+                >
+                  {latest ? 'Already applied' : projectOpen ? 'Apply now' : 'Closed'}
+                </Button>
+              ) : isClient ? (
+                <>
+                  <Button to={`/projects/${project.projectID}/proposals`} className="w-full">
+                    Review proposals ({proposals.totalCount})
+                  </Button>
+                  <Button to={`/projects/${project.projectID}/edit`} variant="outline" className="w-full">
+                    Edit job post
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          </Card>
+
+          <Card title="About the client">
+            <div className="flex items-center gap-3">
+              <Avatar name={clientName} size="md" />
+              <div className="min-w-0">
+                <p className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900">
+                  {clientName}
+                  <BadgeCheck className="h-4 w-4 text-brand-600" aria-hidden="true" />
+                </p>
+                {client?.industry ? <p className="text-xs text-slate-500">{client.industry}</p> : null}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-5">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">
-                  Created At
-                </p>
-                <p className="text-sm text-slate-700">
-                  {project.createdAt ? new Date(project.createdAt).toLocaleString() : 'N/A'}
-                </p>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">Rating</dt>
+                <dd className="font-medium text-slate-900">{clientRating > 0 ? `${Number(clientRating).toFixed(1)} ★` : '—'}</dd>
               </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">Reviews</dt>
+                <dd className="font-medium text-slate-900">{clientReviews}</dd>
+              </div>
+            </dl>
 
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">
-                  Last Updated
-                </p>
-                <p className="text-sm text-slate-700">
-                  {project.updatedAt ? new Date(project.updatedAt).toLocaleString() : 'N/A'}
-                </p>
-              </div>
+            <Button to={`/clients/${project.clientID}`} variant="soft" className="mt-4 w-full">
+              View client profile
+            </Button>
+          </Card>
 
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">
-                  Visibility
-                </p>
-                <p className="text-sm text-slate-700">{project.visibility || 'N/A'}</p>
-              </div>
-            </div>
-          </div>
+          {isClient ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-100"
+            >
+              Delete job post
+            </button>
+          ) : null}
         </div>
       </div>
-
-      {(isClient || isFreelancer) && (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-violet-500 to-purple-400" />
-          <div className="p-6 md:p-8">
-
-            {isClient && (
-              <>
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900">Proposals</h2>
-                    <p className="text-sm text-slate-500 mt-0.5">{proposals.totalCount} received</p>
-                  </div>
-                </div>
-
-                {proposalError && (
-                  <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
-                    {proposalError}
-                  </div>
-                )}
-
-                {proposals.items.length === 0 ? (
-                  <div className="border border-dashed border-slate-300 rounded-xl p-8 text-center text-slate-400 text-sm">
-                    No proposals received yet.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {proposals.items.map(p => (
-                      <div
-                        key={p.proposalId}
-                        className="border border-slate-200 rounded-xl p-4 bg-slate-50"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-slate-900">
-                                {p.freelancerName || 'Freelancer'}
-                              </span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                p.status === 'Pending'
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                  : p.status === 'Accepted'
-                                  ? 'bg-teal-50 text-teal-700 border border-teal-200'
-                                  : 'bg-slate-100 text-slate-500 border border-slate-200'
-                              }`}>
-                                {p.status}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm mb-2">
-                              <span className="font-bold text-teal-600">
-                                ${p.bidAmount?.toLocaleString()}
-                              </span>
-                              <span className="text-slate-400">&middot;</span>
-                              <span className="text-slate-600">{p.deliveryDays} days</span>
-                            </div>
-                            <p className="text-sm text-slate-500 line-clamp-2">{p.message}</p>
-                          </div>
-                          {p.status === 'Pending' && (
-                            <div className="flex gap-2 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => handleAcceptProposal(p.proposalId)}
-                                disabled={proposalActionKey === `accept-${p.proposalId}`}
-                                className="px-3 py-1.5 text-xs rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold disabled:opacity-60"
-                              >
-                                {proposalActionKey === `accept-${p.proposalId}` ? 'Accepting...' : 'Accept'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRejectProposal(p.proposalId)}
-                                disabled={proposalActionKey === `reject-${p.proposalId}`}
-                                className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-60"
-                              >
-                                {proposalActionKey === `reject-${p.proposalId}` ? 'Rejecting...' : 'Reject'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {isFreelancer && (() => {
-              const sorted = [...proposals.items].sort(
-                (a, b) =>
-                  new Date(b.created_at || b.createdAt || 0) -
-                  new Date(a.created_at || a.createdAt || 0)
-              );
-              const latest = sorted[0] ?? null;
-              const projectOpen = project?.status === 'Open';
-
-              return (
-                <>
-                  <div className="mb-5">
-                    <h2 className="text-xl font-bold text-slate-900">Your Proposal</h2>
-                    <p className="text-sm text-slate-500 mt-0.5">
-                      Bid on this project by submitting a proposal.
-                    </p>
-                  </div>
-
-                  {proposalError && (
-                    <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
-                      {proposalError}
-                    </div>
-                  )}
-
-                  {latest?.status === 'Pending' && (
-                    <div className="border border-amber-200 rounded-xl p-4 bg-amber-50">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold border border-amber-200">
-                              Pending
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {new Date(latest.created_at || latest.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p className="text-sm font-bold text-teal-600">
-                            ${latest.bidAmount?.toLocaleString()} &middot; {latest.deliveryDays} days
-                          </p>
-                          <p className="text-sm text-slate-700 mt-1">{latest.message}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteProposal(latest.proposalId)}
-                          disabled={proposalActionKey === `delete-${latest.proposalId}`}
-                          className="shrink-0 px-3 py-1.5 text-xs rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-60"
-                        >
-                          {proposalActionKey === `delete-${latest.proposalId}` ? 'Withdrawing...' : 'Withdraw'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {latest?.status === 'Accepted' && (
-                    <div className="border border-teal-200 rounded-xl p-4 bg-teal-50">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 font-semibold border border-teal-200">
-                        Accepted
-                      </span>
-                      <p className="text-sm text-slate-700 mt-2">
-                        Your proposal was accepted. A contract has been created — open the workflow to begin.
-                      </p>
-                      <p className="text-sm font-bold text-teal-600 mt-1">
-                        ${latest.bidAmount?.toLocaleString()} &middot; {latest.deliveryDays} days
-                      </p>
-                    </div>
-                  )}
-
-                  {(!latest || latest.status === 'Rejected') && (
-                    <>
-                      {latest?.status === 'Rejected' && (
-                        <div className="mb-4 border border-rose-200 rounded-xl p-3 bg-rose-50">
-                          <p className="text-xs text-rose-700">
-                            Your previous proposal was not accepted. You can submit a new one.
-                          </p>
-                        </div>
-                      )}
-                      {projectOpen ? (
-                        <form onSubmit={handleCreateProposal} className="space-y-3">
-                          <div className="grid md:grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-xs text-slate-500 mb-1 block">Bid Amount ($)</label>
-                              <input
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                placeholder="e.g. 500"
-                                value={proposalForm.bidAmount}
-                                onChange={e => setProposalForm(p => ({ ...p, bidAmount: e.target.value }))}
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-slate-500 mb-1 block">Delivery Days</label>
-                              <input
-                                type="number"
-                                min="1"
-                                placeholder="e.g. 14"
-                                value={proposalForm.deliveryDays}
-                                onChange={e => setProposalForm(p => ({ ...p, deliveryDays: e.target.value }))}
-                                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                required
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-xs text-slate-500 mb-1 block">Message</label>
-                            <textarea
-                              placeholder="Describe your approach, relevant experience, and why you're the right fit..."
-                              value={proposalForm.message}
-                              onChange={e => setProposalForm(p => ({ ...p, message: e.target.value }))}
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                              rows={4}
-                              required
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            disabled={proposalActionKey === 'create'}
-                            className="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold disabled:opacity-60"
-                          >
-                            {proposalActionKey === 'create' ? 'Submitting...' : 'Submit Proposal'}
-                          </button>
-                        </form>
-                      ) : (
-                        <div className="border border-dashed border-slate-300 rounded-xl p-6 text-center text-slate-400 text-sm">
-                          This project is no longer accepting proposals.
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

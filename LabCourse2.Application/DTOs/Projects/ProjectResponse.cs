@@ -11,6 +11,7 @@
         public DateTime CreatedAt { get; init; }
         public DateTime UpdatedAt { get; init; }
         public Guid ClientID { get; init; }
+        public string ClientName { get; init; } = string.Empty;
         public Guid CategoryID { get; init; }
         public string CategoryName { get; init; } = string.Empty;
         public List<string> Skills { get; init; } = new();

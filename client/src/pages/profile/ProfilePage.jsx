@@ -1,11 +1,17 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { RefreshCw, Pencil, LogOut, Camera } from 'lucide-react';
 import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { PageHeading } from '../../components/ui/PageHeading';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Avatar } from '../../components/ui/Avatar';
+
+const API_BASE_URL = 'https://localhost:7244';
 
 export default function ProfilePage() {
   const { logout } = useAuth();
-  const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,22 +24,14 @@ export default function ProfilePage() {
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const API_BASE_URL = 'https://localhost:7244';
-
   const loadProfile = async () => {
     try {
       setIsLoading(true);
       setLoadError(null);
-
       const res = await apiClient.get('/api/users/me');
-      const data = res.data?.value ?? res.data?.data ?? res.data;
-      setProfile(data);
+      setProfile(res.data?.value ?? res.data?.data ?? res.data);
     } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        'Error loading profile.';
-      setLoadError(msg);
+      setLoadError(err?.response?.data?.error || err?.response?.data?.message || 'Error loading profile.');
     } finally {
       setIsLoading(false);
     }
@@ -46,28 +44,23 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!selectedPhotoFile) {
       setTempPhotoPreview('');
-      return;
+      return undefined;
     }
-
     const objectUrl = URL.createObjectURL(selectedPhotoFile);
     setTempPhotoPreview(objectUrl);
-
     return () => URL.revokeObjectURL(objectUrl);
   }, [selectedPhotoFile]);
 
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0] || null;
-
     if (!file) {
       setSelectedPhotoFile(null);
       return;
     }
-
     if (!file.type.startsWith('image/')) {
       setUploadError('Please select a valid image file.');
       return;
     }
-
     setUploadError(null);
     setUploadSuccess(false);
     setSelectedPhotoFile(file);
@@ -86,7 +79,6 @@ export default function ProfilePage() {
       setUploadError('Please choose an image first.');
       return;
     }
-
     try {
       setUploadError(null);
       setUploadSuccess(false);
@@ -94,7 +86,6 @@ export default function ProfilePage() {
 
       const meRes = await apiClient.get('/api/users/me');
       const me = meRes.data?.value ?? meRes.data?.data ?? meRes.data;
-
       const userId = me?.userId || me?.userID || me?.id;
       if (!userId) {
         setUploadError('Could not determine current user ID.');
@@ -111,56 +102,36 @@ export default function ProfilePage() {
       });
 
       const uploaded = uploadRes.data?.data ?? uploadRes.data;
-      const uploadedPath =
-        uploaded?.file_Path ||
-        uploaded?.filePath ||
-        uploaded?.path ||
-        uploaded?.url;
-
+      const uploadedPath = uploaded?.file_Path || uploaded?.filePath || uploaded?.path || uploaded?.url;
       if (!uploadedPath) {
         setUploadError('Upload succeeded but no file path was returned.');
         return;
       }
 
-      // Save the profile photo path to the database
       await apiClient.put('/api/users/me', {
-        name: profile.name.trim(),
-        surname: profile.surname.trim(),
-        username: profile.username.trim(),
-        email: profile.email.trim(),
+        name: (profile.name || '').trim(),
+        surname: (profile.surname || '').trim(),
+        username: (profile.username || '').trim(),
+        email: (profile.email || '').trim(),
         profilePhoto: uploadedPath,
       });
 
-      // Update profile with new photo path
-      setProfile((prev) => ({
-        ...prev,
-        profilePhoto: uploadedPath,
-      }));
-
+      setProfile((prev) => ({ ...prev, profilePhoto: uploadedPath }));
       setSelectedPhotoFile(null);
       setTempPhotoPreview('');
       setPhotoInputKey(Date.now());
       setUploadSuccess(true);
-
-      // Clear success message after 3 seconds
       setTimeout(() => setUploadSuccess(false), 3000);
     } catch (err) {
       const raw = err?.response?.data;
-      setUploadError(
-        raw?.error ||
-          raw?.message ||
-          raw?.title ||
-          (typeof raw === 'string' ? raw : 'Failed to upload profile photo.')
-      );
+      setUploadError(raw?.error || raw?.message || raw?.title || (typeof raw === 'string' ? raw : 'Failed to upload profile photo.'));
     } finally {
       setIsUploadingPhoto(false);
     }
   };
 
   const profilePhotoUrl = useMemo(() => {
-    // Show temp preview first if available
     if (tempPhotoPreview) return tempPhotoPreview;
-
     if (!profile?.profilePhoto) return '';
     if (profile.profilePhoto.startsWith('http')) return profile.profilePhoto;
     return `${API_BASE_URL}/${profile.profilePhoto.replace(/^\/+/, '')}`;
@@ -168,241 +139,130 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-10 min-h-[50vh]">
-        <div
-          className="w-8 h-8 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin"
-          aria-hidden="true"
-        />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-9 w-9 animate-spin rounded-full border-4 border-brand-100 border-t-brand-700" aria-hidden="true" />
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="p-10">
-        <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg text-rose-700">
-          <p className="font-semibold">Error loading profile</p>
-          <p className="text-sm mt-1">{loadError}</p>
-          <button
-            onClick={loadProfile}
-            className="mt-3 text-sm font-medium underline text-rose-800 hover:text-rose-900"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
+      <Card className="border-rose-200 bg-rose-50">
+        <p className="font-semibold text-rose-700">Error loading profile</p>
+        <p className="mt-1 text-sm text-rose-600">{loadError}</p>
+        <Button as="button" type="button" variant="outline" size="sm" className="mt-3" onClick={loadProfile}>
+          Try again
+        </Button>
+      </Card>
     );
   }
 
   if (!profile) return null;
 
   return (
-    <div className="max-w-3xl mx-auto p-6 lg:p-10 text-slate-100">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-slate-100">Profile</h1>
+    <div className="mx-auto max-w-3xl space-y-5">
+      <PageHeading
+        title="Profile"
+        actions={
+          <>
+            <Button as="button" type="button" variant="outline" icon={RefreshCw} onClick={loadProfile}>
+              Refresh
+            </Button>
+            <Button to="/profile/edit" icon={Pencil}>
+              Edit profile
+            </Button>
+            <Button as="button" type="button" variant="outline" icon={LogOut} onClick={logout}>
+              Sign out
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={loadProfile}
-            className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors bg-teal-50 px-4 py-2 rounded-lg"
-          >
-            Refresh Data
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/profile/edit')}
-            className="text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg shadow-sm transition-colors"
-          >
-            Edit Profile
-          </button>
-
-          <button
-            type="button"
-            onClick={logout}
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors bg-white border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-lg shadow-sm"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
-        <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start gap-6">
-          <div className="shrink-0 w-full sm:w-auto">
-            {/* Profile Photo with Upload Overlay */}
-            <div className="relative inline-block group">
-              {profilePhotoUrl ? (
-                <img
-                  src={profilePhotoUrl}
-                  alt={`${profile.name} ${profile.surname}`}
-                  className="w-20 h-20 rounded-full object-cover border-2 border-slate-300 group-hover:border-teal-400 transition-colors"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-2xl font-bold border-2 border-slate-300 group-hover:border-teal-400 transition-colors">
-                  {profile?.name?.[0]}
-                  {profile?.surname?.[0]}
-                </div>
-              )}
-
-              {/* Upload Overlay */}
-              <input
-                id="profile-photo-upload"
-                key={photoInputKey}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
-                onChange={handlePhotoSelect}
-                className="hidden"
-              />
-
-              <label
-                htmlFor="profile-photo-upload"
-                className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/50 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <span className="text-white text-1xl opacity-0 group-hover:opacity-80 transition-opacity">
-                  Add photo
-                </span>
+      <Card>
+        <div className="flex flex-col items-start gap-6 sm:flex-row">
+          <div className="shrink-0">
+            <div className="group relative inline-block">
+              <Avatar name={`${profile.name ?? ''} ${profile.surname ?? ''}`} src={profilePhotoUrl || undefined} size="lg" className="h-20 w-20 text-2xl" />
+              <input id="profile-photo-upload" key={photoInputKey} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handlePhotoSelect} className="hidden" />
+              <label htmlFor="profile-photo-upload" className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-slate-900/0 transition-colors group-hover:bg-slate-900/50">
+                <Camera className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-90" aria-hidden="true" />
               </label>
             </div>
 
-            {/* Upload Status Messages */}
-            {uploadError && (
-              <div className="mt-3 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-xs text-rose-700">
-                {uploadError}
-              </div>
-            )}
-
-            {uploadSuccess && (
-              <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700 font-medium">
-                ✓ Photo updated!
-              </div>
-            )}
-
-            {/* Upload Controls - shown when file selected */}
-            {selectedPhotoFile && (
-              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 space-y-2">
+            {uploadError ? <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{uploadError}</p> : null}
+            {uploadSuccess ? <p className="mt-3 rounded-lg border border-brand-100 bg-brand-50 px-3 py-2 text-xs font-medium text-brand-700">Photo updated</p> : null}
+            {selectedPhotoFile ? (
+              <div className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
                 <p className="text-xs font-medium text-amber-800">Selected: {selectedPhotoFile.name}</p>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handlePhotoUpload}
-                    disabled={isUploadingPhoto}
-                    className="flex-1 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:bg-emerald-300 transition-colors"
-                  >
-                    {isUploadingPhoto ? 'Uploading...' : 'Upload'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRemoveSelectedPhoto}
-                    className="flex-1 px-2 py-1 rounded border border-amber-300 text-amber-800 text-xs font-semibold hover:bg-amber-100 transition-colors"
-                  >
+                  <Button as="button" type="button" size="sm" onClick={handlePhotoUpload} disabled={isUploadingPhoto}>
+                    {isUploadingPhoto ? 'Uploading…' : 'Upload'}
+                  </Button>
+                  <Button as="button" type="button" size="sm" variant="outline" onClick={handleRemoveSelectedPhoto}>
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
 
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-slate-900">
-              {profile.name} {profile.surname}
-            </h2>
-            <p className="text-slate-500 font-medium">@{profile.username}</p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-xl font-bold text-slate-900">{profile.name} {profile.surname}</h2>
+            <p className="font-medium text-slate-500">@{profile.username}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {profile.roles?.map((role) => (
-                <span
-                  key={role}
-                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200"
-                >
-                  {role}
-                </span>
+                <Badge key={role} tone="brand">{role}</Badge>
               ))}
             </div>
-
-            <div className="mt-6 space-y-2 text-sm text-slate-600">
-              <p>
-                <span className="font-semibold w-20 inline-block text-slate-500">
-                  Email:
-                </span>{' '}
-                {profile.email}
-              </p>
-              <p>
-                <span className="font-semibold w-20 inline-block text-slate-500">
-                  User ID:
-                </span>{' '}
-                <span className="font-mono text-xs">{profile.userId}</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {profile.clientProfile && (
-        <div className="bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
-          <div className="border-b border-slate-100 bg-slate-50 p-6">
-            <h3 className="text-lg font-bold text-teal-700">Client Details</h3>
-          </div>
-          <div className="p-6 space-y-6">
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Industry
-              </p>
-              <p className="text-slate-900 font-medium">
-                {profile.clientProfile.industry}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Average Budget
-              </p>
-              <p className="text-slate-900 font-medium">
-                $
-                {profile.clientProfile.budget.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Bio / Description
-              </p>
-              <p className="text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100">
-                {profile.clientProfile.bio}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {profile.freelancerProfile && (
-        <div className="bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
-          <div className="border-b border-slate-100 bg-slate-50 p-6">
-            <h3 className="text-lg font-bold text-teal-700">Freelancer Details</h3>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Experience Level
-                </p>
-                <p className="text-slate-900 font-medium">
-                  {profile.freelancerProfile.experienceLevel}
-                </p>
+            <dl className="mt-5 space-y-2 text-sm">
+              <div className="flex gap-2">
+                <dt className="w-20 shrink-0 font-medium text-slate-500">Email</dt>
+                <dd className="text-slate-700">{profile.email}</dd>
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Hourly Rate
-                </p>
-                <p className="text-slate-900 font-medium">
-                  ${profile.freelancerProfile.hourlyRate.toFixed(2)} / hr
-                </p>
+              <div className="flex gap-2">
+                <dt className="w-20 shrink-0 font-medium text-slate-500">User ID</dt>
+                <dd className="font-mono text-xs text-slate-500">{profile.userId}</dd>
               </div>
-            </div>
+            </dl>
           </div>
         </div>
-      )}
+      </Card>
+
+      {profile.clientProfile ? (
+        <Card title="Client details">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Industry</p>
+              <p className="mt-0.5 font-medium text-slate-900">{profile.clientProfile.industry || '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Average budget</p>
+              <p className="mt-0.5 font-medium text-slate-900">${Number(profile.clientProfile.budget || 0).toLocaleString()}</p>
+            </div>
+          </div>
+          {profile.clientProfile.bio ? (
+            <div className="mt-5">
+              <p className="text-xs font-medium text-slate-500">Bio</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-700">{profile.clientProfile.bio}</p>
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {profile.freelancerProfile ? (
+        <Card title="Freelancer details">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Experience level</p>
+              <p className="mt-0.5 font-medium text-slate-900">{profile.freelancerProfile.experienceLevel || '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Hourly rate</p>
+              <p className="mt-0.5 font-medium text-slate-900">${Number(profile.freelancerProfile.hourlyRate || 0).toFixed(2)} / hr</p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }

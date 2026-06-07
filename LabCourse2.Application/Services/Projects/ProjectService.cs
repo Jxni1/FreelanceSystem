@@ -39,6 +39,7 @@ namespace LabCourse2.Application.Services.Projects
 
             var q = _context.Projects
                 .Include(p => p.Category)
+                .Include(p => p.Client).ThenInclude(c => c.User)
                 .AsNoTracking()
                 .AsQueryable();
 
@@ -115,6 +116,7 @@ namespace LabCourse2.Application.Services.Projects
 
             var project = await _context.Projects
                 .Include(p => p.Category)
+                .Include(p => p.Client).ThenInclude(c => c.User)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == id);
 
@@ -183,6 +185,7 @@ namespace LabCourse2.Application.Services.Projects
 
             var created = await _context.Projects
                 .Include(p => p.Category)
+                .Include(p => p.Client).ThenInclude(c => c.User)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
 
@@ -259,6 +262,7 @@ namespace LabCourse2.Application.Services.Projects
 
             var updated = await _context.Projects
                 .Include(p => p.Category)
+                .Include(p => p.Client).ThenInclude(c => c.User)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
 

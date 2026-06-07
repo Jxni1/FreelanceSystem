@@ -36,6 +36,7 @@ import AdminAuditLogsPage from "./pages/admin/AdminAuditLogsPage";
 const ProjectsListPage = lazy(() => import("./pages/projects/ProjectsListPage"));
 const ProjectDetailsPage = lazy(() => import("./pages/projects/ProjectDetailsPage"));
 const ProjectFormPage = lazy(() => import("./pages/projects/ProjectFormPage"));
+const ProposalsReviewPage = lazy(() => import("./pages/projects/ProposalsReviewPage"));
 
 const SkillsListPage = lazy(() => import("./pages/admin/skills/SkillsListPage"));
 const SkillFormPage = lazy(() => import("./pages/admin/skills/SkillFormPage"));
@@ -51,6 +52,8 @@ const ProjectWorkflowPage = lazy(() => import("./pages/milestones/ProjectWorkFlo
 const FreelancerDiscoverPage = lazy(() => import("./pages/freelancer/FreelancerDiscoverPage"));
 const MyWorkPage = lazy(() => import("./pages/freelancer/MyWorkPage"));
 const FreelancersPage = lazy(() => import("./pages/client/FreelancersPage"));
+const FreelancerProfilePage = lazy(() => import("./pages/freelancer/FreelancerProfilePage"));
+const ClientProfilePage = lazy(() => import("./pages/client/ClientProfilePage"));
 
 const ReviewsListPage = lazy(()=> import("./pages/reviews/ReviewsListPage"));
 const ReviewFormPage = lazy(()=> import("./pages/reviews/ReviewFormPage"));
@@ -94,6 +97,8 @@ export default function App() {
                   <Route path="/home" element={<DashboardPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/profile/edit" element={<EditProfilePage />} />
+                  <Route path="/freelancers/:id" element={<FreelancerProfilePage />} />
+                  <Route path="/clients/:id" element={<ClientProfilePage />} />
                   <Route path="/projects" element={<ProjectsListPage />} />
                   <Route path="/projects/:id" element={<ProjectDetailsPage />} />
                   <Route path="/projects/:id/workflow" element={<ProjectWorkflowPage />} />
@@ -120,6 +125,7 @@ export default function App() {
                   <Route element={<ProtectedRoute requiredRoles={[ROLES.CLIENT]} />}>
                     <Route path="/projects/new" element={<ProjectFormPage />} />
                     <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
+                    <Route path="/projects/:id/proposals" element={<ProposalsReviewPage />} />
                     <Route path="/freelancers" element={<FreelancersPage />} />
                     <Route path="/reviews/new" element={<ReviewFormPage />} />
                     <Route path="/reviews/:id/edit" element={<ReviewFormPage />} />

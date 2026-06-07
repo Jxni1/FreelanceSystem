@@ -4,14 +4,13 @@ import { useContracts } from './useContracts';
 import { useFreelancers } from './useFreelancers';
 import { useProposals } from './useProposals';
 import { useProfileContext } from '../context/ProfileContext';
-import { DEMO_CLIENT } from '../data/dashboardDemoData';
 
-const ACTIVE_STATUSES = new Set(['Active', 'InProgress', 'In Progress', 'Ongoing']);
+const ACTIVE_STATUSES = new Set(['Active']);
 
 function formatBudget(project) {
   const amount = project?.budget ?? project?.budgetAmount;
   if (typeof amount === 'number' && amount > 0) return `$${amount.toLocaleString()}`;
-  return project?.budgetLabel ?? '';
+  return '';
 }
 
 export function useClientDashboard() {
@@ -29,26 +28,25 @@ export function useClientDashboard() {
   }, [fetchProjects, fetchContracts, fetchFreelancers, fetchProposals]);
 
   return useMemo(() => {
-    const activeHires = contracts.items.filter((c) => ACTIVE_STATUSES.has(c.status)).length;
+    const activeContracts = contracts.items.filter((c) => ACTIVE_STATUSES.has(c.status));
+    const activeValue = activeContracts.reduce((sum, c) => sum + (Number(c.agreedPrice) || 0), 0);
 
-    const realJobPosts = projects.items
+    const jobPosts = projects.items
       .map((project, index) => ({
-        id: project.projectID ?? project.projectId ?? project.id ?? `jp-${index}`,
-        title: project.title ?? project.name ?? '',
+        id: project.projectID ?? project.projectId ?? `jp-${index}`,
+        title: project.title ?? '',
         status: project.status ?? 'Open',
         budget: formatBudget(project),
-        proposals: DEMO_CLIENT.jobPosts[index % DEMO_CLIENT.jobPosts.length].proposals,
         tags: (project.skillNames ?? project.skills ?? []).slice(0, 3),
       }))
       .filter((post) => post.title);
 
-    const realTalent = (freelancers.items ?? []).map((freelancer, index) => ({
-      id: freelancer.freelancerID ?? freelancer.id ?? `t-${index}`,
-      name: freelancer.name ?? freelancer.username ?? 'Freelancer',
-      role: freelancer.experienceLevel || freelancer.skills?.[0] || 'Freelancer',
-      rate: freelancer.hourlyRate ? `$${freelancer.hourlyRate}/hr` : '',
-      rating: freelancer.averageRating ?? 0,
-      verified: false,
+    const talent = (freelancers.items ?? []).map((f, index) => ({
+      id: f.freelancerID ?? `t-${index}`,
+      name: f.name ?? f.username ?? 'Freelancer',
+      role: f.experienceLevel || f.skills?.[0] || 'Freelancer',
+      rate: f.hourlyRate ? `$${f.hourlyRate}/hr` : '',
+      rating: f.averageRating ?? 0,
     }));
 
     const firstName = profile?.name?.split(' ')[0] || profile?.username || 'there';
@@ -63,26 +61,14 @@ export function useClientDashboard() {
       firstName,
       dateLabel,
       stats: {
-        jobPosts: {
-          value: projects.totalCount || DEMO_CLIENT.stats.jobPosts.value,
-          delta: DEMO_CLIENT.stats.jobPosts.delta,
-          deltaDir: DEMO_CLIENT.stats.jobPosts.deltaDir,
-        },
-        proposals: {
-          value: proposals.totalCount || DEMO_CLIENT.stats.proposals.value,
-          delta: DEMO_CLIENT.stats.proposals.delta,
-          deltaDir: DEMO_CLIENT.stats.proposals.deltaDir,
-        },
-        escrow: { ...DEMO_CLIENT.stats.escrow },
-        hires: {
-          value: activeHires || DEMO_CLIENT.stats.hires.value,
-          delta: DEMO_CLIENT.stats.hires.delta,
-          deltaDir: DEMO_CLIENT.stats.hires.deltaDir,
-        },
+        jobPosts: projects.totalCount || 0,
+        proposals: proposals.totalCount || 0,
+        activeHires: activeContracts.length,
+        activeValue,
       },
-      jobPosts: realJobPosts.length ? realJobPosts : DEMO_CLIENT.jobPosts,
-      talent: realTalent.length ? realTalent : DEMO_CLIENT.talent,
-      escrow: DEMO_CLIENT.escrow,
+      jobPosts,
+      talent,
+      contractsSummary: { count: activeContracts.length, value: activeValue },
     };
   }, [projects, contracts, freelancers, proposals, profile, isLoading]);
 }

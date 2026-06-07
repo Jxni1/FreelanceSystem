@@ -13,4 +13,9 @@ export const freelancerService = {
     const result = await apiClient.get(`/api/freelancers${qs ? `?${qs}` : ''}`);
     return result.data;
   },
+
+  async getById(id) {
+    const result = await apiClient.get(`/api/freelancers/${id}`);
+    return result.data;
+  },
 };
