@@ -1,6 +1,6 @@
 using FluentValidation;
+using LabCourse2.API.Hubs;
 using LabCourse2.API.Middleware;
-using LabCourse2.API.WebSockets;
 using LabCourse2.Application.Interfaces.AI;
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Categories;
@@ -64,8 +64,10 @@ using LabCourse2.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -124,10 +126,10 @@ builder.Services.AddAuthentication(options =>
         OnMessageReceived = context =>
         {
             var path = context.HttpContext.Request.Path;
-            if (path.StartsWithSegments("/ws/chat") &&
-                context.Request.Query.TryGetValue("token", out var token))
+            if (path.StartsWithSegments("/hubs/chat") &&
+                context.Request.Query.TryGetValue("access_token", out var accessToken))
             {
-                context.Token = token;
+                context.Token = accessToken;
             }
 
             return Task.CompletedTask;
@@ -227,8 +229,10 @@ builder.Services.AddScoped<IValidator<UpdateCategoryRequest>, UpdateCategoryRequ
 builder.Services.AddScoped<IProtectedViewService, ProtectedViewService>();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddSingleton<ChatWebSocketConnectionManager>();
-builder.Services.AddScoped<ChatWebSocketHandler>();
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+        options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
 
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
@@ -279,29 +283,7 @@ foreach (var origin in allowedOrigins)
 
 app.UseWebSockets(webSocketOptions);
 
-app.Map("/ws/chat", async context =>
-{
-    if (!context.WebSockets.IsWebSocketRequest)
-    {
-        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await context.Response.WriteAsync("WebSocket requests only.");
-        return;
-    }
-
-    if (context.User.Identity?.IsAuthenticated != true)
-    {
-        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-        await context.Response.WriteAsync("Unauthorized.");
-        return;
-    }
-
-    var socket = await context.WebSockets.AcceptWebSocketAsync();
-
-    using var scope = app.Services.CreateScope();
-    var handler = scope.ServiceProvider.GetRequiredService<ChatWebSocketHandler>();
-
-    await handler.HandleAsync(context, socket);
-});
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.MapControllers();
 

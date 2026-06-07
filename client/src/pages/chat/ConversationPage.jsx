@@ -1,18 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { HubConnectionState } from '@microsoft/signalr';
 import { useAuth } from '../../context/AuthContext';
 import { useConversations } from '../../hooks/useConversations';
-
-const buildWsUrl = () => {
-  const apiUrl = import.meta.env.VITE_API_URL || '';
-
-  if (!apiUrl) {
-    console.error('[CHAT] Missing VITE_API_URL');
-    return '';
-  }
-
-  return `${apiUrl.replace(/^http/, 'ws').replace(/\/api\/?$/, '')}/ws/chat`;
-};
+import { createChatConnection } from '../../lib/chatHub';
 
 const normalizeId = (value) => {
   if (value === null || value === undefined) return '';
@@ -43,7 +34,6 @@ export default function ConversationPage() {
   const [infoMessage, setInfoMessage] = useState('');
   const socketRef = useRef(null);
   const joinedConversationRef = useRef(null);
-  const hasConnectedRef = useRef(false);
   const bottomRef = useRef(null);
 
   const contractId = searchParams.get('contractId');
@@ -200,32 +190,131 @@ export default function ConversationPage() {
       localStorage.getItem('token') ||
       '';
 
-    const wsBaseUrl = buildWsUrl();
-
-    if (!wsBaseUrl) {
-      setConnectionStatus('Connection failed');
-      setInfoMessage('Missing WebSocket URL configuration.');
-      return;
-    }
-
     if (!token) {
       setConnectionStatus('Connection failed');
       setInfoMessage('Missing access token for WebSocket connection.');
       return;
     }
 
-    const fullWsUrl = `${wsBaseUrl}?token=${encodeURIComponent(token)}`;
-    const socket = new WebSocket(fullWsUrl);
+    const connection = createChatConnection(() => token);
 
-    socketRef.current = socket;
+    if (!connection) {
+      setConnectionStatus('Connection failed');
+      setInfoMessage('Missing WebSocket URL configuration.');
+      return;
+    }
+
+    socketRef.current = connection;
     setConnectionStatus('Connecting...');
 
-    socket.onopen = async () => {
-      hasConnectedRef.current = true;
-      setConnectionStatus('Connected');
-      setInfoMessage('');
+    connection.onreconnecting(() => setConnectionStatus('Connecting...'));
 
-      try {
+    connection.onreconnected(() => {
+      setConnectionStatus('Connected');
+      if (joinedConversationRef.current) {
+        connection.invoke('JoinRoom', joinedConversationRef.current).catch(() => {});
+      }
+    });
+
+    connection.onclose(() => setConnectionStatus('Disconnected'));
+
+    connection.on('room_joined', () => {
+      setInfoMessage('');
+    });
+
+    connection.on('conversation_created', async (payload) => {
+      if (!payload) return;
+
+      setConversation(payload);
+
+      if (
+        payload?.conversationID &&
+        joinedConversationRef.current !== payload.conversationID
+      ) {
+        connection.invoke('JoinRoom', payload.conversationID).catch(() => {});
+        joinedConversationRef.current = payload.conversationID;
+      }
+
+      await fetchMessages(payload.conversationID, { page: 1, pageSize: 50 });
+    });
+
+    connection.on('message_request_received', (payload) => {
+      if (!payload) return;
+      setConversation(payload);
+      setInfoMessage('You received a new message request.');
+    });
+
+    connection.on('conversation_request_accepted', (payload) => {
+      if (!payload) return;
+      setConversation(payload);
+      setInfoMessage('Conversation request accepted.');
+    });
+
+    connection.on('conversation_request_rejected', (payload) => {
+      if (!payload) return;
+      setConversation(payload);
+      setInfoMessage('Conversation request rejected.');
+    });
+
+    connection.on('message_created', (payload) => {
+      if (!payload) return;
+
+      const realMessage = {
+        ...payload,
+        isMine: normalizeId(getSenderId(payload)) === normalizeId(currentUserId),
+      };
+
+      setMessages((prev) => {
+        const prevItems = prev?.items || [];
+
+        const withoutMatchedOptimistic = prevItems.filter((item) => {
+          if (!item.isOptimistic) return true;
+
+          const sameConversation =
+            normalizeId(item.conversationID) === normalizeId(realMessage.conversationID);
+
+          const sameContent =
+            (item.content || '').trim() === (realMessage.content || '').trim();
+
+          const sameSender =
+            normalizeId(getSenderId(item)) === normalizeId(getSenderId(realMessage)) ||
+            (item.isMine && realMessage.isMine);
+
+          return !(sameConversation && sameContent && sameSender);
+        });
+
+        const alreadyExists = withoutMatchedOptimistic.some(
+          (item) =>
+            normalizeId(item.messageID) === normalizeId(realMessage.messageID) ||
+            normalizeId(item.id) === normalizeId(realMessage.messageID)
+        );
+
+        if (alreadyExists) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          items: [...withoutMatchedOptimistic, realMessage],
+          totalCount: [...withoutMatchedOptimistic, realMessage].length,
+        };
+      });
+    });
+
+    connection.on('error', (socketError) => {
+      setInfoMessage(socketError || 'A WebSocket error occurred.');
+    });
+
+    let cancelled = false;
+
+    connection
+      .start()
+      .then(async () => {
+        if (cancelled) return;
+
+        setConnectionStatus('Connected');
+        setInfoMessage('');
+
         if (conversationId) {
           setConversation((prev) =>
             prev?.conversationID === conversationId
@@ -237,13 +326,7 @@ export default function ConversationPage() {
                 }
           );
 
-          socket.send(
-            JSON.stringify({
-              type: 'join_room',
-              conversationId,
-            })
-          );
-
+          await connection.invoke('JoinRoom', conversationId);
           joinedConversationRef.current = conversationId;
 
           await fetchMessages(conversationId, { page: 1, pageSize: 50 });
@@ -255,151 +338,24 @@ export default function ConversationPage() {
           const created = await createConversation({ contractID: contractId });
           setConversation(created);
 
-          socket.send(
-            JSON.stringify({
-              type: 'join_room',
-              conversationId: created.conversationID,
-            })
-          );
-
+          await connection.invoke('JoinRoom', created.conversationID);
           joinedConversationRef.current = created.conversationID;
 
           await fetchMessages(created.conversationID, { page: 1, pageSize: 50 });
           await markAsRead(created.conversationID);
         }
-      } catch (err) {
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setConnectionStatus('Connection failed');
         setInfoMessage(err?.message || 'Failed to initialize conversation.');
-      }
-    };
-
-    socket.onmessage = async (event) => {
-      const response = JSON.parse(event.data);
-      const type = response.type || response.Type;
-      const payload = response.payload || response.Payload;
-      const socketError = response.error || response.Error;
-
-      if (type === 'room_joined') {
-        setInfoMessage('');
-        return;
-      }
-
-      if (type === 'conversation_created' && payload) {
-        const createdConversation = payload;
-        setConversation(createdConversation);
-
-        if (
-          createdConversation?.conversationID &&
-          joinedConversationRef.current !== createdConversation.conversationID
-        ) {
-          socket.send(
-            JSON.stringify({
-              type: 'join_room',
-              conversationId: createdConversation.conversationID,
-            })
-          );
-
-          joinedConversationRef.current = createdConversation.conversationID;
-        }
-
-        await fetchMessages(createdConversation.conversationID, { page: 1, pageSize: 50 });
-        return;
-      }
-
-      if (type === 'message_request_received' && payload) {
-        setConversation(payload);
-        setInfoMessage('You received a new message request.');
-        return;
-      }
-
-      if (type === 'conversation_request_accepted' && payload) {
-        setConversation(payload);
-        setInfoMessage('Conversation request accepted.');
-        return;
-      }
-
-      if (type === 'conversation_request_rejected' && payload) {
-        setConversation(payload);
-        setInfoMessage('Conversation request rejected.');
-        return;
-      }
-
-      if (type === 'message_created' && payload) {
-        const realMessage = {
-          ...payload,
-          isMine: normalizeId(getSenderId(payload)) === normalizeId(currentUserId),
-        };
-
-        setMessages((prev) => {
-          const prevItems = prev?.items || [];
-
-          const withoutMatchedOptimistic = prevItems.filter((item) => {
-            if (!item.isOptimistic) return true;
-
-            const sameConversation =
-              normalizeId(item.conversationID) === normalizeId(realMessage.conversationID);
-
-            const sameContent =
-              (item.content || '').trim() === (realMessage.content || '').trim();
-
-            const sameSender =
-              normalizeId(getSenderId(item)) === normalizeId(getSenderId(realMessage)) ||
-              (item.isMine && realMessage.isMine);
-
-            return !(sameConversation && sameContent && sameSender);
-          });
-
-          const alreadyExists = withoutMatchedOptimistic.some(
-            (item) =>
-              normalizeId(item.messageID) === normalizeId(realMessage.messageID) ||
-              normalizeId(item.id) === normalizeId(realMessage.messageID)
-          );
-
-          if (alreadyExists) {
-            return prev;
-          }
-
-          return {
-            ...prev,
-            items: [...withoutMatchedOptimistic, realMessage],
-            totalCount: [...withoutMatchedOptimistic, realMessage].length,
-          };
-        });
-
-        return;
-      }
-
-      if (type === 'error') {
-        setInfoMessage(socketError || 'A WebSocket error occurred.');
-      }
-    };
-
-    socket.onclose = (event) => {
-      const closedBeforeRealConnection =
-        !hasConnectedRef.current && event.code === 1006;
-
-      if (closedBeforeRealConnection) {
-        return;
-      }
-
-      setConnectionStatus('Disconnected');
-
-      if (event.code === 1008) {
-        setInfoMessage('WebSocket authorization failed.');
-      } else if (event.reason) {
-        setInfoMessage(`WebSocket closed: ${event.reason}`);
-      } else if (event.code !== 1000) {
-        setInfoMessage(`WebSocket disconnected (code ${event.code}).`);
-      }
-    };
-
-    socket.onerror = () => {
-      if (!hasConnectedRef.current) return;
-      setConnectionStatus('Connection failed');
-    };
+      });
 
     return () => {
+      cancelled = true;
       joinedConversationRef.current = null;
-      socket.close();
+      socketRef.current = null;
+      connection.stop().catch(() => {});
     };
   }, [
     accessToken,
@@ -419,32 +375,23 @@ export default function ConversationPage() {
       !freelancerId ||
       !initialMessage.trim() ||
       !socketRef.current ||
-      socketRef.current.readyState !== WebSocket.OPEN
+      socketRef.current.state !== HubConnectionState.Connected
     ) {
       return;
     }
 
-    socketRef.current.send(
-      JSON.stringify({
-        type: 'create_conversation',
-        clientId,
-        freelancerId,
-        content: initialMessage.trim(),
-      })
-    );
+    socketRef.current
+      .invoke('CreateConversation', clientId, freelancerId, initialMessage.trim())
+      .catch(() => {});
   };
 
   const handleAccept = async () => {
     if (!conversation?.conversationID) return;
 
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(
-        JSON.stringify({
-          type: 'respond_conversation',
-          conversationId: conversation.conversationID,
-          accept: true,
-        })
-      );
+    if (socketRef.current?.state === HubConnectionState.Connected) {
+      socketRef.current
+        .invoke('RespondConversation', conversation.conversationID, true)
+        .catch(() => {});
     } else {
       const updated = await respondToRequest(conversation.conversationID, true);
       setConversation(updated);
@@ -454,14 +401,10 @@ export default function ConversationPage() {
   const handleReject = async () => {
     if (!conversation?.conversationID) return;
 
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(
-        JSON.stringify({
-          type: 'respond_conversation',
-          conversationId: conversation.conversationID,
-          accept: false,
-        })
-      );
+    if (socketRef.current?.state === HubConnectionState.Connected) {
+      socketRef.current
+        .invoke('RespondConversation', conversation.conversationID, false)
+        .catch(() => {});
     } else {
       const updated = await respondToRequest(conversation.conversationID, false);
       setConversation(updated);
@@ -475,7 +418,7 @@ export default function ConversationPage() {
       !content.trim() ||
       !conversation?.conversationID ||
       !socketRef.current ||
-      socketRef.current.readyState !== WebSocket.OPEN ||
+      socketRef.current.state !== HubConnectionState.Connected ||
       !canSendMessages
     ) {
       return;
@@ -505,13 +448,9 @@ export default function ConversationPage() {
       totalCount: (prev?.items?.length || 0) + 1,
     }));
 
-    socketRef.current.send(
-      JSON.stringify({
-        type: 'send_message',
-        conversationId: conversation.conversationID,
-        content: trimmedContent,
-      })
-    );
+    socketRef.current
+      .invoke('SendMessage', conversation.conversationID, trimmedContent)
+      .catch(() => {});
 
     setContent('');
   };

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 import { useContracts } from '../../hooks/useContracts';
 import { useAuthorization } from '../../hooks/useAuthorization';
 import { SmartBackButton } from '../../components/SmartBackButton';
@@ -121,15 +122,15 @@ export default function ContractDetailsPage() {
                 Workflow
               </Link>
 
-              <Link
-                to={{
-                  pathname: '/inbox',
-                  search: `?contractId=${contract.contractID}`,
-                }}
-                className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold text-center transition-colors"
-              >
-                Chat
-              </Link>
+              {!isAdmin && (
+                <Link
+                  to={`/chat/new?contractId=${contract.contractID}`}
+                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors"
+                >
+                  <MessageSquare className="h-4 w-4" aria-hidden="true" />
+                  Message
+                </Link>
+              )}
 
               {isAdmin && (
                 <button
