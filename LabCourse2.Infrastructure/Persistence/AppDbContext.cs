@@ -121,6 +121,21 @@ namespace LabCourse2.Infrastructure.Persistence
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // ========================
+            // RBAC Configuration with Seeding
+            // ========================
+
+            // Fixed GUIDs for seeding consistency
+            var adminRoleId = new Guid("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d");
+            var clientRoleId = new Guid("b2c3d4e5-f6a7-4b5c-8d9e-1f2a3b4c5d6e");
+            var freelancerRoleId = new Guid("c3d4e5f6-a7b8-4c5d-8e9f-2a3b4c5d6e7f");
+
+            var projectsCreatePermissionId = new Guid("d4e5f6a7-b8c9-4d5e-8f9a-3b4c5d6e7f8a");
+            var projectsDeletePermissionId = new Guid("e5f6a7b8-c9da-4e5f-8a9b-4c5d6e7f8a9b");
+            var proposalsSubmitPermissionId = new Guid("f6a7b8c9-daeb-4f5a-8b9c-5d6e7f8a9b0c");
+            var usersBlockPermissionId = new Guid("a7b8c9da-ebfc-4a5b-8c9d-6e7f8a9b0c1d");
+
+            // Configure UserRole: Many-to-Many between User and Role
             modelBuilder.Entity<UserRole>(e =>
             {
                 e.HasKey(ur => ur.UserRolesID);
@@ -132,8 +147,11 @@ namespace LabCourse2.Infrastructure.Persistence
                  .WithMany(r => r.UserRoles)
                  .HasForeignKey(ur => ur.RoleID)
                  .OnDelete(DeleteBehavior.Cascade);
+                // Prevent duplicate role assignments
+                e.HasIndex(ur => new { ur.UserID, ur.RoleID }).IsUnique();
             });
 
+            // Configure RolePermission: Many-to-Many between Role and Permission
             modelBuilder.Entity<RolePermission>(e =>
             {
                 e.HasKey(rp => rp.RolePermissionsID);
@@ -145,7 +163,111 @@ namespace LabCourse2.Infrastructure.Persistence
                  .WithMany(p => p.RolePermissions)
                  .HasForeignKey(rp => rp.PermissionsID)
                  .OnDelete(DeleteBehavior.Cascade);
+                // Prevent duplicate permission assignments
+                e.HasIndex(rp => new { rp.RoleID, rp.PermissionsID }).IsUnique();
             });
+
+            // Seed Roles
+            modelBuilder.Entity<Role>().HasData(
+                new Role
+                {
+                    RoleID = adminRoleId,
+                    Name = "Admin",
+                    Description = "Administrator role with full system access and management capabilities",
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new Role
+                {
+                    RoleID = clientRoleId,
+                    Name = "Client",
+                    Description = "Role for project owners who create projects and hire freelancers",
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new Role
+                {
+                    RoleID = freelancerRoleId,
+                    Name = "Freelancer",
+                    Description = "Role for independent service providers who submit proposals and complete projects",
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                }
+            );
+
+            // Seed Permissions
+            modelBuilder.Entity<Permission>().HasData(
+                new Permission
+                {
+                    PermissionsID = projectsCreatePermissionId,
+                    Name = "projects.create",
+                    Description = "Permission to create and post new projects"
+                },
+                new Permission
+                {
+                    PermissionsID = projectsDeletePermissionId,
+                    Name = "projects.delete",
+                    Description = "Permission to delete projects"
+                },
+                new Permission
+                {
+                    PermissionsID = proposalsSubmitPermissionId,
+                    Name = "proposals.submit",
+                    Description = "Permission to submit proposals for projects"
+                },
+                new Permission
+                {
+                    PermissionsID = usersBlockPermissionId,
+                    Name = "users.block",
+                    Description = "Permission to block or suspend user accounts"
+                }
+            );
+
+            // Seed RolePermissions: Map permissions to roles
+            modelBuilder.Entity<RolePermission>().HasData(
+                // Admin: ALL permissions
+                new RolePermission
+                {
+                    RolePermissionsID = new Guid("d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a"),
+                    RoleID = adminRoleId,
+                    PermissionsID = projectsCreatePermissionId,
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new RolePermission
+                {
+                    RolePermissionsID = new Guid("e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b"),
+                    RoleID = adminRoleId,
+                    PermissionsID = projectsDeletePermissionId,
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new RolePermission
+                {
+                    RolePermissionsID = new Guid("f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7c"),
+                    RoleID = adminRoleId,
+                    PermissionsID = proposalsSubmitPermissionId,
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new RolePermission
+                {
+                    RolePermissionsID = new Guid("a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8d"),
+                    RoleID = adminRoleId,
+                    PermissionsID = usersBlockPermissionId,
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                },
+                // Client: projects.create only
+                new RolePermission
+                {
+                    RolePermissionsID = new Guid("b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9e"),
+                    RoleID = clientRoleId,
+                    PermissionsID = projectsCreatePermissionId,
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                },
+                // Freelancer: proposals.submit only
+                new RolePermission
+                {
+                    RolePermissionsID = new Guid("c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0f"),
+                    RoleID = freelancerRoleId,
+                    PermissionsID = proposalsSubmitPermissionId,
+                    Created_At = new DateTime(2025, 4, 23, 12, 0, 0, DateTimeKind.Utc)
+                }
+            );
 
             modelBuilder.Entity<RefreshToken>(e =>
             {

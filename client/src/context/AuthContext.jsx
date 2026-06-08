@@ -11,6 +11,34 @@ import { configureApiClient } from '../lib/apiClient';
 
 const AuthContext = createContext(null);
 
+/**
+ * Fetch and store user permissions and roles
+ */
+async function fetchAndStorePermissions(accessToken) {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/my-permissions`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.permissions) {
+        localStorage.setItem('userPermissions', JSON.stringify(data.permissions));
+      }
+      if (data.roles) {
+        localStorage.setItem('userRoles', JSON.stringify(data.roles));
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch permissions:', error);
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
@@ -97,6 +125,9 @@ export function AuthProvider({ children }) {
       accessTokenRef.current = data.accessToken;
       configureApiClient(data.accessToken, refreshTokens);
       if (newUser) scheduleRefresh(newUser.tokenExpiry);
+      
+      // ✅ Fetch and store user permissions
+      await fetchAndStorePermissions(data.accessToken);
     }
 
     return data;
@@ -108,6 +139,10 @@ export function AuthProvider({ children }) {
     setAccessToken(null);
     accessTokenRef.current = null;
     configureApiClient(null, refreshTokens);
+
+    // ✅ Clear permissions
+    localStorage.removeItem('userPermissions');
+    localStorage.removeItem('userRoles');
 
     await fetch(`${import.meta.env.VITE_API_URL}/api/auth/revoke`, {
       method: 'POST',

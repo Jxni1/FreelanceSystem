@@ -26,6 +26,13 @@ apiClient.interceptors.response.use(
   async error => {
     const original = error.config;
 
+    // Handle 403 Forbidden (Permission Denied)
+    if (error.response?.status === 403) {
+      const message = error.response?.data?.message || 'You do not have permission to perform this action';
+      window.dispatchEvent(new CustomEvent('auth:permission-denied', { detail: { message } }));
+      return Promise.reject(error);
+    }
+
     if (error.response?.status !== 401 || original._retried) {
       return Promise.reject(error);
     }

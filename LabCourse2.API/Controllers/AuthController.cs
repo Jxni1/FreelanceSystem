@@ -1,6 +1,7 @@
 using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.Interfaces;
 using LabCourse2.Domain.Constants;
+using LabCourse2.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,11 +12,13 @@ namespace LabCourse2.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly LabCourse2.Infrastructure.Services.IAuthorizationService _authorizationService;
         private readonly IWebHostEnvironment _env;
 
-        public AuthController(IAuthService authService, IWebHostEnvironment env)
+        public AuthController(IAuthService authService, LabCourse2.Infrastructure.Services.IAuthorizationService authorizationService, IWebHostEnvironment env)
         {
             _authService = authService;
+            _authorizationService = authorizationService;
             _env = env;
         }
 
@@ -124,6 +127,28 @@ namespace LabCourse2.API.Controllers
                 return NotFound(new { success = false, message = "User profile not found." });
 
             return Ok(profile);
+        }
+
+        [HttpGet("my-permissions")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetMyPermissions()
+        {
+            var userIdStr = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+                            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Unauthorized();
+
+            var permissions = await _authorizationService.GetUserPermissionsAsync(userId);
+            var roles = await _authorizationService.GetUserRolesAsync(userId);
+
+            return Ok(new
+            {
+                roles = roles,
+                permissions = permissions
+            });
         }
 
         [HttpPost("revoke")]
