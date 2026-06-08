@@ -1,6 +1,7 @@
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Contracts;
 using LabCourse2.Application.DTOs.Proposals;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Interfaces.Proposals;
 using LabCourse2.Application.Mappings;
@@ -15,15 +16,18 @@ namespace LabCourse2.Application.Services.Proposals
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
         private readonly INotificationCreator _notificationCreator;
+        private readonly ICacheService _cacheService;
 
         public ProposalService(
             IAppDbContext context,
             ICurrentUserService currentUser,
-            INotificationCreator notificationCreator)
+            INotificationCreator notificationCreator,
+            ICacheService cacheService)
         {
             _context = context;
             _currentUser = currentUser;
             _notificationCreator = notificationCreator;
+            _cacheService = cacheService;
         }
 
         private async Task<FreelancerProfile?> GetFreelancerProfileAsync() =>
@@ -42,6 +46,15 @@ namespace LabCourse2.Application.Services.Proposals
             if (freelancer is null && client is null)
                 return Result<PagedResult<ProposalResponse>>
                     .Forbidden("You must have a freelancer or client profile.");
+
+            var userContext = freelancer?.FreelancerID.ToString() ?? client!.ClientID.ToString();
+            var status = query.Status ?? "null";
+            var projectId = query.ProjectId?.ToString() ?? "null";
+            var cacheKey = $"proposals_{userContext}_{query.Page}_{query.PageSize}_{status}_{projectId}";
+
+            var cached = await _cacheService.GetAsync<PagedResult<ProposalResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<ProposalResponse>>.Success(cached);
 
             var q = _context.Proposals
                 .Include(p => p.Freelancer).ThenInclude(f => f.User)
@@ -68,13 +81,17 @@ namespace LabCourse2.Application.Services.Proposals
                 .Take(query.PageSize)
                 .ToListAsync();
 
-            return Result<PagedResult<ProposalResponse>>.Success(new PagedResult<ProposalResponse>
+            var result = new PagedResult<ProposalResponse>
             {
                 Items = items.Select(p => p.ToResponse()),
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            });
+            };
+
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
+
+            return Result<PagedResult<ProposalResponse>>.Success(result);
         }
 
         public async Task<Result<ProposalResponse>> GetByIdAsync(Guid id)
@@ -134,6 +151,8 @@ namespace LabCourse2.Application.Services.Proposals
                     "New proposal received",
                     $"A new proposal was submitted for your project \"{project.Title}\".");
             }
+
+            await _cacheService.RemoveByPatternAsync("proposals_*");
 
             return Result<ProposalResponse>.Created(created!.ToResponse());
         }
@@ -232,6 +251,9 @@ namespace LabCourse2.Application.Services.Proposals
                 .Include(c => c.Project)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.ContractID == contract.ContractID);
+
+            await _cacheService.RemoveByPatternAsync("proposals_*");
+            await _cacheService.RemoveByPatternAsync("contracts_*");
 
             return Result<ContractResponse>.Created(created!.ToResponse());
         }

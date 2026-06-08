@@ -3,6 +3,7 @@ using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.DTOs.Contracts;
 using LabCourse2.Application.DTOs.Users;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Contracts;
 using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Mappings;
@@ -21,15 +22,18 @@ namespace LabCourse2.Application.Services.Contracts
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
         private readonly INotificationCreator _notificationCreator;
+        private readonly ICacheService _cacheService;
 
         public ContractService(
             IAppDbContext context,
             ICurrentUserService currentUser,
-            INotificationCreator notificationCreator)
+            INotificationCreator notificationCreator,
+            ICacheService cacheService)
         {
             _context = context;
             _currentUser = currentUser;
             _notificationCreator = notificationCreator;
+            _cacheService = cacheService;
         }
 
         private async Task<ClientProfile?> GetClientProfileAsync() =>
@@ -85,6 +89,14 @@ namespace LabCourse2.Application.Services.Contracts
             if (client is null)
                 return Result<PagedResult<ContractResponse>>.Forbidden("Only clients can view their contracts.");
 
+            var status = query.Status ?? "null";
+            var projectId = query.ProjectID?.ToString() ?? "null";
+            var cacheKey = $"contracts_client_{client.ClientID}_{query.Page}_{query.PageSize}_{status}_{projectId}";
+
+            var cached = await _cacheService.GetAsync<PagedResult<ContractResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<ContractResponse>>.Success(cached);
+
             var q = _context.Contracts
                 .Include(c => c.Client).ThenInclude(c => c.User)
                 .Include(c => c.Freelancer).ThenInclude(f => f.User)
@@ -108,13 +120,17 @@ namespace LabCourse2.Application.Services.Contracts
                 .Select(c => c.ToResponse())
                 .ToListAsync();
 
-            return Result<PagedResult<ContractResponse>>.Success(new PagedResult<ContractResponse>
+            var result = new PagedResult<ContractResponse>
             {
                 Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            });
+            };
+
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
+
+            return Result<PagedResult<ContractResponse>>.Success(result);
         }
 
         public async Task<Result<PagedResult<ContractResponse>>> GetContractsByFreelancerIDAsync(ContractQueryParams query)
@@ -122,6 +138,14 @@ namespace LabCourse2.Application.Services.Contracts
             var freelancer = await GetFreelancerProfileAsync();
             if (freelancer is null)
                 return Result<PagedResult<ContractResponse>>.Forbidden("Only freelancers can view their contracts.");
+
+            var status = query.Status ?? "null";
+            var projectId = query.ProjectID?.ToString() ?? "null";
+            var cacheKey = $"contracts_freelancer_{freelancer.FreelancerID}_{query.Page}_{query.PageSize}_{status}_{projectId}";
+
+            var cached = await _cacheService.GetAsync<PagedResult<ContractResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<ContractResponse>>.Success(cached);
 
             var q = _context.Contracts
                 .Include(c => c.Client).ThenInclude(c => c.User)
@@ -146,13 +170,17 @@ namespace LabCourse2.Application.Services.Contracts
                 .Select(c => c.ToResponse())
                 .ToListAsync();
 
-            return Result<PagedResult<ContractResponse>>.Success(new PagedResult<ContractResponse>
+            var result = new PagedResult<ContractResponse>
             {
                 Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            });
+            };
+
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
+
+            return Result<PagedResult<ContractResponse>>.Success(result);
         }
 
         public async Task<Result<ContractResponse>> GetByIdAsync(Guid id)
@@ -210,6 +238,8 @@ namespace LabCourse2.Application.Services.Contracts
                     $"You have been assigned a new contract for project \"{created.Project?.Title}\".");
             }
 
+            await _cacheService.RemoveByPatternAsync("contracts_*");
+
             return Result<ContractResponse>.Created(created!.ToResponse());
         }
 
@@ -242,6 +272,8 @@ namespace LabCourse2.Application.Services.Contracts
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.ContractID == contract.ContractID);
 
+            await _cacheService.RemoveByPatternAsync("contracts_*");
+
             return Result<ContractResponse>.Success(updated!.ToResponse());
         }
 
@@ -260,7 +292,9 @@ namespace LabCourse2.Application.Services.Contracts
 
             if (contract.ClientID != client.ClientID)
                 return Result<bool>.Forbidden("You do not own this contract.");
+await _cacheService.RemoveByPatternAsync("contracts_*");
 
+            
             _context.Contracts.Remove(contract);
             await _context.SaveChangesAsync();
 
