@@ -8,14 +8,25 @@ namespace LabCourse2.Application.Services
     public class FreelancerService : IFreelancerService
     {
         private readonly IAppDbContext _context;
+        private readonly ICacheService _cacheService;
 
-        public FreelancerService(IAppDbContext context)
+        public FreelancerService(IAppDbContext context, ICacheService cacheService)
         {
             _context = context;
+            _cacheService = cacheService;
         }
 
         public async Task<Result<PagedResult<FreelancerResponse>>> GetAllAsync(FreelancerQueryParams query)
         {
+            var search = query.Search ?? "null";
+            var experience = query.ExperienceLevel ?? "null";
+            var skill = query.Skill ?? "null";
+            var cacheKey = $"freelancers_all_{query.Page}_{query.PageSize}_{search}_{experience}_{skill}";
+
+            var cached = await _cacheService.GetAsync<PagedResult<FreelancerResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<FreelancerResponse>>.Success(cached);
+
             var q = _context.FreelancerProfiles
                 .Include(fp => fp.User)
                 .Include(fp => fp.Reviews)
@@ -67,13 +78,17 @@ namespace LabCourse2.Application.Services
                     : 0
             }).ToList();
 
-            return Result<PagedResult<FreelancerResponse>>.Success(new PagedResult<FreelancerResponse>
+            var result = new PagedResult<FreelancerResponse>
             {
                 Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            });
+            };
+
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(2));
+
+            return Result<PagedResult<FreelancerResponse>>.Success(result);
         }
     }
 }

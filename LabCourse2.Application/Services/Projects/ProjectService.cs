@@ -33,10 +33,10 @@ namespace LabCourse2.Application.Services.Projects
             var visibility = query.Visibility ?? "null";
             var cacheKey = $"projects_all_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}";
             
-            // TEMPORARILY DISABLED CACHING TO DEBUG ISSUE
-            // var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
-            // if (cached != null)
-            //     return Result<PagedResult<ProjectResponse>>.Success(cached);
+          
+            var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<ProjectResponse>>.Success(cached);
 
             var q = _context.Projects
                 .Include(p => p.Category)
@@ -102,8 +102,8 @@ namespace LabCourse2.Application.Services.Projects
                 PageSize = query.PageSize
             };
 
-            // TEMPORARILY DISABLED CACHING
-            // await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
+            
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
 
             return Result<PagedResult<ProjectResponse>>.Success(result);
         }
