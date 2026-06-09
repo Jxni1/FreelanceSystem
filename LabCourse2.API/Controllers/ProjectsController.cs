@@ -39,7 +39,9 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
+       
         [HttpPost]
+        [Authorize(Roles = "Client")]
         public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
         {
             var validation = await _createValidator.ValidateAsync(request);
@@ -50,7 +52,9 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
+        
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Client")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request)
         {
             var validation = await _updateValidator.ValidateAsync(request);
@@ -61,7 +65,9 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
+        
         [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Client")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _projectService.DeleteAsync(id);

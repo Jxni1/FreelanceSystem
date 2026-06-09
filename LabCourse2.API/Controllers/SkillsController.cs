@@ -40,6 +40,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateSkillRequest request)
         {
             var validation = await _createValidator.ValidateAsync(request);
@@ -51,6 +52,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSkillRequest request)
         {
             var validation = await _updateValidator.ValidateAsync(request);
@@ -62,6 +64,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpDelete("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _skillService.DeleteAsync(id);

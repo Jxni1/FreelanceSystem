@@ -11,12 +11,60 @@ import { configureApiClient } from '../lib/apiClient';
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+async function fetchAndStorePermissions(accessToken) {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/my-permissions`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
 
-  const accessTokenRef = useRef(null);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.permissions) {
+        localStorage.setItem('userPermissions', JSON.stringify(data.permissions));
+      }
+      if (data.roles) {
+        localStorage.setItem('userRoles', JSON.stringify(data.roles));
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch permissions:', error);
+  }
+}
+
+// ✅ Synchronously initialize auth state from localStorage
+function initializeAuthState() {
+  try {
+    const storedToken = localStorage.getItem('accessToken');
+    if (!storedToken) {
+      return { user: null, accessToken: null };
+    }
+
+    const decodedUser = buildAuthUser(storedToken);
+    
+    // Check if token is still valid
+    if (decodedUser && decodedUser.tokenExpiry > new Date()) {
+      return { user: decodedUser, accessToken: storedToken };
+    }
+  } catch (error) {
+    console.error('Error initializing auth from localStorage:', error);
+  }
+
+  return { user: null, accessToken: null };
+}
+
+export function AuthProvider({ children }) {
+  // ✅ Initialize state synchronously from localStorage BEFORE render
+  const initialAuthState = initializeAuthState();
+  const [user, setUser] = useState(initialAuthState.user);
+  const [accessToken, setAccessToken] = useState(initialAuthState.accessToken);
+  const [isLoading, setIsLoading] = useState(!initialAuthState.user); // Only loading if no initial user
+
+  const accessTokenRef = useRef(initialAuthState.accessToken);
   const refreshPromiseRef = useRef(null);
   const silentRefreshTimer = useRef(null);
 
@@ -45,6 +93,9 @@ export function AuthProvider({ children }) {
           setUser(null);
           setAccessToken(null);
           accessTokenRef.current = null;
+          localStorage.removeItem('userPermissions');
+          localStorage.removeItem('userRoles');
+          localStorage.removeItem('accessToken');
           window.dispatchEvent(new CustomEvent('auth:theft-detected'));
           return null;
         }
@@ -53,6 +104,9 @@ export function AuthProvider({ children }) {
           setUser(null);
           setAccessToken(null);
           accessTokenRef.current = null;
+          localStorage.removeItem('userPermissions');
+          localStorage.removeItem('userRoles');
+          localStorage.removeItem('accessToken');
           return null;
         }
 
@@ -60,6 +114,7 @@ export function AuthProvider({ children }) {
         setUser(newUser);
         setAccessToken(data.accessToken);
         accessTokenRef.current = data.accessToken;
+        localStorage.setItem('accessToken', data.accessToken);
         configureApiClient(data.accessToken, refreshTokens);
 
         if (newUser) scheduleRefresh(newUser.tokenExpiry);
@@ -76,64 +131,87 @@ export function AuthProvider({ children }) {
     configureApiClient(accessToken, refreshTokens);
   }, [accessToken, refreshTokens]);
 
+  // ✅ Background refresh after initial state is set from localStorage
   useEffect(() => {
-    refreshTokens().finally(() => setIsLoading(false));
+    const performBackgroundRefresh = async () => {
+      try {
+        const storedToken = localStorage.getItem('accessToken');
+        
+        if (storedToken) {
+          const decodedUser = buildAuthUser(storedToken);
+          
+          // If token has expired, refresh it
+          if (!decodedUser || decodedUser.tokenExpiry <= new Date()) {
+            await refreshTokens();
+          } else {
+            // Token still valid, just schedule the next refresh
+            scheduleRefresh(decodedUser.tokenExpiry);
+          }
+        } else {
+         
+          await refreshTokens();
+        }
+      } catch (error) {
+        console.error('Background refresh error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    performBackgroundRefresh();
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+  const login = useCallback(
+    async (email, password) => {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.success && data.accessToken) {
-      const newUser = buildAuthUser(data.accessToken);
-      setUser(newUser);
-      setAccessToken(data.accessToken);
-      accessTokenRef.current = data.accessToken;
-      configureApiClient(data.accessToken, refreshTokens);
-      if (newUser) scheduleRefresh(newUser.tokenExpiry);
-    }
+      if (data.success && data.accessToken) {
+        const newUser = buildAuthUser(data.accessToken);
+        setUser(newUser);
+        setAccessToken(data.accessToken);
+        accessTokenRef.current = data.accessToken;
+        configureApiClient(data.accessToken, refreshTokens);
 
-    return data;
-  }, [scheduleRefresh, refreshTokens]);
+        
+        localStorage.setItem('accessToken', data.accessToken);
 
-  const logout = useCallback(async () => {
-    if (silentRefreshTimer.current) clearTimeout(silentRefreshTimer.current);
+        await fetchAndStorePermissions(data.accessToken);
+        scheduleRefresh(newUser.tokenExpiry);
+      }
+
+      return data;
+    },
+    [refreshTokens, scheduleRefresh]
+  );
+
+  const logout = useCallback(() => {
     setUser(null);
     setAccessToken(null);
     accessTokenRef.current = null;
-    configureApiClient(null, refreshTokens);
-
-    await fetch(`${import.meta.env.VITE_API_URL}/api/auth/revoke`, {
-      method: 'POST',
-      credentials: 'include',
-    }).catch(() => null);
-  }, [refreshTokens]);
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('userPermissions');
+    localStorage.removeItem('userRoles');
+    if (silentRefreshTimer.current) clearTimeout(silentRefreshTimer.current);
+  }, []);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        accessToken,
-        isLoading,
-        isAuthenticated: !!user,
-        login,
-        logout,
-        refreshTokens,
-      }}
-    >
+    <AuthContext.Provider value={{ user, accessToken, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
 }
