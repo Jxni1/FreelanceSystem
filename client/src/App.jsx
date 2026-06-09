@@ -26,6 +26,7 @@ import AdminReportsPage from "./pages/admin/reports/AdminReportsPage";
 import ClientsPage from "./pages/freelancer/ClientsPage";
 import ClientProjectsPage from "./pages/freelancer/ClientsProjectsPage";
 import FavoriteFreelancersPage from "./pages/client/FavoriteFreelancersPage";
+import ReceivedProposalsPage from "./pages/client/ReceivedProposalsPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 
 import ConversationPage from "./pages/chat/ConversationPage";
@@ -126,6 +127,7 @@ export default function App() {
                     <Route path="/favorite-freelancers" element={<FavoriteFreelancersPage />} />
                     <Route path="/projects/:id/stats" element={<ProtectedViewStatsPage />} />
                     <Route path="/spending" element={<ClientSpendingDashboard />} />
+                    <Route path="/proposals" element={<ReceivedProposalsPage />} />
                   </Route>
 
                   <Route element={<ProtectedRoute requiredRoles={[ROLES.CLIENT, ROLES.FREELANCER]} />}>
