@@ -26,6 +26,10 @@ apiClient.interceptors.response.use(
   async error => {
     const original = error.config;
 
+    if (error.response?.status === 403) {
+      const message = error.response?.data?.message || 'Access denied';
+      window.dispatchEvent(new CustomEvent('auth:permission-denied', { detail: { message } }));
+    }
     if (error.response?.status !== 401 || original._retried) {
       return Promise.reject(error);
     }

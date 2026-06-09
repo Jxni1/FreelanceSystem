@@ -69,6 +69,8 @@ using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
 using System.Text.Json;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -107,6 +109,9 @@ builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
+builder.Services.AddScoped<LabCourse2.Infrastructure.Services.IAuthorizationService, LabCourse2.Infrastructure.Services.AuthorizationService>();
+builder.Services.AddScoped<LabCourse2.Infrastructure.Services.IRoleManagementService, LabCourse2.Infrastructure.Services.RoleManagementService>();
+
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 
@@ -126,7 +131,10 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+        RoleClaimType = ClaimTypes.Role,
+        
+        NameClaimType = JwtRegisteredClaimNames.UniqueName
     };
 
     options.Events = new JwtBearerEvents

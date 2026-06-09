@@ -1,177 +1,183 @@
 using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.Interfaces;
-using LabCourse2.Domain.Constants;
+using LabCourse2.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LabCourse2.API.Controllers
 {
     [ApiController]
-    [Route("api/auth")]
-    public class AuthController : ControllerBase
+    [Route("api/[controller]")]
+    public class AuthController : BaseApiController
     {
         private readonly IAuthService _authService;
-        private readonly IWebHostEnvironment _env;
+        private readonly ITokenService _tokenService;
+        private readonly LabCourse2.Infrastructure.Services.IAuthorizationService _authorizationService;
 
-        public AuthController(IAuthService authService, IWebHostEnvironment env)
+        public AuthController(
+            IAuthService authService,
+            ITokenService tokenService,
+            LabCourse2.Infrastructure.Services.IAuthorizationService authorizationService)
         {
             _authService = authService;
-            _env = env;
+            _tokenService = tokenService;
+            _authorizationService = authorizationService;
         }
 
-
         [HttpPost("register")]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(AuthResult), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(AuthResult), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            var result = await _authService.RegisterAsync(request, UserAgent, RemoteIp);
-            if (!result.Success) return BadRequest(result);
-
-            SetRefreshTokenCookie(result.RefreshToken!);
-            return StatusCode(StatusCodes.Status201Created, new
-            {
-                success = true,
-                accessToken = result.AccessToken
-            });
+            var result = await _authService.RegisterAsync(request);
+            if (!result.Success)
+                return BadRequest(new { errors = result.Errors });
+            return Ok(result);
         }
 
         [HttpPost("register-admin")]
-        [Authorize(Roles = RoleConstants.Admin)]
-        [ProducesResponseType(typeof(AuthResult), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(AuthResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterRequest request)
         {
-            var result = await _authService.RegisterAdminAsync(request, UserAgent, RemoteIp);
-            if (!result.Success) return BadRequest(result);
-
-            SetRefreshTokenCookie(result.RefreshToken!);
-            return StatusCode(StatusCodes.Status201Created, new
-            {
-                success = true,
-                accessToken = result.AccessToken
-            });
+            var result = await _authService.RegisterAdminAsync(request);
+            if (!result.Success)
+                return BadRequest(new { errors = result.Errors });
+            return Ok(result);
         }
-
 
         [HttpPost("login")]
-        [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var result = await _authService.LoginAsync(request, UserAgent, RemoteIp);
-            if (!result.Success) return Unauthorized(new { success = false, errors = result.Errors });
-
-            SetRefreshTokenCookie(result.RefreshToken!);
-            return Ok(new
-            {
-                success = true,
-                accessToken = result.AccessToken
-            });
+            var result = await _authService.LoginAsync(request);
+            if (!result.Success)
+                return BadRequest(new { errors = result.Errors });
+            return Ok(result);
         }
-
 
         [HttpPost("refresh")]
-        [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Refresh()
         {
-            var refreshToken = Request.Cookies["rt"];
-            if (string.IsNullOrEmpty(refreshToken))
-                return Unauthorized(new { success = false, errors = new[] { "No refresh token provided." } });
-
-            var result = await _authService.RefreshTokenAsync(refreshToken, UserAgent, RemoteIp);
-
-            if (result.IsTheftDetected)
+            try
             {
-                ClearRefreshTokenCookie();
-                return Unauthorized(new { success = false, isTheftDetected = true });
+                var refreshToken = Request.Cookies["refreshToken"];
+                if (string.IsNullOrEmpty(refreshToken))
+                    return Unauthorized(new { message = "No refresh token found" });
+
+                var result = await _authService.RefreshTokenAsync(refreshToken);
+                if (!result.Success)
+                    return Unauthorized(new { errors = result.Errors });
+                return Ok(result);
             }
-
-            if (!result.Success)
-                return Unauthorized(new { success = false, errors = result.Errors });
-
-            SetRefreshTokenCookie(result.RefreshToken!);
-            return Ok(new
+            catch (Exception ex)
             {
-                success = true,
-                accessToken = result.AccessToken
-            });
+                return StatusCode(500, new { message = "Error refreshing token", error = ex.Message });
+            }
         }
-
 
         [HttpGet("me")]
         [Authorize]
-        [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetMe()
+        public async Task<IActionResult> GetCurrentUser()
         {
-            var userIdStr = User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
-                            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                    ?? User.FindFirst("sub")?.Value;
 
-            if (!Guid.TryParse(userIdStr, out var userId))
-                return Unauthorized();
+                if (!Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized(new { message = "Invalid user ID in token" });
+                }
 
-            var profile = await _authService.GetUserProfileAsync(userId);
-            
-            if (profile is null)
-                return NotFound(new { success = false, message = "User profile not found." });
+                var result = await _authService.GetUserProfileAsync(userId);
+                if (result == null)
+                    return NotFound(new { message = "User not found" });
 
-            return Ok(profile);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving user", error = ex.Message });
+            }
         }
 
         [HttpPost("revoke")]
-        [AllowAnonymous]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [Authorize]
         public async Task<IActionResult> Revoke()
         {
-            var refreshToken = Request.Cookies["rt"];
-            ClearRefreshTokenCookie();
-
-            if (string.IsNullOrEmpty(refreshToken))
-                return NoContent();
-
-            await _authService.RevokeTokenAsync(refreshToken);
-            return NoContent();
-        }
-
-
-        private void SetRefreshTokenCookie(string token)
-        {
-
-            var isDev = _env.IsDevelopment();
-            Response.Cookies.Append("rt", token, new CookieOptions
+            try
             {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = isDev ? SameSiteMode.None : SameSiteMode.Strict,
-                Path = "/api/auth",
-                Expires = DateTimeOffset.UtcNow.AddDays(7)
-            });
-        }
+                var refreshToken = Request.Cookies["refreshToken"];
+                if (string.IsNullOrEmpty(refreshToken))
+                    return Unauthorized(new { message = "No refresh token found" });
 
-        private void ClearRefreshTokenCookie()
-        {
-            var isDev = _env.IsDevelopment();
-            Response.Cookies.Delete("rt", new CookieOptions
+                var result = await _authService.RevokeTokenAsync(refreshToken);
+                if (!result.Success)
+                    return BadRequest(new { errors = result.Errors });
+                return Ok(result);
+            }
+            catch (Exception ex)
             {
-                Path = "/api/auth",
-                Secure = true,
-                SameSite = isDev ? SameSiteMode.None : SameSiteMode.Strict,
-            });
+                return StatusCode(500, new { message = "Error revoking token", error = ex.Message });
+            }
         }
 
-        private string? UserAgent =>
-            Request.Headers.UserAgent.FirstOrDefault();
+        [HttpGet("my-permissions")]
+        [Authorize]
+        public async Task<IActionResult> GetMyPermissions()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                    ?? User.FindFirst("sub")?.Value;
 
-        private string? RemoteIp =>
-            HttpContext.Connection.RemoteIpAddress?.ToString();
+                if (!Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return Unauthorized(new { message = "Invalid user ID in token" });
+                }
+
+                var roles = (await _authorizationService.GetUserRolesAsync(userId)).ToList();
+                var permissions = (await _authorizationService.GetUserPermissionsAsync(userId)).ToList();
+
+                return Ok(new
+                {
+                    roles,
+                    permissions
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving permissions", error = ex.Message });
+            }
+        }
+
+        
+        [HttpGet("debug/decode-token")]
+        [Authorize]
+        public IActionResult DecodeToken()
+        {
+            try
+            {
+                var authHeader = Request.Headers["Authorization"].ToString();
+                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+                    return BadRequest("No Bearer token found");
+
+                var token = authHeader.Substring("Bearer ".Length);
+                
+                
+                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
+
+                var claims = jwtToken.Claims.Select(c => new { c.Type, c.Value }).ToList();
+
+                return Ok(new
+                {
+                    tokenExpiry = jwtToken.ValidTo,
+                    claims = claims,
+                    roleClaimsFound = jwtToken.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList()
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
 }
