@@ -1,5 +1,6 @@
 using LabCourse2.Application.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System.Text.Json;
@@ -12,12 +13,14 @@ public class CacheService : ICacheService
     private readonly IDistributedCache _cache;
     private readonly ILogger<CacheService> _logger;
     private readonly IConnectionMultiplexer _connectionMultiplexer;
+    private readonly string _instanceName;
 
-    public CacheService(IDistributedCache cache, ILogger<CacheService> logger, IConnectionMultiplexer connectionMultiplexer)
+    public CacheService(IDistributedCache cache, ILogger<CacheService> logger, IConnectionMultiplexer connectionMultiplexer, IConfiguration configuration)
     {
         _cache = cache;
         _logger = logger;
         _connectionMultiplexer = connectionMultiplexer;
+        _instanceName = configuration["Redis:InstanceName"] ?? string.Empty;
     }
 
     public async Task<T?> GetAsync<T>(string key)
@@ -124,17 +127,19 @@ public class CacheService : ICacheService
 
             var tasks = new List<Task>();
             int totalKeysRemoved = 0;
+            var db = _connectionMultiplexer.GetDatabase();
+            var prefixedPattern = $"{_instanceName}{pattern}";
 
             foreach (var endpoint in endpoints)
             {
                 var server = _connectionMultiplexer.GetServer(endpoint);
                 
-                // Use SCAN to find keys matching the pattern
-                var keys = server.Keys(pattern: pattern);
+                // Use SCAN to find keys matching the pattern (with instance prefix)
+                var keys = server.Keys(pattern: prefixedPattern);
                 
                 foreach (var key in keys)
                 {
-                    tasks.Add(_cache.RemoveAsync(key.ToString()));
+                    tasks.Add(db.KeyDeleteAsync(key));
                     totalKeysRemoved++;
                 }
             }

@@ -36,9 +36,11 @@ const NAV = {
         items: [
           { label: 'Dashboard', icon: LayoutGrid, to: '/home', end: true },
           { label: 'My job posts', icon: Briefcase, to: '/projects', badgeKey: 'jobPosts' },
+          { label: 'Proposals', icon: Send, to: '/proposals', badgeKey: 'proposals' },
           { label: 'Find talent', icon: Users, to: '/freelancers' },
           { label: 'Contracts', icon: FileText, to: '/contracts' },
           { label: 'Messages', icon: MessageSquare, to: '/inbox', badgeKey: 'inbox' },
+          { label: 'Review', icon: Briefcase, to: '/reviews'},
         ],
       },
       {
@@ -94,6 +96,8 @@ const NAV = {
           { label: 'Protected views', icon: Eye, to: '/admin/protected-views' },
           { label: 'Disputes', icon: Flag, disabled: true, badgeKey: 'disputes' },
           { label: 'Payouts', icon: Banknote, disabled: true },
+          {label: 'Skills', icon: Tag, to: '/admin/skills' },
+          {label: 'Categories', icon: Briefcase, to: '/admin/categories' }
         ],
       },
     ],
@@ -162,7 +166,7 @@ export function Sidebar({ open = false, onClose, inboxUnread = 0 }) {
   const badges = {
     inbox: inboxUnread,
     jobPosts: DEMO_NAV_BADGES.clientJobPosts,
-    proposals: DEMO_NAV_BADGES.freelancerProposals,
+    proposals: isFreelancer ? DEMO_NAV_BADGES.freelancerProposals : undefined,
     moderation: DEMO_NAV_BADGES.adminModeration,
     disputes: DEMO_NAV_BADGES.adminDisputes,
   };
