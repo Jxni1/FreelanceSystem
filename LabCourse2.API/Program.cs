@@ -198,6 +198,8 @@ builder.Services.AddScoped<IValidator<UpdateMilestoneRequest>, UpdateMilestoneRe
 builder.Services.AddScoped<IValidator<FundMilestoneRequest>, FundMilestoneRequestValidator>();
 builder.Services.AddScoped<IValidator<SubmitMilestoneRequest>, SubmitMilestoneRequestValidator>();
 
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+
 builder.Services.AddScoped<IDeliverableService, DeliverableService>();
 builder.Services.AddScoped<IValidator<CreateDeliverableRequest>, CreateDeliverableRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateDeliverableRequest>, UpdateDeliverableRequestValidator>();
