@@ -94,7 +94,7 @@ const NAV = {
           { label: 'Contracts', icon: FileText, to: '/admin/contracts' },
           { label: 'Categories', icon: Tag, to: '/admin/categories' },
           { label: 'Audit logs', icon: ScrollText, to: '/admin/audit-logs' },
-          { label: 'ML model', icon: Cpu, to: '/admin/ai-test' },
+
           { label: 'Protected views', icon: Eye, to: '/admin/protected-views' },
           { label: 'Disputes', icon: Flag, disabled: true, badgeKey: 'disputes' },
           { label: 'Payouts', icon: Banknote, disabled: true },
