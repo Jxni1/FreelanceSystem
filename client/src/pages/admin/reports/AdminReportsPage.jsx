@@ -431,13 +431,13 @@ export default function AdminReportsPage() {
                           View
                         </button>
 
-                        <button
+                        {/* <button
                           type="button"
                           onClick={() => handleReview(report)}
                           className="px-2.5 py-1 rounded-md bg-sky-50 text-sky-700 text-xs font-medium hover:bg-sky-100"
                         >
-                          Review
-                        </button>
+                         
+                        </button> */}
 
                         <button
                           type="button"

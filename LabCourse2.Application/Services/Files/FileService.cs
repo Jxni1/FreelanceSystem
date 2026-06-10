@@ -1,7 +1,6 @@
 ﻿using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Files;
 using LabCourse2.Application.Interfaces.Files;
-using LabCourse2.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabCourse2.Application.Services.Files
@@ -94,14 +93,17 @@ namespace LabCourse2.Application.Services.Files
             if (!entityExists)
                 return Result<FileResponse>.NotFound("Target entity was not found.");
 
-            var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", normalizedEntity.ToLower());
-            
-            // For User entity, create a profiles subdirectory
+            var uploadsRoot = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "uploads",
+                normalizedEntity.ToLower());
+
             if (normalizedEntity.Equals("User", StringComparison.OrdinalIgnoreCase))
             {
                 uploadsRoot = Path.Combine(uploadsRoot, "profiles");
             }
-            
+
             Directory.CreateDirectory(uploadsRoot);
 
             var extension = Path.GetExtension(request.File.FileName);
@@ -157,13 +159,12 @@ namespace LabCourse2.Application.Services.Files
             }
 
             var entityFolder = Path.Combine(uploadsRoot, "uploads", file.Entity.ToLower());
-            
-            // For User entity, create a profiles subdirectory
+
             if (file.Entity.Equals("User", StringComparison.OrdinalIgnoreCase))
             {
                 entityFolder = Path.Combine(entityFolder, "profiles");
             }
-            
+
             Directory.CreateDirectory(entityFolder);
 
             var extension = Path.GetExtension(request.File.FileName);
@@ -219,13 +220,14 @@ namespace LabCourse2.Application.Services.Files
                 "Contract" => await _context.Contracts.AnyAsync(x => x.ContractID == entityId),
                 "Report" => await _context.Reports.AnyAsync(x => x.ReportsID == entityId),
                 "User" => await _context.Users.AnyAsync(x => x.UserID == entityId),
+                "Milestone" => await _context.Milestones.AnyAsync(x => x.MilestoneID == entityId),
                 _ => false
             };
         }
 
         private static string? NormalizeEntity(string entity)
         {
-            var allowed = new[] { "Project", "Contract", "Report", "User" };
+            var allowed = new[] { "Project", "Contract", "Report", "User", "Milestone" };
 
             return allowed.FirstOrDefault(x =>
                 x.Equals(entity, StringComparison.OrdinalIgnoreCase));

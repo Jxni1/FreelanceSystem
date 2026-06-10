@@ -1,20 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useContracts } from '../../hooks/useContracts';
-import { useMilestones } from '../../hooks/useMilestones';
+
 import { useAuthorization } from '../../hooks/useAuthorization';
 import { SmartBackButton } from '../../components/SmartBackButton';
 import { reviewService } from '../../lib/reviewService';
+import MilestoneSubmitSection from '../projects/components/MilestoneSubmitSection';
+import { useMilestones } from '../../hooks/useMilestones';
 
 function statusBadgeClass(status) {
   switch (status) {
-    case 'Draft':          return 'bg-slate-100 text-slate-600';
-    case 'PendingPayment': return 'bg-violet-100 text-violet-700';
-    case 'Funded':         return 'bg-blue-100 text-blue-700';
-    case 'Submitted':      return 'bg-amber-100 text-amber-700';
-    case 'Approved':       return 'bg-teal-100 text-teal-700';
-    case 'Cancelled':      return 'bg-rose-100 text-rose-700';
-    default:               return 'bg-slate-100 text-slate-600';
+    case 'Draft':
+      return 'bg-slate-100 text-slate-700 ring-slate-200';
+    case 'PendingPayment':
+      return 'bg-violet-50 text-violet-700 ring-violet-200';
+    case 'Funded':
+      return 'bg-blue-50 text-blue-700 ring-blue-200';
+    case 'Submitted':
+      return 'bg-amber-50 text-amber-700 ring-amber-200';
+    case 'Approved':
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+    case 'Cancelled':
+      return 'bg-rose-50 text-rose-700 ring-rose-200';
+    default:
+      return 'bg-slate-100 text-slate-700 ring-slate-200';
   }
 }
 
@@ -24,6 +33,23 @@ function extractError(err) {
   if (raw?.message) return raw.message;
   if (Array.isArray(raw)) return raw.join(' ');
   return 'An error occurred.';
+}
+
+function formatMoney(value) {
+  return `$${Number(value || 0).toLocaleString()}`;
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString();
+}
+
+function sectionCardClass() {
+  return 'rounded-3xl border border-slate-200 bg-white shadow-sm';
+}
+
+function actionBtn(base = '') {
+  return `inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${base}`;
 }
 
 export default function ProjectWorkflowPage() {
@@ -40,7 +66,6 @@ export default function ProjectWorkflowPage() {
     updateMilestone,
     deleteMilestone,
     fundMilestone,
-    submitMilestone,
     approveMilestone,
   } = useMilestones();
 
@@ -48,14 +73,27 @@ export default function ProjectWorkflowPage() {
   const [workflowError, setWorkflowError] = useState(null);
   const [actionLoadingKey, setActionLoadingKey] = useState('');
 
-  const [newMilestone, setNewMilestone] = useState({ title: '', description: '', amount: '', dueDate: '' });
-  const [editingMilestoneId, setEditingMilestoneId] = useState('');
-  const [editMilestoneForm, setEditMilestoneForm] = useState({ title: '', description: '', amount: '', dueDate: '' });
+  const [newMilestone, setNewMilestone] = useState({
+    title: '',
+    description: '',
+    amount: '',
+    dueDate: '',
+  });
 
-  const [submitForms, setSubmitForms] = useState({});
+  const [editingMilestoneId, setEditingMilestoneId] = useState('');
+  const [editMilestoneForm, setEditMilestoneForm] = useState({
+    title: '',
+    description: '',
+    amount: '',
+    dueDate: '',
+  });
 
   const [reviewForm, setReviewForm] = useState({ comment: '', rating: 5 });
-  const [reviewState, setReviewState] = useState({ loading: false, error: null, submitted: false });
+  const [reviewState, setReviewState] = useState({
+    loading: false,
+    error: null,
+    submitted: false,
+  });
 
   useEffect(() => {
     const resolve = async () => {
@@ -64,16 +102,21 @@ export default function ProjectWorkflowPage() {
 
       if (isContractRoute) {
         setContractId(id);
-        try { await fetchContractById(id); }
-        catch { setWorkflowError('Unable to load contract details.'); }
+        try {
+          await fetchContractById(id);
+        } catch {
+          setWorkflowError('Unable to load contract details.');
+        }
         return;
       }
 
       try {
         const result = await fetchContracts({ projectID: id, page: 1, pageSize: 25 });
-        const match = result?.items?.find(c => (c.projectID || c.projectId) === id) ?? result?.items?.[0];
+        const match =
+          result?.items?.find((c) => (c.projectID || c.projectId) === id) ?? result?.items?.[0];
         const cid = match?.contractID || match?.contractId || null;
         setContractId(cid);
+
         if (cid) {
           await fetchContractById(cid);
         } else {
@@ -83,13 +126,17 @@ export default function ProjectWorkflowPage() {
         setWorkflowError('Unable to resolve the project contract.');
       }
     };
+
     resolve();
   }, [id, isContractRoute, fetchContractById, fetchContracts]);
 
   const refreshMilestones = async (cid = contractId) => {
     if (!cid) return;
-    try { await fetchMilestonesByContract(cid); }
-    catch { setWorkflowError('Failed to reload milestones.'); }
+    try {
+      await fetchMilestonesByContract(cid);
+    } catch {
+      setWorkflowError('Failed to reload milestones.');
+    }
   };
 
   useEffect(() => {
@@ -99,8 +146,10 @@ export default function ProjectWorkflowPage() {
   const handleCreateMilestone = async (e) => {
     e.preventDefault();
     if (!contractId) return;
+
     setActionLoadingKey('create');
     setWorkflowError(null);
+
     try {
       const res = await createMilestone({
         title: newMilestone.title.trim(),
@@ -109,7 +158,12 @@ export default function ProjectWorkflowPage() {
         dueDate: new Date(newMilestone.dueDate).toISOString(),
         contractID: contractId,
       });
-      if (!res?.success) { setWorkflowError(res?.error || 'Failed to create milestone.'); return; }
+
+      if (!res?.success) {
+        setWorkflowError(res?.error || 'Failed to create milestone.');
+        return;
+      }
+
       setNewMilestone({ title: '', description: '', amount: '', dueDate: '' });
       await refreshMilestones();
     } finally {
@@ -129,12 +183,18 @@ export default function ProjectWorkflowPage() {
 
   const cancelEdit = () => {
     setEditingMilestoneId('');
-    setEditMilestoneForm({ title: '', description: '', amount: '', dueDate: '' });
+    setEditMilestoneForm({
+      title: '',
+      description: '',
+      amount: '',
+      dueDate: '',
+    });
   };
 
   const handleSaveEdit = async (m) => {
     setActionLoadingKey(`save-${m.milestoneID}`);
     setWorkflowError(null);
+
     try {
       const res = await updateMilestone(m.milestoneID, {
         title: editMilestoneForm.title.trim(),
@@ -143,7 +203,12 @@ export default function ProjectWorkflowPage() {
         dueDate: new Date(editMilestoneForm.dueDate).toISOString(),
         status: m.status,
       });
-      if (!res?.success) { setWorkflowError(res?.error || 'Failed to update milestone.'); return; }
+
+      if (!res?.success) {
+        setWorkflowError(res?.error || 'Failed to update milestone.');
+        return;
+      }
+
       cancelEdit();
       await refreshMilestones();
     } finally {
@@ -153,11 +218,18 @@ export default function ProjectWorkflowPage() {
 
   const handleDelete = async (milestoneId) => {
     if (!window.confirm('Delete this milestone?')) return;
+
     setActionLoadingKey(`delete-${milestoneId}`);
     setWorkflowError(null);
+
     try {
       const res = await deleteMilestone(milestoneId);
-      if (!res?.success) { setWorkflowError(res?.error || 'Failed to delete milestone.'); return; }
+
+      if (!res?.success) {
+        setWorkflowError(res?.error || 'Failed to delete milestone.');
+        return;
+      }
+
       if (editingMilestoneId === milestoneId) cancelEdit();
       await refreshMilestones();
     } finally {
@@ -168,36 +240,22 @@ export default function ProjectWorkflowPage() {
   const handleFund = async (milestoneId) => {
     setActionLoadingKey(`fund-${milestoneId}`);
     setWorkflowError(null);
+
     try {
       const res = await fundMilestone(milestoneId, {});
-      if (!res?.success) { setWorkflowError(res?.error || 'Failed to fund milestone.'); return; }
+      if (!res?.success) {
+        setWorkflowError(res?.error || 'Failed to fund milestone.');
+        return;
+      }
+
       const url = res.data?.checkoutUrl;
-      if (!url) { setWorkflowError('Stripe did not return a checkout URL.'); return; }
+      if (!url) {
+        setWorkflowError('Stripe did not return a checkout URL.');
+        return;
+      }
+
       sessionStorage.setItem('postPaymentReturn', location.pathname);
       window.location.href = url;
-    } finally {
-      setActionLoadingKey('');
-    }
-  };
-
-  const handleSubmit = async (milestoneId) => {
-    const form = submitForms[milestoneId] || {};
-    const note = form.note?.trim() || '';
-    const fileIds = (form.rawFileIds || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-    if (!note && !fileIds.length) {
-      setWorkflowError('Please provide a submission note or at least one File ID.');
-      return;
-    }
-    setActionLoadingKey(`submit-${milestoneId}`);
-    setWorkflowError(null);
-    try {
-      const res = await submitMilestone(milestoneId, {
-        fileIds,
-        note: note || undefined,
-      });
-      if (!res?.success) { setWorkflowError(res?.error || 'Failed to submit milestone.'); return; }
-      setSubmitForms(prev => { const n = { ...prev }; delete n[milestoneId]; return n; });
-      await refreshMilestones();
     } finally {
       setActionLoadingKey('');
     }
@@ -206,9 +264,15 @@ export default function ProjectWorkflowPage() {
   const handleApprove = async (milestoneId) => {
     setActionLoadingKey(`approve-${milestoneId}`);
     setWorkflowError(null);
+
     try {
       const res = await approveMilestone(milestoneId);
-      if (!res?.success) { setWorkflowError(res?.error || 'Failed to approve milestone.'); return; }
+
+      if (!res?.success) {
+        setWorkflowError(res?.error || 'Failed to approve milestone.');
+        return;
+      }
+
       await refreshMilestones();
       if (contractId) await fetchContractById(contractId);
     } finally {
@@ -219,473 +283,658 @@ export default function ProjectWorkflowPage() {
   const handleReview = async (e) => {
     e.preventDefault();
     if (!contract?.contractID) return;
+
     setReviewState({ loading: true, error: null, submitted: false });
+
     try {
       await reviewService.create({
         contractID: contract.contractID,
         comment: reviewForm.comment.trim(),
         rating: reviewForm.rating,
       });
+
       setReviewState({ loading: false, error: null, submitted: true });
     } catch (err) {
-      setReviewState({ loading: false, error: extractError(err), submitted: false });
+      setReviewState({
+        loading: false,
+        error: extractError(err),
+        submitted: false,
+      });
     }
   };
 
-  const approvedCount = milestones.filter(m => m.status === 'Approved').length;
+  const approvedCount = milestones.filter((m) => m.status === 'Approved').length;
+  const submittedCount = milestones.filter((m) => m.status === 'Submitted').length;
+  const fundedCount = milestones.filter((m) => m.status === 'Funded').length;
   const contractComplete = contract?.status === 'Completed';
   const totalValue = milestones.reduce((s, m) => s + (m.amount || 0), 0);
 
+  const workflowProgress = useMemo(() => {
+    if (!milestones.length) return 0;
+    return Math.round((approvedCount / milestones.length) * 100);
+  }, [approvedCount, milestones.length]);
+
   return (
-    <div className="p-8 max-w-5xl mx-auto text-slate-100">
-      <SmartBackButton
-        fallbackTo={contract?.projectID ? `/projects/${contract.projectID}` : '/projects'}
-        label="Back to Project"
-      />
-
-      <div className="bg-white border rounded-2xl p-6 mt-4 text-slate-900">
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-bold">{contract?.projectTitle || 'Project Workflow'}</h1>
-            <p className="text-slate-500 text-sm mt-1">Milestones · Escrow · Deliveries</p>
-            {contract?.contractID && (
-              <p className="text-xs text-slate-400 font-mono mt-1">Contract: {contract.contractID}</p>
-            )}
-          </div>
-          <span className={`text-xs px-3 py-1 rounded-full font-semibold border ${
-            contractComplete
-              ? 'bg-teal-50 text-teal-700 border-teal-200'
-              : contract?.status === 'Cancelled'
-              ? 'bg-rose-50 text-rose-700 border-rose-200'
-              : 'bg-blue-50 text-blue-700 border-blue-200'
-          }`}>
-            {contract?.status || 'Active'}
-          </span>
-        </div>
-      </div>
-
-      {workflowError && (
-        <div className="mt-4 flex items-start justify-between gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm">
-          <span>{workflowError}</span>
-          <button
-            type="button"
-            className="shrink-0 text-amber-600 underline text-xs"
-            onClick={() => setWorkflowError(null)}
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        <div className="bg-teal-50 p-4 rounded-xl">
-          <p className="text-xs text-teal-600 font-medium">Approved</p>
-          <p className="text-2xl text-teal-700 font-bold mt-0.5">{approvedCount}/{milestones.length}</p>
-        </div>
-        <div className="bg-indigo-50 p-4 rounded-xl">
-          <p className="text-xs text-indigo-600 font-medium">Total Milestones</p>
-          <p className="text-2xl text-indigo-700 font-bold mt-0.5">{milestones.length}</p>
-        </div>
-        <div className="bg-amber-50 p-4 rounded-xl">
-          <p className="text-xs text-amber-600 font-medium">Contract</p>
-          <p className="text-xl text-amber-700 font-bold mt-0.5 truncate">{contract?.status || '—'}</p>
-        </div>
-        <div className="bg-purple-50 p-4 rounded-xl">
-          <p className="text-xs text-purple-600 font-medium">Total Value</p>
-          <p className="text-2xl text-purple-700 font-bold mt-0.5">${totalValue.toLocaleString()}</p>
-        </div>
-      </div>
-
-      {isClient && contractId && !contractComplete && (
-        <form
-          onSubmit={handleCreateMilestone}
-          className="mt-6 border rounded-2xl p-5 bg-white text-slate-900 space-y-3"
-        >
-          <h2 className="font-bold text-base text-slate-800">Add Milestone</h2>
-          <div className="grid md:grid-cols-4 gap-3">
-            <input
-              type="text"
-              placeholder="Title"
-              value={newMilestone.title}
-              onChange={e => setNewMilestone(p => ({ ...p, title: e.target.value }))}
-              className="border rounded-lg px-3 py-2 text-sm"
-              required
-            />
-            <input
-              type="number"
-              placeholder="Amount ($)"
-              min="0.01"
-              step="0.01"
-              value={newMilestone.amount}
-              onChange={e => setNewMilestone(p => ({ ...p, amount: e.target.value }))}
-              className="border rounded-lg px-3 py-2 text-sm"
-              required
-            />
-            <input
-              type="date"
-              value={newMilestone.dueDate}
-              onChange={e => setNewMilestone(p => ({ ...p, dueDate: e.target.value }))}
-              className="border rounded-lg px-3 py-2 text-sm"
-              required
-            />
-            <button
-              type="submit"
-              disabled={actionLoadingKey === 'create'}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
-            >
-              {actionLoadingKey === 'create' ? 'Adding...' : '+ Add Milestone'}
-            </button>
-          </div>
-          <textarea
-            placeholder="Description (required)"
-            value={newMilestone.description}
-            onChange={e => setNewMilestone(p => ({ ...p, description: e.target.value }))}
-            className="w-full border rounded-lg px-3 py-2 text-sm"
-            rows={2}
-            required
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-4">
+          <SmartBackButton
+            fallbackTo={contract?.projectID ? `/projects/${contract.projectID}` : '/projects'}
+            label="Back to Project"
           />
-        </form>
-      )}
+        </div>
 
-      <div className="mt-8 space-y-3">
-        <h2 className="font-bold text-lg">Milestones</h2>
-
-        {contractLoading && <p className="text-sm text-slate-400">Loading...</p>}
-        {!milestones.length && !contractLoading && (
-          <div className="border border-dashed rounded-xl p-8 text-center text-slate-400 text-sm">
-            {contractId ? 'No milestones yet.' : 'No contract linked to this project.'}
-          </div>
-        )}
-
-        {milestones.map((m, idx) => (
-          <div key={m.milestoneID} className="border rounded-xl bg-white text-slate-900 overflow-hidden">
-            <div className="flex items-start justify-between gap-3 p-4 pb-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="shrink-0 w-7 h-7 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center">
-                  {idx + 1}
-                </span>
+        <div className="space-y-6">
+          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-7 text-white sm:px-8">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
-                  <p className="font-semibold text-slate-900 truncate">{m.title}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Due {new Date(m.dueDate).toLocaleDateString()} &middot; ${m.amount?.toLocaleString()}
-                    {m.totalDeliverables > 0 && (
-                      <> &middot; {m.totalDeliverables} file{m.totalDeliverables !== 1 ? 's' : ''} submitted</>
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15">
+                      Workflow
+                    </span>
+                    {contract?.contractID && (
+                      <span className="rounded-full bg-white/10 px-3 py-1 font-mono text-[11px] text-slate-200 ring-1 ring-white/15">
+                        Contract {contract.contractID}
+                      </span>
                     )}
+                  </div>
+
+                  <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                    {contract?.projectTitle || 'Project Workflow'}
+                  </h1>
+
+                  <p className="mt-2 max-w-2xl text-sm text-slate-300 sm:text-base">
+                    Track milestones, escrow funding, submissions, approvals, and final review in one place.
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {m.isOverdue && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-600">Overdue</span>
-                )}
-                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${statusBadgeClass(m.status)}`}>
-                  {m.status}
-                </span>
+
+                <div className="flex flex-col items-start gap-3 lg:items-end">
+                  <span
+                    className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
+                      contractComplete
+                        ? 'bg-emerald-400/10 text-emerald-200 ring-emerald-400/20'
+                        : contract?.status === 'Cancelled'
+                          ? 'bg-rose-400/10 text-rose-200 ring-rose-400/20'
+                          : 'bg-blue-400/10 text-blue-200 ring-blue-400/20'
+                    }`}
+                  >
+                    {contract?.status || 'Active'}
+                  </span>
+
+                  <div className="w-full min-w-[220px] lg:max-w-xs">
+                    <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
+                      <span>Overall progress</span>
+                      <span>{workflowProgress}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-emerald-400 transition-all"
+                        style={{ width: `${workflowProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {(m.fundedAt || m.submittedAt || m.approvedAt) && (
-              <div className="px-4 pb-2 flex flex-wrap gap-4 text-xs text-slate-400">
-                {m.fundedAt    && <span>Funded {new Date(m.fundedAt).toLocaleDateString()}</span>}
-                {m.submittedAt && <span>Submitted {new Date(m.submittedAt).toLocaleDateString()}</span>}
-                {m.approvedAt  && <span>Approved {new Date(m.approvedAt).toLocaleDateString()}</span>}
+            <div className="grid grid-cols-2 gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:grid-cols-4 sm:p-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-medium text-slate-500">Approved</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">
+                  {approvedCount}
+                  <span className="ml-1 text-sm font-medium text-slate-400">/ {milestones.length || 0}</span>
+                </p>
               </div>
-            )}
 
-            {isClient && editingMilestoneId === m.milestoneID && (
-              <div className="px-4 pb-4 pt-3 border-t bg-slate-50 space-y-2">
-                <div className="grid md:grid-cols-4 gap-2">
-                  <input
-                    type="text"
-                    value={editMilestoneForm.title}
-                    onChange={e => setEditMilestoneForm(p => ({ ...p, title: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 text-sm bg-white"
-                    placeholder="Title"
-                  />
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={editMilestoneForm.amount}
-                    onChange={e => setEditMilestoneForm(p => ({ ...p, amount: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 text-sm bg-white"
-                    placeholder="Amount"
-                  />
-                  <input
-                    type="date"
-                    value={editMilestoneForm.dueDate}
-                    onChange={e => setEditMilestoneForm(p => ({ ...p, dueDate: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 text-sm bg-white"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSaveEdit(m)}
-                      disabled={actionLoadingKey === `save-${m.milestoneID}`}
-                      className="flex-1 px-3 py-2 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
-                    >
-                      {actionLoadingKey === `save-${m.milestoneID}` ? 'Saving...' : 'Save'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelEdit}
-                      className="flex-1 px-3 py-2 text-xs rounded-lg border text-slate-600 hover:bg-slate-100"
-                    >
-                      Cancel
-                    </button>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-medium text-slate-500">Funded</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">{fundedCount}</p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-medium text-slate-500">Awaiting review</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">{submittedCount}</p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-medium text-slate-500">Total value</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(totalValue)}</p>
+              </div>
+            </div>
+          </section>
+
+          {workflowError && (
+            <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <span>{workflowError}</span>
+              <button
+                type="button"
+                className="shrink-0 font-medium text-amber-700 underline underline-offset-2"
+                onClick={() => setWorkflowError(null)}
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          <section className={sectionCardClass()}>
+            <div className="border-b border-slate-200 px-6 py-5">
+              <h2 className="text-lg font-semibold text-slate-900">Workflow stages</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Each milestone moves from draft to funded, submitted, and approved.
+              </p>
+            </div>
+
+            <div className="grid gap-4 p-6 md:grid-cols-4">
+              {[
+                { title: '1. Draft', desc: 'Client defines scope, amount, and due date.' },
+                { title: '2. Funded', desc: 'Milestone is funded and held in escrow.' },
+                { title: '3. Submitted', desc: 'Freelancer submits work and notes.' },
+                { title: '4. Approved', desc: 'Client approves and payment is released.' },
+              ].map((step) => (
+                <div key={step.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">{step.title}</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {isClient && contractId && !contractComplete && (
+            <section className={sectionCardClass()}>
+              <div className="border-b border-slate-200 px-6 py-5">
+                <h2 className="text-lg font-semibold text-slate-900">Add milestone</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Create a new milestone with a budget, deadline, and clear deliverable description.
+                </p>
+              </div>
+
+              <form onSubmit={handleCreateMilestone} className="space-y-4 p-6">
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="md:col-span-2">
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Title</label>
+                    <input
+                      type="text"
+                      placeholder="Landing page design"
+                      value={newMilestone.title}
+                      onChange={(e) => setNewMilestone((p) => ({ ...p, title: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Amount</label>
+                    <input
+                      type="number"
+                      placeholder="500"
+                      min="0.01"
+                      step="0.01"
+                      value={newMilestone.amount}
+                      onChange={(e) => setNewMilestone((p) => ({ ...p, amount: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Due date</label>
+                    <input
+                      type="date"
+                      value={newMilestone.dueDate}
+                      onChange={(e) => setNewMilestone((p) => ({ ...p, dueDate: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                      required
+                    />
                   </div>
                 </div>
-                <textarea
-                  value={editMilestoneForm.description}
-                  onChange={e => setEditMilestoneForm(p => ({ ...p, description: e.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
-                  placeholder="Description"
-                  rows={2}
-                />
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">Description</label>
+                  <textarea
+                    placeholder="Describe what should be delivered for this milestone..."
+                    value={newMilestone.description}
+                    onChange={(e) => setNewMilestone((p) => ({ ...p, description: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={actionLoadingKey === 'create'}
+                    className={actionBtn('bg-indigo-600 text-white hover:bg-indigo-700')}
+                  >
+                    {actionLoadingKey === 'create' ? 'Adding...' : 'Add milestone'}
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
+
+          <section className="space-y-4">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Milestones</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Review funding, submissions, approvals, and next actions for each milestone.
+                </p>
+              </div>
+            </div>
+
+            {contractLoading && (
+              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-500 shadow-sm">
+                Loading workflow...
               </div>
             )}
 
-            <div className="px-4 pb-4">
-              {m.status === 'Draft' && (
-                <div className="border-t pt-3 space-y-3">
-                  {isClient && (
-                    <>
+            {!milestones.length && !contractLoading && (
+              <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-sm">
+                <p className="text-base font-medium text-slate-700">
+                  {contractId ? 'No milestones yet.' : 'No contract linked to this project.'}
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  {contractId
+                    ? 'Create the first milestone to start the project workflow.'
+                    : 'A contract needs to exist before workflow milestones can be managed.'}
+                </p>
+              </div>
+            )}
+
+            {milestones.map((m, idx) => (
+              <article
+                key={m.milestoneID}
+                className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
+              >
+                <div className="border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
+                          {idx + 1}
+                        </span>
+                        {m.isOverdue && (
+                          <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
+                            Overdue
+                          </span>
+                        )}
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${statusBadgeClass(m.status)}`}
+                        >
+                          {m.status}
+                        </span>
+                      </div>
+
+                      <h3 className="truncate text-lg font-semibold text-slate-900">{m.title}</h3>
+
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-500">
+                        <span>Due {formatDate(m.dueDate)}</span>
+                        <span>{formatMoney(m.amount)}</span>
+                        {m.totalDeliverables > 0 && (
+                          <span>
+                            {m.totalDeliverables} file{m.totalDeliverables !== 1 ? 's' : ''} submitted
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid min-w-[220px] grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-3">
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Funded</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-700">
+                          {m.fundedAt ? formatDate(m.fundedAt) : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Submitted</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-700">
+                          {m.submittedAt ? formatDate(m.submittedAt) : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Approved</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-700">
+                          {m.approvedAt ? formatDate(m.approvedAt) : '—'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {isClient && editingMilestoneId === m.milestoneID && (
+                  <div className="border-b border-slate-200 bg-indigo-50/50 px-5 py-5 sm:px-6">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-slate-900">Edit milestone</h4>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <input
+                        type="text"
+                        value={editMilestoneForm.title}
+                        onChange={(e) => setEditMilestoneForm((p) => ({ ...p, title: e.target.value }))}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                        placeholder="Title"
+                      />
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={editMilestoneForm.amount}
+                        onChange={(e) => setEditMilestoneForm((p) => ({ ...p, amount: e.target.value }))}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                        placeholder="Amount"
+                      />
+                      <input
+                        type="date"
+                        value={editMilestoneForm.dueDate}
+                        onChange={(e) => setEditMilestoneForm((p) => ({ ...p, dueDate: e.target.value }))}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                      />
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => startEdit(m)}
-                          className="px-3 py-1.5 text-xs rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700"
+                          onClick={() => handleSaveEdit(m)}
+                          disabled={actionLoadingKey === `save-${m.milestoneID}`}
+                          className={actionBtn('flex-1 bg-indigo-600 text-white hover:bg-indigo-700')}
                         >
-                          Edit
+                          {actionLoadingKey === `save-${m.milestoneID}` ? 'Saving...' : 'Save'}
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(m.milestoneID)}
-                          disabled={actionLoadingKey === `delete-${m.milestoneID}`}
-                          className="px-3 py-1.5 text-xs rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 disabled:opacity-60"
+                          onClick={cancelEdit}
+                          className={actionBtn('flex-1 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50')}
                         >
-                          {actionLoadingKey === `delete-${m.milestoneID}` ? 'Deleting...' : 'Delete'}
+                          Cancel
                         </button>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleFund(m.milestoneID)}
-                          disabled={actionLoadingKey === `fund-${m.milestoneID}`}
-                          className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60"
-                        >
-                          {actionLoadingKey === `fund-${m.milestoneID}` ? 'Redirecting to Stripe...' : 'Fund with Stripe'}
-                        </button>
-                        <span className="text-xs text-slate-500">${m.amount?.toLocaleString()} held in escrow via Stripe</span>
-                      </div>
-                    </>
-                  )}
-                  {isFreelancer && (
-                    <p className="text-xs text-slate-500 italic">Waiting for client to fund this milestone.</p>
-                  )}
-                </div>
-              )}
+                    </div>
 
-              {m.status === 'PendingPayment' && (
-                <div className="border-t pt-3">
-                  {isClient && (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <p className="text-xs text-violet-600 font-medium">
-                        Awaiting payment — finish checkout to fund this milestone.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => handleFund(m.milestoneID)}
-                        disabled={actionLoadingKey === `fund-${m.milestoneID}`}
-                        className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60"
-                      >
-                        {actionLoadingKey === `fund-${m.milestoneID}` ? 'Redirecting to Stripe...' : 'Resume payment'}
-                      </button>
+                    <textarea
+                      value={editMilestoneForm.description}
+                      onChange={(e) =>
+                        setEditMilestoneForm((p) => ({ ...p, description: e.target.value }))
+                      }
+                      className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                      placeholder="Description"
+                      rows={3}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-4 px-5 py-5 sm:px-6">
+                  {m.description && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Description</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{m.description}</p>
                     </div>
                   )}
-                  {isFreelancer && (
-                    <p className="text-xs text-slate-500 italic">Client is completing payment for this milestone.</p>
-                  )}
-                </div>
-              )}
 
-              {m.status === 'Funded' && (
-                <div className="border-t pt-3">
-                  {isFreelancer && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-medium text-slate-700">Submit your work</p>
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1 block">
-                          Submission note <span className="text-slate-400">(proof of work, URL, description, etc.)</span>
-                        </label>
-                        <textarea
-                          placeholder="e.g. Domain connected — DNS A record updated to 203.0.113.42. Propagation takes up to 24h. Screenshot: https://..."
-                          value={submitForms[m.milestoneID]?.note || ''}
-                          onChange={e =>
-                            setSubmitForms(p => ({
-                              ...p,
-                              [m.milestoneID]: { ...p[m.milestoneID], note: e.target.value },
-                            }))
-                          }
-                          className="w-full border rounded-lg px-3 py-2 text-sm text-slate-900 bg-white"
-                          rows={3}
+                  {m.status === 'Draft' && (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      {isClient ? (
+                        <div className="space-y-4">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(m)}
+                              className={actionBtn('border border-slate-300 bg-white text-slate-700 hover:bg-slate-50')}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(m.milestoneID)}
+                              disabled={actionLoadingKey === `delete-${m.milestoneID}`}
+                              className={actionBtn('border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100')}
+                            >
+                              {actionLoadingKey === `delete-${m.milestoneID}` ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-blue-900">Ready to fund this milestone</p>
+                              <p className="mt-1 text-sm text-blue-700">
+                                {formatMoney(m.amount)} will be held in escrow through Stripe until approval.
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleFund(m.milestoneID)}
+                              disabled={actionLoadingKey === `fund-${m.milestoneID}`}
+                              className={actionBtn('bg-blue-600 text-white hover:bg-blue-700')}
+                            >
+                              {actionLoadingKey === `fund-${m.milestoneID}` ? 'Redirecting...' : 'Fund with Stripe'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500">
+                          Waiting for the client to fund this milestone before work begins.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {m.status === 'PendingPayment' && (
+                    <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+                      {isClient ? (
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-violet-900">Payment in progress</p>
+                            <p className="mt-1 text-sm text-violet-700">
+                              Complete checkout to move this milestone into escrow.
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleFund(m.milestoneID)}
+                            disabled={actionLoadingKey === `fund-${m.milestoneID}`}
+                            className={actionBtn('bg-violet-600 text-white hover:bg-violet-700')}
+                          >
+                            {actionLoadingKey === `fund-${m.milestoneID}` ? 'Redirecting...' : 'Resume payment'}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-violet-700">
+                          The client is currently completing payment for this milestone.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {m.status === 'Funded' && (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      {isFreelancer ? (
+                        <MilestoneSubmitSection
+                          milestoneId={m.milestoneID}
+                          onSubmitted={async () => {
+                            setWorkflowError(null);
+                            await refreshMilestones();
+                            if (contractId) await fetchContractById(contractId);
+                          }}
                         />
-                      </div>
+                      ) : (
+                        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                          <p className="text-sm font-semibold text-blue-900">Escrow funded</p>
+                          <p className="mt-1 text-sm text-blue-700">
+                            The milestone is funded. Waiting for the freelancer to submit deliverables.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {m.status === 'Submitted' && (
+                    <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
                       <div>
-                        <label className="text-xs text-slate-500 mb-1 block">
-                          File IDs <span className="text-slate-400">(optional — one GUID per line)</span>
-                        </label>
-                        <textarea
-                          placeholder={'3fa85f64-5717-4562-b3fc-2c963f66afa6'}
-                          value={submitForms[m.milestoneID]?.rawFileIds || ''}
-                          onChange={e =>
-                            setSubmitForms(p => ({
-                              ...p,
-                              [m.milestoneID]: { ...p[m.milestoneID], rawFileIds: e.target.value },
-                            }))
-                          }
-                          className="w-full border rounded-lg px-3 py-2 text-sm text-slate-900 bg-white font-mono"
-                          rows={2}
-                        />
+                        <p className="text-sm font-semibold text-amber-900">Submission received</p>
+                        <p className="mt-1 text-sm text-amber-700">
+                          Review the delivery and approve to release {formatMoney(m.amount)}.
+                        </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSubmit(m.milestoneID)}
-                        disabled={actionLoadingKey === `submit-${m.milestoneID}`}
-                        className="px-4 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold disabled:opacity-60"
-                      >
-                        {actionLoadingKey === `submit-${m.milestoneID}` ? 'Submitting...' : 'Submit Milestone'}
-                      </button>
-                    </div>
-                  )}
-                  {isClient && (
-                    <p className="text-xs text-blue-600 font-medium">
-                      Funded — waiting for freelancer to submit deliverables.
-                    </p>
-                  )}
-                </div>
-              )}
 
-              {m.status === 'Submitted' && (
-                <div className="border-t pt-3 space-y-3">
-                  {m.submissionNote && (
-                    <div className="rounded-lg bg-slate-50 border px-3 py-2">
-                      <p className="text-xs font-medium text-slate-500 mb-0.5">Submission note</p>
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{m.submissionNote}</p>
+                      {m.submissionNote && (
+                        <div className="rounded-2xl border border-white/60 bg-white/70 px-4 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            Submission note
+                          </p>
+                          <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                            {m.submissionNote}
+                          </p>
+                        </div>
+                      )}
+
+                      {m.totalDeliverables > 0 && (
+                        <p className="text-sm text-slate-600">
+                          {m.totalDeliverables} file{m.totalDeliverables !== 1 ? 's' : ''} attached to this submission.
+                        </p>
+                      )}
+
+                      {isClient ? (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleApprove(m.milestoneID)}
+                            disabled={actionLoadingKey === `approve-${m.milestoneID}`}
+                            className={actionBtn('bg-emerald-600 text-white hover:bg-emerald-700')}
+                          >
+                            {actionLoadingKey === `approve-${m.milestoneID}`
+                              ? 'Approving...'
+                              : 'Approve & release payment'}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-medium text-amber-800">
+                          Waiting for the client to review and approve this milestone.
+                        </p>
+                      )}
                     </div>
                   )}
-                  {m.totalDeliverables > 0 && (
-                    <p className="text-xs text-slate-500">
-                      {m.totalDeliverables} file{m.totalDeliverables !== 1 ? 's' : ''} attached.
-                    </p>
-                  )}
-                  {isClient && (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <p className="text-xs text-slate-500">
-                        Approving releases ${m.amount?.toLocaleString()} to the freelancer.
+
+                  {m.status === 'Approved' && (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-sm font-semibold text-emerald-900">
+                        Approved — payment released successfully.
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => handleApprove(m.milestoneID)}
-                        disabled={actionLoadingKey === `approve-${m.milestoneID}`}
-                        className="px-4 py-2 text-sm rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold disabled:opacity-60"
-                      >
-                        {actionLoadingKey === `approve-${m.milestoneID}`
-                          ? 'Approving...'
-                          : 'Approve & Release Payment'}
-                      </button>
+                      {m.submissionNote && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-emerald-800/90">
+                          {m.submissionNote}
+                        </p>
+                      )}
                     </div>
                   )}
-                  {isFreelancer && (
-                    <p className="text-xs text-amber-600 font-medium">
-                      Submitted — waiting for client to review and approve.
-                    </p>
+
+                  {m.status === 'Cancelled' && (
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                      <p className="text-sm font-semibold text-rose-900">This milestone has been cancelled.</p>
+                    </div>
                   )}
                 </div>
-              )}
+              </article>
+            ))}
+          </section>
 
-              {m.status === 'Approved' && (
-                <div className="border-t pt-3 space-y-2">
-                  <span className="text-sm font-medium text-teal-700">Approved — payment released.</span>
-                  {m.submissionNote && (
-                    <p className="text-xs text-slate-400 whitespace-pre-wrap">{m.submissionNote}</p>
-                  )}
-                </div>
-              )}
-
-              {m.status === 'Cancelled' && (
-                <div className="border-t pt-3">
-                  <p className="text-xs text-rose-500">This milestone has been cancelled.</p>
-                </div>
-              )}
+          <section className={sectionCardClass()}>
+            <div className="border-b border-slate-200 px-6 py-5">
+              <h2 className="text-lg font-semibold text-slate-900">Escrow flow</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                A simple overview of how milestone funding and approval work.
+              </p>
             </div>
-          </div>
-        ))}
-      </div>
 
-      <div className="mt-8 border rounded-2xl p-5 bg-slate-50 text-slate-900">
-        <h2 className="font-semibold text-sm text-slate-700 mb-2">Escrow Flow</h2>
-        <ol className="list-decimal pl-5 text-xs text-slate-500 space-y-1">
-          <li><strong>Client</strong> creates milestones (Draft) and funds each — payment held in escrow.</li>
-          <li><strong>Freelancer</strong> submits deliverables by providing File IDs (Funded → Submitted).</li>
-          <li><strong>Client</strong> reviews and approves — payment released to freelancer (Approved).</li>
-          <li>When all milestones are approved the contract auto-completes.</li>
-        </ol>
-      </div>
-
-      {isClient && contractComplete && (
-        <div className="mt-6 border rounded-2xl p-5 bg-white text-slate-900">
-          <h2 className="font-bold text-base mb-1">Leave a Review</h2>
-          <p className="text-sm text-slate-500 mb-4">
-            Contract completed — share your experience with the freelancer.
-          </p>
-
-          {reviewState.submitted ? (
-            <div className="p-4 rounded-xl bg-teal-50 text-teal-700 text-sm font-medium">
-              Your review has been submitted.
-            </div>
-          ) : (
-            <form onSubmit={handleReview} className="space-y-3">
-              {reviewState.error && (
-                <div className="p-3 rounded-lg bg-rose-50 text-rose-700 text-sm">{reviewState.error}</div>
-              )}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-700 shrink-0">Rating:</span>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setReviewForm(p => ({ ...p, rating: star }))}
-                      className={`text-2xl leading-none transition-colors ${
-                        star <= reviewForm.rating ? 'text-amber-400' : 'text-slate-300 hover:text-amber-200'
-                      }`}
-                    >
-                      ★
-                    </button>
-                  ))}
+            <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                'Client creates milestones and defines scope, amount, and due date.',
+                'Each funded milestone is held in escrow through Stripe.',
+                'Freelancer submits work with notes, proof, and optional file IDs.',
+                'Client approves the submission and payment is released.',
+              ].map((item, i) => (
+                <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+                    {i + 1}
+                  </div>
+                  <p className="text-sm leading-6 text-slate-600">{item}</p>
                 </div>
-                <span className="text-sm text-slate-400">{reviewForm.rating}/5</span>
+              ))}
+            </div>
+          </section>
+
+          {isClient && contractComplete && (
+            <section className={sectionCardClass()}>
+              <div className="border-b border-slate-200 px-6 py-5">
+                <h2 className="text-lg font-semibold text-slate-900">Leave a review</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  The contract is complete. Share your experience working with the freelancer.
+                </p>
               </div>
-              <textarea
-                placeholder="Share your experience working with this freelancer..."
-                value={reviewForm.comment}
-                onChange={e => setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                rows={3}
-                required
-              />
-              <button
-                type="submit"
-                disabled={reviewState.loading}
-                className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold disabled:opacity-60"
-              >
-                {reviewState.loading ? 'Submitting...' : 'Submit Review'}
-              </button>
-            </form>
+
+              <div className="p-6">
+                {reviewState.submitted ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm font-medium text-emerald-800">
+                    Your review has been submitted.
+                  </div>
+                ) : (
+                  <form onSubmit={handleReview} className="space-y-4">
+                    {reviewState.error && (
+                      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        {reviewState.error}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <span className="text-sm font-medium text-slate-700">Rating</span>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewForm((p) => ({ ...p, rating: star }))}
+                            className={`text-3xl leading-none transition ${
+                              star <= reviewForm.rating
+                                ? 'text-amber-400'
+                                : 'text-slate-300 hover:text-amber-200'
+                            }`}
+                          >
+                            ★
+                          </button>
+                        ))}
+                      </div>
+                      <span className="text-sm text-slate-500">{reviewForm.rating}/5</span>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-slate-700">Comment</label>
+                      <textarea
+                        placeholder="Share your experience working with this freelancer..."
+                        value={reviewForm.comment}
+                        onChange={(e) => setReviewForm((p) => ({ ...p, comment: e.target.value }))}
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                        rows={4}
+                        required
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={reviewState.loading}
+                        className={actionBtn('bg-indigo-600 text-white hover:bg-indigo-700')}
+                      >
+                        {reviewState.loading ? 'Submitting...' : 'Submit review'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </section>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
