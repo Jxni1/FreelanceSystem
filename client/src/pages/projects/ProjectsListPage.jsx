@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
 import { useAuthorization } from '../../hooks/useAuthorization';
 import { apiClient } from '../../lib/apiClient';
+import ProjectSearchFilter from '../../components/SearchFilters/ProjectSearchFilter';
 
 export default function ProjectsListPage() {
   const { projects, isLoading, error, fetchProjects, deleteProject } = useProjects();
   const { isClient } = useAuthorization();
-  const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({});
 
   // reporting state
   const [reportingProjectId, setReportingProjectId] = useState(null);
@@ -17,20 +18,24 @@ export default function ProjectsListPage() {
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
-    fetchProjects({ page, pageSize: 10, search: searchTerm });
-  }, [fetchProjects, page, searchTerm]);
+    const params = {
+      page,
+      pageSize: 10,
+      ...filters,
+    };
+    fetchProjects(params);
+  }, [fetchProjects, page, filters]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       await deleteProject(id);
-      fetchProjects({ page, pageSize: 10, search: searchTerm });
+      fetchProjects({ page, pageSize: 10, ...filters });
     }
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setPage(1);
-    fetchProjects({ page: 1, pageSize: 10, search: searchTerm });
+  const handleSearch = (searchFilters) => {
+    setFilters(searchFilters);
+    setPage(1); // Reset to page 1 when searching
   };
 
   const statusBadgeClass = (status) => {
@@ -98,217 +103,139 @@ export default function ProjectsListPage() {
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
             Projects
           </h1>
-          <p className="text-xs md:text-sm text-slate-500 mt-1">
-            Manage projects, budgets, statuses, and visibility from one place.
-          </p>
         </div>
-
         {isClient && (
           <Link
             to="/projects/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-sm font-semibold text-white shadow-sm transition-colors"
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-colors"
           >
-            <span className="text-base leading-none">+</span>
-            <span>New Project</span>
+            + New Project
           </Link>
         )}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-          <form onSubmit={handleSearchSubmit} className="relative w-full max-w-md">
-            <input
-              type="text"
-              placeholder="Search projects by title..."
-              className="w-full pl-4 pr-10 py-2.5 rounded-lg bg-slate-50 border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="absolute right-3 top-2.5 text-slate-400 hover:text-teal-600 text-sm font-semibold"
-            >
-              &#x21B5;
-            </button>
-          </form>
+      {/* ADD SEARCH FILTER HERE - ONLY ON THIS PAGE */}
+      <ProjectSearchFilter onSearch={handleSearch} />
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
         </div>
+      )}
 
-        {error && (
-          <div className="p-4 border-b border-rose-200 bg-rose-50 text-xs text-rose-700">
-            {typeof error === 'string' ? error : 'Failed to load projects'}
-          </div>
-        )}
-
-        {isLoading && !projects?.items?.length ? (
-          <div className="p-10 text-center text-slate-500">
-            <div className="inline-block w-8 h-8 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin mb-4" />
-            <p className="text-sm">Loading projects...</p>
-          </div>
-        ) : projects?.items?.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">
-            <div className="text-5xl mb-4 opacity-40">📁</div>
-            <p className="text-base font-medium text-slate-700 mb-1">
-              No projects found
-            </p>
-            <p className="text-xs text-slate-500">
-              Get started by creating a new project.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 border-b border-slate-200">
-                    <th className="px-5 py-3">Title</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Budget</th>
-                    <th className="px-5 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {projects?.items?.map((project) => (
-                    <tr
-                      key={project.projectID}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
-                      <td className="px-5 py-3 align-middle">
-                        <div className="font-semibold text-slate-900">
-                          {project.title}
-                        </div>
-                        <div className="text-xs text-slate-500 truncate max-w-xs">
-                          {project.description}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 align-middle">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusBadgeClass(
-                            project.status
-                          )}`}
-                        >
-                          {project.status || 'Open'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 align-middle font-medium text-slate-900">
-                        ${project.budget?.toLocaleString()}
-                      </td>
-                      <td className="px-5 py-3 align-middle text-right space-x-2">
-                        <Link
-                          to={`/projects/${project.projectID}`}
-                          className="text-xs font-semibold text-teal-600 hover:text-teal-700"
-                        >
-                          View
-                        </Link>
-                        <Link
-                          to={`/projects/${project.projectID}/edit`}
-                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(project.projectID)}
-                          className="text-xs font-semibold text-rose-600 hover:text-rose-700"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => startReporting(project.projectID)}
-                          className="text-xs font-semibold text-amber-600 hover:text-amber-700"
-                        >
-                          Report
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {reportingProjectId && (
-              <div className="border-t border-slate-200 bg-slate-50 px-5 py-4">
-                <div className="max-w-xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-slate-800">
-                      Report project
-                    </p>
-                    <button
-                      type="button"
-                      onClick={cancelReporting}
-                      className="text-[11px] text-slate-500 hover:text-slate-700"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  <textarea
-                    rows={3}
-                    value={reportReason}
-                    onChange={(e) => setReportReason(e.target.value)}
-                    className="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    placeholder="Describe why this project should be reported..."
-                  />
-                  {reportError && (
-                    <p className="mt-1 text-[11px] text-rose-600">{reportError}</p>
-                  )}
-                  <div className="mt-3 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={cancelReporting}
-                      className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-700 hover:bg-slate-100"
-                    >
-                      Close
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSubmitReport}
-                      disabled={isSubmittingReport}
-                      className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-xs font-semibold text-white disabled:bg-amber-300"
-                    >
-                      {isSubmittingReport ? 'Sending...' : 'Submit report'}
-                    </button>
+      {isLoading && projects.items.length === 0 ? (
+        <div className="p-8 text-center text-slate-500">Loading projects...</div>
+      ) : projects.items.length === 0 ? (
+        <div className="text-center py-16 text-slate-400">No projects found.</div>
+      ) : (
+        <div className="space-y-4">
+          {projects.items.map((project) => (
+            <div
+              key={project.projectID}
+              className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div className="flex-1">
+                  <Link
+                    to={`/projects/${project.projectID}`}
+                    className="text-lg font-semibold text-teal-600 hover:text-teal-700"
+                  >
+                    {project.title}
+                  </Link>
+                  <p className="text-slate-600 text-sm mt-1">{project.description}</p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${statusBadgeClass(project.status)}`}>
+                      {project.status}
+                    </span>
+                    <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                      ${project.budget?.toFixed(2) || '0.00'}
+                    </span>
                   </div>
                 </div>
+                <div className="flex gap-2">
+                  {isClient && (
+                    <>
+                      <Link
+                        to={`/projects/${project.projectID}/edit`}
+                        className="px-3 py-1.5 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(project.projectID)}
+                        className="px-3 py-1.5 text-sm bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => startReporting(project.projectID)}
+                    className="px-3 py-1.5 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    Report
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {projects.totalCount > projects.pageSize && (
+        <div className="flex justify-center gap-2 mt-6">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage(p => p - 1)}
+            className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2 text-slate-600">Page {page}</span>
+          <button
+            disabled={page * projects.pageSize >= projects.totalCount}
+            onClick={() => setPage(p => p + 1)}
+            className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {reportingProjectId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Report Project</h3>
+            {reportError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {reportError}
               </div>
             )}
-          </>
-        )}
-
-        {projects?.totalCount > 10 && (
-          <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 text-xs text-slate-500">
-            <span>
-              Showing{' '}
-              <span className="font-semibold text-slate-700">
-                {(projects.page - 1) * projects.pageSize + 1}
-              </span>{' '}
-              to{' '}
-              <span className="font-semibold text-slate-700">
-                {Math.min(projects.page * projects.pageSize, projects.totalCount)}
-              </span>{' '}
-              of{' '}
-              <span className="font-semibold text-slate-700">
-                {projects.totalCount}
-              </span>{' '}
-              results
-            </span>
-            <div className="flex gap-2">
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              placeholder="Explain why you're reporting this project..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 resize-none"
+              rows="4"
+            />
+            <div className="flex gap-2 justify-end">
               <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={projects.page === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={cancelReporting}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
               >
-                Previous
+                Cancel
               </button>
               <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={projects.page * projects.pageSize >= projects.totalCount}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSubmitReport}
+                disabled={isSubmittingReport}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors disabled:opacity-50"
               >
-                Next
+                {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

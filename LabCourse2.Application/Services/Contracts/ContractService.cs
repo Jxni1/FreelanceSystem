@@ -14,6 +14,7 @@ using OfficeOpenXml;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using LabCourse2.Application.Utilities;
 
 namespace LabCourse2.Application.Services.Contracts
 {
@@ -65,10 +66,18 @@ namespace LabCourse2.Application.Services.Contracts
             if (query.ProjectID.HasValue)
                 q = q.Where(c => c.ProjectID == query.ProjectID);
 
+            q = q.FilterByDateRange(query.StartDateFrom, query.StartDateTo,
+                                         query.EndDateFrom, query.EndDateTo);
+
+            q = q.FilterByPriceRange(query.MinPrice, query.MaxPrice);
+
+            q = q.SearchContracts(query.Description);
+
             var totalCount = await q.CountAsync();
 
+            q = q.SortContracts(query.SortBy, query.SortOrder);
+
             var items = await q
-                .OrderByDescending(c => c.Start_Date)
                 .Skip((query.Page - 1) * query.PageSize)
                 .Take(query.PageSize)
                 .Select(c => c.ToResponse())
@@ -91,18 +100,21 @@ namespace LabCourse2.Application.Services.Contracts
 
             var status = query.Status ?? "null";
             var projectId = query.ProjectID?.ToString() ?? "null";
-            var cacheKey = $"contracts_client_{client.ClientID}_{query.Page}_{query.PageSize}_{status}_{projectId}";
+            var minPrice = query.MinPrice?.ToString() ?? "null";
+            var maxPrice = query.MaxPrice?.ToString() ?? "null";
+            var sortBy = query.SortBy ?? "startDate";
+            var cacheKey = $"contracts_client_{client.ClientID}_{query.Page}_{query.PageSize}_{status}_{projectId}_{minPrice}_{maxPrice}_{sortBy}";
 
             var cached = await _cacheService.GetAsync<PagedResult<ContractResponse>>(cacheKey);
             if (cached != null)
                 return Result<PagedResult<ContractResponse>>.Success(cached);
 
             var q = _context.Contracts
+                .Where(c => c.ClientID == client.ClientID)
                 .Include(c => c.Client).ThenInclude(c => c.User)
                 .Include(c => c.Freelancer).ThenInclude(f => f.User)
                 .Include(c => c.Project)
                 .AsNoTracking()
-                .Where(c => c.ClientID == client.ClientID)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.Status))
@@ -111,10 +123,18 @@ namespace LabCourse2.Application.Services.Contracts
             if (query.ProjectID.HasValue)
                 q = q.Where(c => c.ProjectID == query.ProjectID);
 
+            q = q.FilterByDateRange(query.StartDateFrom, query.StartDateTo,
+                                         query.EndDateFrom, query.EndDateTo);
+
+            q = q.FilterByPriceRange(query.MinPrice, query.MaxPrice);
+
+            q = q.SearchContracts(query.Description);
+
             var totalCount = await q.CountAsync();
 
+            q = q.SortContracts(query.SortBy, query.SortOrder);
+
             var items = await q
-                .OrderByDescending(c => c.Start_Date)
                 .Skip((query.Page - 1) * query.PageSize)
                 .Take(query.PageSize)
                 .Select(c => c.ToResponse())
@@ -128,8 +148,7 @@ namespace LabCourse2.Application.Services.Contracts
                 PageSize = query.PageSize
             };
 
-            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
-
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
             return Result<PagedResult<ContractResponse>>.Success(result);
         }
 
@@ -141,18 +160,19 @@ namespace LabCourse2.Application.Services.Contracts
 
             var status = query.Status ?? "null";
             var projectId = query.ProjectID?.ToString() ?? "null";
-            var cacheKey = $"contracts_freelancer_{freelancer.FreelancerID}_{query.Page}_{query.PageSize}_{status}_{projectId}";
+            var sortBy = query.SortBy ?? "startDate";
+            var cacheKey = $"contracts_freelancer_{freelancer.FreelancerID}_{query.Page}_{query.PageSize}_{status}_{projectId}_{sortBy}";
 
             var cached = await _cacheService.GetAsync<PagedResult<ContractResponse>>(cacheKey);
             if (cached != null)
                 return Result<PagedResult<ContractResponse>>.Success(cached);
 
             var q = _context.Contracts
+                .Where(c => c.FreelancerID == freelancer.FreelancerID)
                 .Include(c => c.Client).ThenInclude(c => c.User)
                 .Include(c => c.Freelancer).ThenInclude(f => f.User)
                 .Include(c => c.Project)
                 .AsNoTracking()
-                .Where(c => c.FreelancerID == freelancer.FreelancerID)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.Status))
@@ -161,10 +181,18 @@ namespace LabCourse2.Application.Services.Contracts
             if (query.ProjectID.HasValue)
                 q = q.Where(c => c.ProjectID == query.ProjectID);
 
+            q = q.FilterByDateRange(query.StartDateFrom, query.StartDateTo,
+                                         query.EndDateFrom, query.EndDateTo);
+
+            q = q.FilterByPriceRange(query.MinPrice, query.MaxPrice);
+
+            q = q.SearchContracts(query.Description);
+
             var totalCount = await q.CountAsync();
 
+            q = q.SortContracts(query.SortBy, query.SortOrder);
+
             var items = await q
-                .OrderByDescending(c => c.Start_Date)
                 .Skip((query.Page - 1) * query.PageSize)
                 .Take(query.PageSize)
                 .Select(c => c.ToResponse())
@@ -178,8 +206,7 @@ namespace LabCourse2.Application.Services.Contracts
                 PageSize = query.PageSize
             };
 
-            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
-
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
             return Result<PagedResult<ContractResponse>>.Success(result);
         }
 
@@ -253,7 +280,6 @@ namespace LabCourse2.Application.Services.Contracts
             var contract = await _context.Contracts
                 .Include(c => c.Client).ThenInclude(c => c.User)
                 .Include(c => c.Freelancer).ThenInclude(f => f.User)
-                .Include(c => c.Project)
                 .FirstOrDefaultAsync(c => c.ContractID == id);
 
             if (contract is null)
@@ -268,7 +294,6 @@ namespace LabCourse2.Application.Services.Contracts
             var updated = await _context.Contracts
                 .Include(c => c.Client).ThenInclude(c => c.User)
                 .Include(c => c.Freelancer).ThenInclude(f => f.User)
-                .Include(c => c.Project)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.ContractID == contract.ContractID);
 

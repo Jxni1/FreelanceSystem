@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProposals } from '../../hooks/useProposals';
 import { useContracts } from '../../hooks/useContracts';
+import ProposalSearchFilter from '../../components/SearchFilters/ProposalSearchFilter';
+import ContractSearchFilter from '../../components/SearchFilters/ContractSearchFilter';
 
 const PROPOSAL_STATUS_STYLES = {
   Pending:  'bg-amber-50 text-amber-700 border-amber-200',
@@ -20,182 +22,178 @@ const TABS = ['Proposals', 'Contracts'];
 
 export default function MyWorkPage() {
   const [tab, setTab] = useState('Proposals');
-  const [proposalStatus, setProposalStatus] = useState('');
-  const [contractStatus, setContractStatus] = useState('');
+  const [proposalPage, setProposalPage] = useState(1);
+  const [contractPage, setContractPage] = useState(1);
+  const [proposalFilters, setProposalFilters] = useState({});
+  const [contractFilters, setContractFilters] = useState({});
 
   const { proposals, isLoading: proposalsLoading, fetchProposals } = useProposals();
   const { contracts, isLoading: contractsLoading, fetchContracts } = useContracts();
 
   useEffect(() => {
-    if (tab === 'Proposals') fetchProposals({ pageSize: 50, status: proposalStatus || undefined });
-  }, [tab, proposalStatus, fetchProposals]);
+    if (tab === 'Proposals') {
+      fetchProposals({
+        page: proposalPage,
+        pageSize: 10,
+        ...proposalFilters,
+      });
+    }
+  }, [tab, proposalPage, proposalFilters, fetchProposals]);
 
   useEffect(() => {
-    if (tab === 'Contracts') fetchContracts({ pageSize: 50, status: contractStatus || undefined });
-  }, [tab, contractStatus, fetchContracts]);
+    if (tab === 'Contracts') {
+      fetchContracts({
+        page: contractPage,
+        pageSize: 10,
+        ...contractFilters,
+      });
+    }
+  }, [tab, contractPage, contractFilters, fetchContracts]);
 
   const proposalItems = proposals?.items ?? [];
   const contractItems = contracts?.items ?? contracts ?? [];
 
-  return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6 text-slate-900">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Work</h1>
-        <p className="text-sm text-slate-500 mt-1">Track your proposals and active contracts.</p>
-      </div>
+  const handleProposalSearch = (filters) => {
+    setProposalFilters(filters);
+    setProposalPage(1);
+  };
 
-      <div className="flex gap-1 border-b border-slate-200">
-        {TABS.map(t => (
+  const handleContractSearch = (filters) => {
+    setContractFilters(filters);
+    setContractPage(1);
+  };
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold text-slate-900 mb-6">My Work</h1>
+
+      <div className="flex gap-4 mb-6 border-b border-slate-200">
+        {TABS.map((tabName) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab === t
-                ? 'border-teal-500 text-teal-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+            key={tabName}
+            onClick={() => setTab(tabName)}
+            className={`px-4 py-2 font-medium transition-colors ${
+              tab === tabName
+                ? 'text-teal-600 border-b-2 border-teal-600'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            {t}
+            {tabName}
           </button>
         ))}
       </div>
 
-      <div className="flex gap-1 border-b border-slate-200">
-        <Link to="/portfolio"
-          className="px-4 py-2 rounded-lg border border-teal-200 bg-teal-50 text-xs font-semibold text-teal-700 hover:bg-teal-100 transition-colors">
-          My Portfolio →
-        </Link>
-      </div>
-
       {tab === 'Proposals' && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <select
-              value={proposalStatus}
-              onChange={e => setProposalStatus(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="">All statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Accepted">Accepted</option>
-              <option value="Rejected">Rejected</option>
-            </select>
-          </div>
+        <div>
+          <ProposalSearchFilter onSearch={handleProposalSearch} />
 
-          {proposalsLoading && (
-            <div className="flex justify-center py-10">
-              <div className="w-8 h-8 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin" />
-            </div>
-          )}
-
-          {!proposalsLoading && proposalItems.length === 0 && (
-            <div className="text-center py-12 text-slate-500">
-              <p>No proposals yet.</p>
-              <Link to="/discover" className="mt-2 inline-block text-teal-600 hover:text-teal-700 text-sm">
-                Browse open projects →
-              </Link>
-            </div>
-          )}
-
-          <div className="space-y-3">
-            {proposalItems.map(p => (
-              <div
-                key={p.proposalId}
-                className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-900">{p.projectTitle ?? `Project ${p.projectId?.slice(0, 8)}`}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Bid: <span className="text-teal-600 font-medium">${p.bidAmount?.toLocaleString()}</span>
-                      {p.deliveryDays && <> · {p.deliveryDays} days</>}
-                    </p>
+          {proposalsLoading && proposalItems.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">Loading proposals...</div>
+          ) : proposalItems.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">No proposals found.</div>
+          ) : (
+            <div className="space-y-4">
+              {proposalItems.map((proposal) => (
+                <div
+                  key={proposal.proposalId}
+                  className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-slate-900">{proposal.projectTitle}</h3>
+                      <p className="text-slate-600 text-sm mt-1">{proposal.message}</p>
+                      <div className="flex gap-4 mt-3 text-sm text-slate-600">
+                        <span>Bid: ${proposal.bidAmount}</span>
+                        <span>Delivery: {proposal.deliveryDays} days</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium border ${PROPOSAL_STATUS_STYLES[proposal.status] || ''}`}>
+                          {proposal.status}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${PROPOSAL_STATUS_STYLES[p.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                    {p.status}
-                  </span>
                 </div>
-                {p.message && <p className="text-xs text-slate-500 line-clamp-2">{p.message}</p>}
-                {p.status === 'Accepted' && p.contractId && (
-                  <Link
-                    to={`/contracts/${p.contractId}/workflow`}
-                    className="inline-block text-xs text-teal-600 hover:text-teal-700 font-medium"
-                  >
-                    Open workflow →
-                  </Link>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {proposals?.totalCount > 10 && (
+            <div className="flex justify-center gap-2 mt-6">
+              <button
+                disabled={proposalPage === 1}
+                onClick={() => setProposalPage(p => p - 1)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-slate-600">Page {proposalPage}</span>
+              <button
+                disabled={proposalPage * 10 >= (proposals?.totalCount || 0)}
+                onClick={() => setProposalPage(p => p + 1)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {tab === 'Contracts' && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <select
-              value={contractStatus}
-              onChange={e => setContractStatus(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-white border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="">All statuses</option>
-              <option value="Active">Active</option>
-              <option value="Pending">Pending</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          </div>
+        <div>
+          <ContractSearchFilter onSearch={handleContractSearch} />
 
-          {contractsLoading && (
-            <div className="flex justify-center py-10">
-              <div className="w-8 h-8 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin" />
-            </div>
-          )}
-
-          {!contractsLoading && contractItems.length === 0 && (
-            <div className="text-center py-12 text-slate-500">
-              <p>No contracts yet.</p>
-            </div>
-          )}
-
-          <div className="space-y-3">
-            {contractItems.map(c => {
-              const cid = c.contractID ?? c.contractId;
-              return (
+          {contractsLoading && contractItems.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">Loading contracts...</div>
+          ) : contractItems.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">No contracts found.</div>
+          ) : (
+            <div className="space-y-4">
+              {contractItems.map((contract) => (
                 <div
-                  key={cid}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm"
+                  key={contract.contractID}
+                  className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-semibold text-slate-900">{c.title ?? `Contract ${cid?.slice(0, 8)}`}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Budget: <span className="text-teal-600 font-medium">${c.budget?.toLocaleString()}</span>
-                      </p>
+                      <h3 className="font-semibold text-slate-900">{contract.projectTitle}</h3>
+                      <div className="flex gap-4 mt-2 text-sm text-slate-600">
+                        <span>${contract.agreedPrice?.toFixed(2)}</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium border ${CONTRACT_STATUS_STYLES[contract.status] || ''}`}>
+                          {contract.status}
+                        </span>
+                      </div>
                     </div>
-                    <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${CONTRACT_STATUS_STYLES[c.status] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                      {c.status}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-3 pt-1">
                     <Link
-                      to={`/contracts/${cid}`}
-                      className="text-xs text-slate-500 hover:text-slate-700"
+                      to={`/contracts/${contract.contractID}`}
+                      className="px-3 py-1.5 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
                     >
-                      Details
-                    </Link>
-                    <Link
-                      to={`/contracts/${cid}/workflow`}
-                      className="text-xs text-teal-600 hover:text-teal-700 font-medium"
-                    >
-                      Open workflow →
+                      View
                     </Link>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {contracts?.totalCount > 10 && (
+            <div className="flex justify-center gap-2 mt-6">
+              <button
+                disabled={contractPage === 1}
+                onClick={() => setContractPage(p => p - 1)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-slate-600">Page {contractPage}</span>
+              <button
+                disabled={contractPage * 10 >= (contracts?.totalCount || 0)}
+                onClick={() => setContractPage(p => p + 1)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

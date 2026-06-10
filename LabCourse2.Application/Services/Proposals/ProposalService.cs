@@ -8,6 +8,7 @@ using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Constants;
 using LabCourse2.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using LabCourse2.Application.Utilities;
 
 namespace LabCourse2.Application.Services.Proposals
 {
@@ -61,37 +62,39 @@ namespace LabCourse2.Application.Services.Proposals
                 .Include(p => p.Project)
                 .AsNoTracking()
                 .AsQueryable();
-
-            if (freelancer is not null)
-                q = q.Where(p => p.FreelancerId == freelancer.FreelancerID);
-            else
-                q = q.Where(p => p.Project.ClientID == client!.ClientID);
-
+ 
             if (!string.IsNullOrWhiteSpace(query.Status))
                 q = q.Where(p => p.Status == query.Status);
 
             if (query.ProjectId.HasValue)
-                q = q.Where(p => p.ProjectId == query.ProjectId.Value);
+                q = q.Where(p => p.ProjectId == query.ProjectId);
+
+            if (query.FreelancerId.HasValue)
+                q = q.Where(p => p.FreelancerId == query.FreelancerId);
+ 
+            q = q.FilterByBidRange(query.MinBidAmount, query.MaxBidAmount);
+ 
+            q = q.FilterByDeliveryDays(query.MinDeliveryDays, query.MaxDeliveryDays);
+ 
+            q = q.SearchProposals(query.SearchMessage);
 
             var totalCount = await q.CountAsync();
+ 
+            q = q.SortProposals(query.SortBy, query.SortOrder);
 
             var items = await q
-                .OrderByDescending(p => p.Created_at)
                 .Skip((query.Page - 1) * query.PageSize)
                 .Take(query.PageSize)
+                .Select(p => p.ToResponse())
                 .ToListAsync();
 
-            var result = new PagedResult<ProposalResponse>
+            return Result<PagedResult<ProposalResponse>>.Success(new PagedResult<ProposalResponse>
             {
-                Items = items.Select(p => p.ToResponse()),
+                Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            };
-
-            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
-
-            return Result<PagedResult<ProposalResponse>>.Success(result);
+            });
         }
 
         public async Task<Result<ProposalResponse>> GetByIdAsync(Guid id)

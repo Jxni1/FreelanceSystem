@@ -5,6 +5,7 @@ using LabCourse2.Application.Interfaces.Projects;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using LabCourse2.Application.Utilities;
 
 namespace LabCourse2.Application.Services.Projects
 {
@@ -27,13 +28,17 @@ namespace LabCourse2.Application.Services.Projects
 
         public async Task<Result<PagedResult<ProjectResponse>>> GetAllAsync(ProjectQueryParams query)
         {
-            var search = query.Search ?? "null";
+            var search = query.Search ?? query.FullTextSearch ?? "null";
             var categoryId = query.CategoryID?.ToString() ?? "null";
             var status = query.Status ?? "null";
             var visibility = query.Visibility ?? "null";
-            var cacheKey = $"projects_all_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}";
+            var minBudget = query.MinBudget?.ToString() ?? "null";
+            var maxBudget = query.MaxBudget?.ToString() ?? "null";
+            var sortBy = query.SortBy ?? "createdAt";
+            var sortOrder = query.SortOrder ?? "desc";
             
-          
+            var cacheKey = $"projects_search_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}_{minBudget}_{maxBudget}_{sortBy}_{sortOrder}";
+            
             var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
             if (cached != null)
                 return Result<PagedResult<ProjectResponse>>.Success(cached);
@@ -49,8 +54,9 @@ namespace LabCourse2.Application.Services.Projects
                 q = q.Where(p => p.ClientID == clientProfile.ClientID);
             }
 
-
-            if (!string.IsNullOrWhiteSpace(query.Search))
+            if (!string.IsNullOrWhiteSpace(query.FullTextSearch))
+                q = q.SearchProjects(query.FullTextSearch, query.SearchIn ?? "title,description");
+            else if (!string.IsNullOrWhiteSpace(query.Search))
                 q = q.Where(p => p.Title.Contains(query.Search));
 
             if (query.CategoryID.HasValue)
@@ -61,6 +67,8 @@ namespace LabCourse2.Application.Services.Projects
 
             if (!string.IsNullOrWhiteSpace(query.Visibility))
                 q = q.Where(p => p.Visibility == query.Visibility);
+
+            q = q.FilterByBudgetRange(query.MinBudget, query.MaxBudget);
 
             if (!string.IsNullOrWhiteSpace(query.Skill))
                 q = q.Where(p => _context.ProjectSkills
@@ -74,8 +82,9 @@ namespace LabCourse2.Application.Services.Projects
 
             var totalCount = await q.CountAsync();
 
+            q = q.SortProjects(query.SortBy, query.SortOrder);
+
             var rawItems = await q
-                .OrderByDescending(p => p.CreatedAt)
                 .Skip((query.Page - 1) * query.PageSize)
                 .Take(query.PageSize)
                 .ToListAsync();
@@ -102,9 +111,7 @@ namespace LabCourse2.Application.Services.Projects
                 PageSize = query.PageSize
             };
 
-            
-            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1));
-
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
             return Result<PagedResult<ProjectResponse>>.Success(result);
         }
 

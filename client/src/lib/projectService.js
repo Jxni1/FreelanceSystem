@@ -5,6 +5,7 @@ export const projectService = {
     const urlParams = new URLSearchParams();
     if (params.page) urlParams.append('page', params.page);
     if (params.pageSize) urlParams.append('pageSize', params.pageSize);
+     
     if (params.search) urlParams.append('search', params.search);
     if (params.categoryId) urlParams.append('categoryId', params.categoryId);
     if (params.status) urlParams.append('status', params.status);
@@ -13,6 +14,14 @@ export const projectService = {
     if (Array.isArray(params.skillNames)) {
       params.skillNames.forEach(s => urlParams.append('skillNames', s));
     }
+
+    // Advanced search parameters
+    if (params.fullTextSearch) urlParams.append('fullTextSearch', params.fullTextSearch);
+    if (params.searchIn) urlParams.append('searchIn', params.searchIn);
+    if (params.minBudget) urlParams.append('minBudget', params.minBudget);
+    if (params.maxBudget) urlParams.append('maxBudget', params.maxBudget);
+    if (params.sortBy) urlParams.append('sortBy', params.sortBy);
+    if (params.sortOrder) urlParams.append('sortOrder', params.sortOrder);
 
     const queryString = urlParams.toString();
     const result = await apiClient.get(`/api/projects${queryString ? `?${queryString}` : ''}`);

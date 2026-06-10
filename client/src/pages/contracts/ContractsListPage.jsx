@@ -1,14 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';   
 import { Link } from 'react-router-dom';
 import { useContracts } from '../../hooks/useContracts';
 import { useAuthorization } from '../../hooks/useAuthorization';
-
-const STATUS_STYLES = {
-  Active: 'bg-teal-50 text-teal-700 border-teal-200',
-  Pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  Completed: 'bg-blue-50 text-blue-700 border-blue-200',
-  Cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
-};
+import ContractSearchFilter from '../../components/SearchFilters/ContractSearchFilter';
 
 export default function ContractsListPage() {
   const {
@@ -22,7 +16,8 @@ export default function ContractsListPage() {
   } = useContracts();
 
   const { isAdmin } = useAuthorization();
-  const [filters, setFilters] = useState({ page: 1, pageSize: 10, status: '' });
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({});
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -34,556 +29,316 @@ export default function ContractsListPage() {
   const exportMenuRef = useRef(null);
 
   useEffect(() => {
-    fetchContracts(filters);
-  }, [filters, fetchContracts]);
+    const params = {
+      page,
+      pageSize: 10,
+      ...filters,
+    };
+    fetchContracts(params);
+  }, [filters, page, fetchContracts]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+    const handleClickOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
         setIsExportOpen(false);
       }
     };
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setIsExportOpen(false);
-        setIsImportOpen(false);
-      }
-    };
-
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this contract?')) {
-      try {
-        await deleteContract(id);
-        fetchContracts(filters);
-      } catch (err) {
-        console.error('Delete failed:', err);
-      }
+    if (window.confirm('Delete this contract?')) {
+      await deleteContract(id);
+      fetchContracts({ page, pageSize: 10, ...filters });
     }
   };
 
   const handlePageChange = (newPage) => {
-    setFilters((prev) => ({ ...prev, page: newPage }));
+    setPage(newPage);
+  };
+
+  const handleSearch = (searchFilters) => {
+    setFilters(searchFilters);
+    setPage(1);
   };
 
   const totalPages = Math.max(
     1,
-    Math.ceil((contracts.totalCount || 0) / (filters.pageSize || 10))
+    Math.ceil((contracts.totalCount || 0) / 10)
   );
 
   const openImportModal = () => {
-    setImportFormat('csv');
     setImportFile(null);
-    setImportResult(null);
+    setImportFormat('csv');
     setFormError(null);
+    setImportResult(null);
     setIsImportOpen(true);
-    setIsExportOpen(false);
   };
 
   const closeImportModal = () => {
-    setImportFormat('csv');
-    setImportFile(null);
-    setImportResult(null);
-    setFormError(null);
     setIsImportOpen(false);
+    setImportFile(null);
+    setImportFormat('csv');
+    setFormError(null);
+    setImportResult(null);
   };
 
   const getImportAccept = () => {
-    if (importFormat === 'csv') return '.csv';
-    if (importFormat === 'excel') return '.xlsx';
-    return '.json';
+    return importFormat === 'csv' ? '.csv' : '.xlsx';
   };
 
   const downloadBlob = (response, fallbackName) => {
-    const blob = new Blob([response.data], {
-      type: response.headers['content-type'] || 'application/octet-stream',
-    });
+    try {
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = fallbackName;
 
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    const disposition = response.headers['content-disposition'];
-    let fileName = fallbackName;
-
-    if (disposition && disposition.includes('filename=')) {
-      const match = disposition.match(/filename="?([^"]+)"?/);
-      if (match && match[1]) {
-        fileName = match[1];
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (matches?.[1]) {
+          filename = matches[1];
+        }
       }
-    }
 
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed:', err);
+    }
   };
 
   const handleExport = async (format) => {
     try {
+      const response = await exportContracts({ format });
+      downloadBlob(response, `contracts.${format}`);
       setIsExportOpen(false);
-      const response = await exportContracts(filters, format);
-      const extension = format === 'excel' ? 'xlsx' : format;
-      downloadBlob(response, `contracts-export.${extension}`);
     } catch (err) {
-      console.error('Export failed:', err);
+      alert('Export failed', err);
     }
   };
 
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    setFormError(null);
-
     if (!importFile) {
-      setFormError('Please choose a file to import.');
+      setFormError('Please select a file to import.');
       return;
     }
-
     try {
+      setFormError(null);
       const result = await importContracts(importFile, importFormat);
-      setImportResult(result?.data ?? result?.value ?? result);
-      await fetchContracts(filters);
+      setImportResult(result);
+      setTimeout(() => {
+        closeImportModal();
+        fetchContracts({ page, pageSize: 10, ...filters });
+      }, 2000);
     } catch (err) {
-      const apiError =
-        err?.response?.data?.message ||
-        err?.response?.data?.title ||
-        err?.response?.data?.detail ||
-        (typeof err?.response?.data === 'string' ? err.response.data : null) ||
-        'Failed to import contracts.';
-
-      setFormError(apiError);
+      const raw = err?.response?.data;
+      setFormError(
+        typeof raw === 'string' ? raw : raw?.message || 'Import failed'
+      );
     }
   };
 
-  const getViewContractPath = (contractId) => {
-    return isAdmin
-      ? `/admin/contracts/${contractId}`
-      : `/contracts/${contractId}`;
-  };
+  const getViewContractPath = (contractId) => `/contracts/${contractId}`;
+  const getWorkflowPath = (contractId) => `/contracts/${contractId}/workflow`;
+  const getChatPath = (contractId) => `/contracts/${contractId}/chat`;
 
-  const getEditContractPath = (contractId) => {
-    return isAdmin
-      ? `/admin/contracts/${contractId}/edit`
-      : `/contracts/${contractId}/edit`;
-  };
-
-  const getWorkflowPath = (contractId) => {
-    return isAdmin
-      ? `/admin/contracts/${contractId}/workflow`
-      : `/contracts/${contractId}/workflow`;
-  };
-
-  const getChatPath = (contractId) => {
-    return {
-      pathname: '/inbox',
-      search: `?contractId=${contractId}`,
-    };
-  };
+  if (isLoading && contracts.items.length === 0) {
+    return <div className="p-8 text-center text-slate-500">Loading contracts...</div>;
+  }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 p-6 text-slate-900 md:p-8">
-      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-            Contract Management
-          </h1>
-          <p className="mt-1 text-xs text-slate-500 md:text-sm">
-            View, create, and manage all contracts across the platform.
-          </p>
-        </div>
-
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Contracts</h1>
         {isAdmin && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-2">
+            <button
+              onClick={openImportModal}
+              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium"
+            >
+              Import
+            </button>
             <div className="relative" ref={exportMenuRef}>
               <button
-                type="button"
-                onClick={() => setIsExportOpen((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-                aria-haspopup="menu"
-                aria-expanded={isExportOpen}
+                onClick={() => setIsExportOpen(!isExportOpen)}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium"
               >
-                ↓ Export
-                <svg
-                  className={`h-4 w-4 transition-transform ${isExportOpen ? 'rotate-180' : ''}`}
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                Export
               </button>
-
               {isExportOpen && (
-                <div
-                  className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
-                  role="menu"
-                >
+                <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-300 rounded-lg shadow-lg z-10">
                   <button
-                    type="button"
                     onClick={() => handleExport('csv')}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    role="menuitem"
+                    className="block w-full text-left px-4 py-2 hover:bg-slate-50"
                   >
-                    <span>Export as CSV</span>
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">.csv</span>
+                    CSV
                   </button>
-
                   <button
-                    type="button"
-                    onClick={() => handleExport('excel')}
-                    className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    role="menuitem"
+                    onClick={() => handleExport('xlsx')}
+                    className="block w-full text-left px-4 py-2 hover:bg-slate-50"
                   >
-                    <span>Export as Excel</span>
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">.xlsx</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleExport('json')}
-                    className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    role="menuitem"
-                  >
-                    <span>Export as JSON</span>
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">.json</span>
+                    XLSX
                   </button>
                 </div>
               )}
             </div>
-
-            <button
-              type="button"
-              onClick={openImportModal}
-              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition-colors hover:bg-amber-100"
-            >
-              ↑ Import
-            </button>
-
-            <Link
-              to="/admin/contracts/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-purple-700"
-            >
-              <span className="text-base leading-none">+</span>
-              <span>New Contract</span>
-            </Link>
           </div>
         )}
       </div>
 
-      <div className="mb-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col items-start gap-4 p-4 sm:flex-row sm:items-center">
-          <select
-            value={filters.status}
-            onChange={(e) =>
-              setFilters((f) => ({ ...f, status: e.target.value, page: 1 }))
-            }
-            className="max-w-xs rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-500"
+      <ContractSearchFilter onSearch={handleSearch} />
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
+      {contracts.items.length === 0 && !isLoading ? (
+        <div className="text-center py-16 text-slate-400">No contracts found.</div>
+      ) : (
+        <div className="space-y-4">
+          {contracts.items.map((c) => (
+            <div
+              key={c.contractID}
+              className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-slate-900">{c.projectTitle}</h3>
+                  <p className="text-slate-600 text-sm">{c.description}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <p className="text-xs text-slate-500">Client</p>
+                  <p className="font-medium text-slate-900">{c.clientName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Freelancer</p>
+                  <p className="font-medium text-slate-900">{c.freelancerName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Status</p>
+                  <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-teal-50 text-teal-700">
+                    {c.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Price</p>
+                  <p className="font-medium text-slate-900">${c.agreedPrice?.toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Link
+                  to={getViewContractPath(c.contractID)}
+                  className="px-3 py-1.5 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  View
+                </Link>
+                <Link
+                  to={getWorkflowPath(c.contractID)}
+                  className="px-3 py-1.5 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Workflow
+                </Link>
+                <Link
+                  to={getChatPath(c.contractID)}
+                  className="px-3 py-1.5 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Chat
+                </Link>
+                <button
+                  onClick={() => handleDelete(c.contractID)}
+                  className="px-3 py-1.5 text-sm bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {contracts.totalCount > 10 && (
+        <div className="flex justify-center gap-2 mt-6">
+          <button
+            disabled={page === 1}
+            onClick={() => handlePageChange(page - 1)}
+            className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
           >
-            <option value="">All statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Active">Active</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-        </div>
-      </div>
-
-      {isLoading && (
-        <div className="py-10 text-center text-slate-500">
-          <div className="mb-4 inline-block h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-purple-500" />
-          <p className="text-sm">Loading contracts...</p>
-        </div>
-      )}
-
-      {error && !isLoading && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
-          {typeof error === 'string'
-            ? error
-            : error.message || 'Failed to load contracts.'}
+            Previous
+          </button>
+          <span className="px-4 py-2 text-slate-600">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages}
+            onClick={() => handlePageChange(page + 1)}
+            className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
+          >
+            Next
+          </button>
         </div>
       )}
 
-      {!isLoading && !error && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50">
-                <tr className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                  <th className="px-5 py-3 text-left">Description</th>
-                  <th className="px-5 py-3 text-left">Client</th>
-                  <th className="px-5 py-3 text-left">Freelancer</th>
-                  <th className="px-5 py-3 text-left">Agreed Price</th>
-                  <th className="px-5 py-3 text-left">Status</th>
-                  <th className="px-5 py-3 text-left">Start Date</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {contracts.items?.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-10 text-center text-sm text-slate-500"
-                    >
-                      No contracts found matching your filters.
-                    </td>
-                  </tr>
-                ) : (
-                  contracts.items?.map((contract) => (
-                    <tr
-                      key={contract.contractID}
-                      className="transition-colors hover:bg-slate-50"
-                    >
-                      <td className="max-w-[260px] truncate px-5 py-3 text-slate-900">
-                        {contract.description}
-                      </td>
-                      <td className="px-5 py-3 font-medium text-slate-700">
-                        {contract.clientName}
-                      </td>
-                      <td className="px-5 py-3 text-slate-700">
-                        {contract.freelancerName}
-                      </td>
-                      <td className="px-5 py-3 font-semibold text-slate-900">
-                        ${contract.agreedPrice?.toLocaleString() || 'N/A'}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
-                            STATUS_STYLES[contract.status] ||
-                            'border-slate-200 bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {contract.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-slate-500">
-                        {contract.start_Date
-                          ? new Date(contract.start_Date).toLocaleDateString()
-                          : 'N/A'}
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex justify-end gap-2">
-                          <Link
-                            to={getViewContractPath(contract.contractID)}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                          >
-                            View Contract
-                          </Link>
-
-                          <Link
-                            to={getEditContractPath(contract.contractID)}
-                            className="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700"
-                          >
-                            Edit
-                          </Link>
-
-                          <Link
-                            to={getWorkflowPath(contract.contractID)}
-                            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-                          >
-                            Workflow
-                          </Link>
-
-                          <Link
-                            to={getChatPath(contract.contractID)}
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
-                          >
-                            Chat
-                          </Link>
-
-                          <button
-                            onClick={() => handleDelete(contract.contractID)}
-                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {contracts.totalCount > filters.pageSize && (
-            <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-xs text-slate-500 sm:flex-row">
-              <p>
-                Showing{' '}
-                <span className="font-semibold text-slate-700">
-                  {(filters.page - 1) * filters.pageSize + 1}
-                </span>{' '}
-                to{' '}
-                <span className="font-semibold text-slate-700">
-                  {Math.min(filters.page * filters.pageSize, contracts.totalCount)}
-                </span>{' '}
-                of{' '}
-                <span className="font-semibold text-slate-700">
-                  {contracts.totalCount}
-                </span>{' '}
-                contracts
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={filters.page <= 1}
-                  onClick={() => handlePageChange(filters.page - 1)}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <span className="px-2">
-                  Page {filters.page} of {totalPages}
-                </span>
-                <button
-                  disabled={filters.page >= totalPages}
-                  onClick={() => handlePageChange(filters.page + 1)}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Next
-                </button>
+      {isImportOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Import Contracts</h3>
+            {importResult && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                ✓ Import successful!
               </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {isImportOpen && isAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">Import Contracts</h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Upload a supported file and import contracts in bulk.
-                </p>
+            )}
+            {formError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {formError}
               </div>
-              <button
-                type="button"
-                onClick={closeImportModal}
-                className="text-sm text-slate-400 hover:text-slate-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleImportSubmit} className="space-y-4 p-6">
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-semibold uppercase text-slate-500">
-                  Format
-                </label>
+            )}
+            <form onSubmit={handleImportSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Format</label>
                 <select
                   value={importFormat}
-                  onChange={(e) => {
-                    setImportFormat(e.target.value);
-                    setImportFile(null);
-                    setImportResult(null);
-                    setFormError(null);
-                  }}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => setImportFormat(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
                 >
                   <option value="csv">CSV</option>
-                  <option value="excel">Excel</option>
-                  <option value="json">JSON</option>
+                  <option value="xlsx">XLSX</option>
                 </select>
               </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                Accepted file type:{' '}
-                <span className="font-semibold text-slate-800">{getImportAccept()}</span>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">File</label>
+                <input
+                  type="file"
+                  accept={getImportAccept()}
+                  onChange={(e) => setImportFile(e.target.files?.[0])}
+                  className="w-full"
+                />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-semibold uppercase text-slate-500">
-                  File
-                </label>
-
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center hover:border-purple-400 hover:bg-purple-50/40">
-                  <span className="text-sm font-medium text-slate-700">
-                    {importFile ? importFile.name : 'Choose a file'}
-                  </span>
-                  <span className="mt-1 text-xs text-slate-500">
-                    Click to browse {getImportAccept()} file
-                  </span>
-                  <input
-                    type="file"
-                    accept={getImportAccept()}
-                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                Expected fields: Description, ClientID, FreelancerID, ProjectID, ProposalID,
-                AgreedPrice, StartDate, EndDate, Status
-              </div>
-
-              {importResult && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-lg border border-emerald-200 bg-white p-3">
-                      <div className="text-[11px] font-semibold uppercase text-emerald-600">Total</div>
-                      <div className="mt-1 text-lg font-semibold text-emerald-900">
-                        {importResult.totalRows}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-emerald-200 bg-white p-3">
-                      <div className="text-[11px] font-semibold uppercase text-emerald-600">Imported</div>
-                      <div className="mt-1 text-lg font-semibold text-emerald-900">
-                        {importResult.importedRows}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-emerald-200 bg-white p-3">
-                      <div className="text-[11px] font-semibold uppercase text-emerald-600">Failed</div>
-                      <div className="mt-1 text-lg font-semibold text-emerald-900">
-                        {importResult.failedRows}
-                      </div>
-                    </div>
-                  </div>
-
-                  {importResult.errors?.length > 0 && (
-                    <div className="mt-3 rounded-lg border border-rose-200 bg-white p-3 text-xs text-rose-700">
-                      {importResult.errors.slice(0, 5).map((err, idx) => (
-                        <div key={idx}>- {err}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {formError && (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
-                  {formError}
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={closeImportModal}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg"
                 >
-                  Import contracts
+                  Import
                 </button>
               </div>
             </form>

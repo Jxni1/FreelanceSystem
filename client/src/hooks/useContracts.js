@@ -86,20 +86,12 @@ export function useContracts() {
     }
   }, [normalizeContract, getErrorMessage]);
 
-  const createContract = useCallback(async (payload) => {
+  const createContract = useCallback(async (data) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await contractService.create(payload);
-      const normalized = normalizeContract(data);
-
-      setContracts((prev) => ({
-        ...prev,
-        items: [normalized, ...prev.items],
-        totalCount: (prev.totalCount || 0) + 1,
-      }));
-
-      return normalized;
+      const newContract = await contractService.create(data);
+      return normalizeContract(newContract);
     } catch (err) {
       const message = getErrorMessage(err, 'Failed to create contract.');
       setError(message);
@@ -109,25 +101,12 @@ export function useContracts() {
     }
   }, [normalizeContract, getErrorMessage]);
 
-  const updateContract = useCallback(async (contractId, payload) => {
+  const updateContract = useCallback(async (id, data) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await contractService.update(contractId, payload);
-      const normalized = normalizeContract(data);
-
-      setContracts((prev) => ({
-        ...prev,
-        items: prev.items.map((contract) =>
-          contract.contractID === contractId ? normalized : contract
-        ),
-      }));
-
-      setSelectedContract((prev) =>
-        prev?.contractID === contractId ? normalized : prev
-      );
-
-      return normalized;
+      const updated = await contractService.update(id, data);
+      return normalizeContract(updated);
     } catch (err) {
       const message = getErrorMessage(err, 'Failed to update contract.');
       setError(message);
@@ -137,33 +116,23 @@ export function useContracts() {
     }
   }, [normalizeContract, getErrorMessage]);
 
-  const deleteContract = useCallback(async (contractId) => {
+  const deleteContract = useCallback(async (id) => {
+    setIsLoading(true);
     setError(null);
     try {
-      await contractService.delete(contractId);
-
-      setContracts((prev) => ({
-        ...prev,
-        items: prev.items.filter((contract) => contract.contractID !== contractId),
-        totalCount: Math.max((prev.totalCount || 0) - 1, 0),
-      }));
-
-      setSelectedContract((prev) =>
-        prev?.contractID === contractId ? null : prev
-      );
-
-      return true;
+      await contractService.delete(id);
     } catch (err) {
       const message = getErrorMessage(err, 'Failed to delete contract.');
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [getErrorMessage]);
 
-  const exportContracts = useCallback(async (params = {}, format = 'csv') => {
-    setError(null);
+  const exportContracts = useCallback(async (params = {}) => {
     try {
-      return await contractService.exportContracts(params, format);
+      return await contractService.exportContracts(params);
     } catch (err) {
       const message = getErrorMessage(err, 'Failed to export contracts.');
       setError(message);
@@ -172,7 +141,6 @@ export function useContracts() {
   }, [getErrorMessage]);
 
   const importContracts = useCallback(async (file, format = 'csv') => {
-    setError(null);
     try {
       return await contractService.importContracts(file, format);
     } catch (err) {
@@ -193,7 +161,6 @@ export function useContracts() {
     createContract,
     updateContract,
     deleteContract,
-    setSelectedContract,
     exportContracts,
     importContracts,
   };
