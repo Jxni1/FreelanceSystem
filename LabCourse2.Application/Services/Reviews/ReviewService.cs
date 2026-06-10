@@ -6,6 +6,7 @@ using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Constants;
 using LabCourse2.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using LabCourse2.Application.Utilities;
 
 namespace LabCourse2.Application.Services.Reviews
 {
@@ -38,30 +39,36 @@ namespace LabCourse2.Application.Services.Reviews
             var q = _context.Reviews
                 .Include(r => r.Freelancer).ThenInclude(f => f.User)
                 .Include(r => r.Client).ThenInclude(c => c.User)
+                .Include(r => r.Contract)
                 .AsNoTracking()
                 .AsQueryable();
-
+ 
             if (query.FreelancerID.HasValue)
-                q = q.Where(r => r.FreelancerID == query.FreelancerID.Value);
+                q = q.Where(r => r.FreelancerID == query.FreelancerID);
+
+            if (query.ClientID.HasValue)
+                q = q.Where(r => r.ClientID == query.ClientID);
 
             if (query.ContractID.HasValue)
-                q = q.Where(r => r.ContractID == query.ContractID.Value);
-
-            var freelancer = await GetFreelancerProfileAsync();
-            if (freelancer is not null)
-                q = q.Where(r => r.FreelancerID == freelancer.FreelancerID);
+                q = q.Where(r => r.ContractID == query.ContractID);
+ 
+            q = q.FilterByRatingRange(query.MinRating, query.MaxRating);
+ 
+            q = q.SearchReviews(query.SearchComment);
 
             var totalCount = await q.CountAsync();
+ 
+            q = q.SortReviews(query.SortBy, query.SortOrder);
 
             var items = await q
-                .OrderByDescending(r => r.Created_at)
                 .Skip((query.Page - 1) * query.PageSize)
                 .Take(query.PageSize)
+                .Select(r => r.ToResponse())
                 .ToListAsync();
 
             return Result<PagedResult<ReviewResponse>>.Success(new PagedResult<ReviewResponse>
             {
-                Items = items.Select(r => r.ToResponse()),
+                Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize

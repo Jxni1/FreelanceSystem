@@ -5,7 +5,14 @@ export const skillService = {
     const urlParams = new URLSearchParams();
     if (params.page) urlParams.append('page', params.page);
     if (params.pageSize) urlParams.append('pageSize', params.pageSize);
+    
+    // Old parameters
     if (params.search) urlParams.append('search', params.search);
+
+    // NEW: Advanced search parameters
+    if (params.searchType) urlParams.append('searchType', params.searchType);
+    if (params.sortBy) urlParams.append('sortBy', params.sortBy);
+    if (params.sortOrder) urlParams.append('sortOrder', params.sortOrder);
 
     const queryString = urlParams.toString();
     const result = await apiClient.get(`/api/skills${queryString ? `?${queryString}` : ''}`);

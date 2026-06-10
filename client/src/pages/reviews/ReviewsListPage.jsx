@@ -1,26 +1,38 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useReviews } from '../../hooks/useReviews';
 import { useAuth } from '../../context/AuthContext';
-import { ROLES } from '../../constants/roles';
 import { useAuthorization } from '../../hooks/useAuthorization';
+import ReviewSearchFilter from '../../components/SearchFilters/ReviewSearchFilter';
 
 export default function ReviewsListPage() {
   const { reviews, isLoading, error, fetchReviews, deleteReview } = useReviews();
   const { user } = useAuth();
   const { isClient } = useAuthorization();
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({});
 
   useEffect(() => {
-    fetchReviews({ page });
-  }, [page]);
+    fetchReviews({
+      page,
+      pageSize: 10,
+      ...filters,
+    });
+  }, [page, filters, fetchReviews]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this review?')) return;
     try {
       await deleteReview(id);
-      fetchReviews({ page });
-    } catch {}
+      fetchReviews({ page, pageSize: 10, ...filters });
+    } catch {
+      alert('Failed to delete review. Please try again.');
+    }
+  };
+
+  const handleSearch = (searchFilters) => {
+    setFilters(searchFilters);
+    setPage(1);
   };
 
   if (isLoading && reviews.items.length === 0)
@@ -42,8 +54,12 @@ export default function ReviewsListPage() {
         )}
       </div>
 
+      <ReviewSearchFilter onSearch={handleSearch} />
+
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
+        </div>
       )}
 
       {reviews.items.length === 0 && !isLoading ? (
@@ -89,7 +105,7 @@ export default function ReviewsListPage() {
           ))}
         </div>
       )}
- 
+
       {reviews.totalCount > reviews.pageSize && (
         <div className="flex justify-center gap-2 mt-6">
           <button
