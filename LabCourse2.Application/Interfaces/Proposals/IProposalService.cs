@@ -15,7 +15,6 @@ namespace LabCourse2.Application.Interfaces.Proposals
         Task<Result<ContractResponse>> AcceptAsync(Guid proposalId);
         Task<Result<ProposalResponse>> RejectAsync(Guid proposalId);
         Task<Result<bool>> DeleteAsync(Guid id);
-
         Task<Result<FileExportResultDto>> ExportProposalsAsync(ProposalQueryParams query, string format);
         Task<Result<ImportResultDto>> ImportProposalsAsync(IFormFile file, string format);
     }

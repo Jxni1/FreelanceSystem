@@ -1,292 +1,406 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft, Star, DollarSign, Briefcase,
-  Calendar, Clock, CheckCircle, Award,
+  ArrowLeft,
+  Star,
+  DollarSign,
+  Briefcase,
+  Calendar,
+  Clock,
+  CheckCircle,
+  Award,
+  UserCircle2,
+  Pencil,
+  Search,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useContracts } from '../../hooks/useContracts';
 import { useReviews } from '../../hooks/useReviews';
 import { apiClient } from '../../lib/apiClient';
+import { PageHeading } from '../../components/ui/PageHeading';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
 
-const LEVEL_COLORS = {
-  Junior: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Mid:    'bg-sky-50 text-sky-700 border-sky-200',
-  Senior: 'bg-violet-50 text-violet-700 border-violet-200',
-  Expert: 'bg-amber-50 text-amber-700 border-amber-200',
+const LEVEL_TONE = {
+  Junior: 'emerald',
+  Mid: 'sky',
+  Senior: 'violet',
+  Expert: 'amber',
 };
 
 function StarRow({ rating, size = 13 }) {
   return (
     <div className="flex items-center gap-0.5">
-      {[1,2,3,4,5].map(i => (
-        <Star key={i} size={size}
-          className={i <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'} />
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          size={size}
+          className={
+            i <= rating
+              ? 'fill-amber-400 text-amber-400'
+              : 'fill-slate-200 text-slate-200'
+          }
+        />
       ))}
     </div>
   );
 }
 
-const fmt = (n) =>
-  '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+function formatMoney(value) {
+  return '$' + Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString();
+}
 
 export default function FreelancerPortfolioPage() {
   const { user } = useAuth();
   const { contracts, fetchContracts } = useContracts();
   const { reviews, fetchReviews } = useReviews();
+
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
+  const contractItems = Array.isArray(contracts?.items) ? contracts.items : [];
+  const reviewItems = Array.isArray(reviews?.items) ? reviews.items : [];
+
   useEffect(() => {
-    apiClient.get('/api/users/me')
-      .then(res => setProfile(res.data))
+    apiClient
+      .get('/api/users/me')
+      .then((res) => setProfile(res.data))
       .catch(() => {})
       .finally(() => setProfileLoading(false));
+
     fetchContracts({ page: 1, pageSize: 100 });
   }, [fetchContracts]);
 
-  // Fetch reviews once we have a freelancerID from contracts
   useEffect(() => {
-    const fid = contracts.items.find(c => c.freelancerID)?.freelancerID;
-    if (fid) fetchReviews({ freelancerId: fid, pageSize: 50 });
-  }, [contracts.items, fetchReviews]);
+    const freelancerId = contractItems.find((c) => c.freelancerID)?.freelancerID;
+    if (freelancerId) {
+      fetchReviews({ freelancerId, pageSize: 50 });
+    }
+  }, [contractItems, fetchReviews]);
 
   const fp = profile?.freelancerProfile;
 
   const stats = useMemo(() => {
-    const completed = contracts.items.filter(c => c.status === 'Completed');
-    const active    = contracts.items.filter(c => c.status === 'Active' || c.status === 'InProgress');
-    const totalEarned = completed.reduce((s, c) => s + (c.agreedPrice ?? 0), 0);
-    const avgRating = reviews.items.length
-      ? (reviews.items.reduce((s, r) => s + r.rating, 0) / reviews.items.length).toFixed(1)
+    const completed = contractItems.filter((c) => c.status === 'Completed');
+    const active = contractItems.filter(
+      (c) => c.status === 'Active' || c.status === 'InProgress'
+    );
+
+    const totalEarned = completed.reduce((sum, c) => sum + (c.agreedPrice ?? 0), 0);
+
+    const avgRating = reviewItems.length
+      ? (
+          reviewItems.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) /
+          reviewItems.length
+        ).toFixed(1)
       : null;
-    return { completedCount: completed.length, activeCount: active.length, totalEarned, avgRating };
-  }, [contracts.items, reviews.items]);
+
+    return {
+      completedCount: completed.length,
+      activeCount: active.length,
+      totalEarned,
+      avgRating,
+    };
+  }, [contractItems, reviewItems]);
 
   const ratingDist = useMemo(() => {
-    const d = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    reviews.items.forEach(r => { d[r.rating] = (d[r.rating] ?? 0) + 1; });
-    return d;
-  }, [reviews.items]);
+    const dist = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviewItems.forEach((r) => {
+      const rating = Number(r.rating);
+      if (dist[rating] !== undefined) dist[rating] += 1;
+    });
+    return dist;
+  }, [reviewItems]);
 
-  const completedWork = useMemo(() =>
-    contracts.items
-      .filter(c => c.status === 'Completed')
-      .sort((a, b) => new Date(b.end_Date ?? 0) - new Date(a.end_Date ?? 0))
-      .slice(0, 6),
-  [contracts.items]);
+  const completedWork = useMemo(
+    () =>
+      [...contractItems]
+        .filter((c) => c.status === 'Completed')
+        .sort(
+          (a, b) =>
+            new Date(b.end_Date ?? 0).getTime() - new Date(a.end_Date ?? 0).getTime()
+        )
+        .slice(0, 6),
+    [contractItems]
+  );
+
+  const initials =
+    [profile?.name?.[0] ?? '', profile?.surname?.[0] ?? ''].join('').toUpperCase() ||
+    user?.username?.[0]?.toUpperCase() ||
+    '?';
+
+  const experienceTone = LEVEL_TONE[fp?.experienceLevel] ?? 'slate';
 
   if (profileLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-teal-500 rounded-full animate-spin" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-brand-600" />
       </div>
     );
   }
 
-  const initials = [profile?.name?.[0] ?? '', profile?.surname?.[0] ?? '']
-    .join('').toUpperCase() || user?.username?.[0]?.toUpperCase() || '?';
-  const levelStyle = LEVEL_COLORS[fp?.experienceLevel] ?? 'bg-slate-100 text-slate-600 border-slate-200';
-
   return (
-    <div className="min-h-screen bg-slate-50">
-
-      {/* Sticky header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <Link to="/discover" className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-500">
-            <ArrowLeft size={18} />
-          </Link>
-          <div>
-            <h1 className="text-base font-bold text-slate-900">My Portfolio</h1>
-            <p className="text-[11px] text-slate-400">Your public profile</p>
+    <div className="space-y-6">
+      <PageHeading
+        eyebrow={
+          <>
+            Public freelancer profile ·{' '}
+            <span className="font-medium text-brand-700">Portfolio overview</span>
+          </>
+        }
+        title="My portfolio"
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <Button to="/freelancer" variant="soft" icon={LayoutDashboard}>
+              Back to dashboard
+            </Button>
+            <Button to="/profile/edit" variant="soft" icon={Pencil}>
+              Edit profile
+            </Button>
+            <Button to="/discover" icon={Search}>
+              Find work
+            </Button>
           </div>
-          <Link to="/profile/edit"
-            className="ml-auto px-4 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-            Edit Profile
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-
-        {/* Profile hero card */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="h-24 bg-gradient-to-r from-teal-600 via-emerald-500 to-teal-500" />
-          <div className="px-6 pb-6">
-            <div className="flex items-end gap-4 -mt-10 mb-4">
-              <div className="w-20 h-20 rounded-2xl border-4 border-white bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center text-white font-bold text-2xl shadow-sm flex-shrink-0 overflow-hidden">
-                {profile?.profilePhoto
-                  ? <img src={profile.profilePhoto} alt="" className="w-full h-full object-cover" />
-                  : initials}
-              </div>
-              <div className="mb-1 min-w-0 flex-1">
-                <h2 className="text-xl font-bold text-slate-900 leading-tight">
-                  {profile?.name} {profile?.surname}
-                </h2>
-                <p className="text-sm text-slate-400">@{profile?.username}</p>
-              </div>
-              <div className="mb-1 flex items-center gap-2 flex-shrink-0">
-                {fp?.experienceLevel && (
-                  <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${levelStyle}`}>
-                    {fp.experienceLevel}
-                  </span>
-                )}
-                {fp?.hourlyRate > 0 && (
-                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-teal-50 text-teal-700 border border-teal-200">
-                    {fmt(fp.hourlyRate)}/hr
-                  </span>
-                )}
-              </div>
+      <Card bodyClassName="p-0 overflow-hidden">
+        <div className="h-28 bg-gradient-to-r from-brand-700 via-teal-600 to-emerald-500" />
+        <div className="px-6 pb-6">
+          <div className="-mt-10 flex flex-col gap-4 md:flex-row md:items-end">
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-gradient-to-br from-brand-500 to-emerald-500 text-2xl font-bold text-white shadow-sm">
+              {profile?.profilePhoto ? (
+                <img
+                  src={profile.profilePhoto}
+                  alt={`${profile?.name || 'Freelancer'} profile`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initials
+              )}
             </div>
 
-            {fp?.skills?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {fp.skills.map(s => (
-                  <span key={s} className="px-3 py-1 text-xs rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-medium">
-                    {s}
-                  </span>
-                ))}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <h2 className="truncate text-2xl font-bold text-slate-900">
+                    {profile?.name} {profile?.surname}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">@{profile?.username}</p>
+                  {fp?.bio ? (
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                      {fp.bio}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {fp?.experienceLevel ? (
+                    <Badge tone={experienceTone}>{fp.experienceLevel}</Badge>
+                  ) : null}
+                  {fp?.hourlyRate > 0 ? (
+                    <Badge tone="brand">{formatMoney(fp.hourlyRate)}/hr</Badge>
+                  ) : null}
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Total Earned',    value: fmt(stats.totalEarned),     Icon: DollarSign,  color: 'text-teal-600',   bg: 'bg-teal-50',   border: 'border-teal-200' },
-            { label: 'Completed Jobs',  value: stats.completedCount,        Icon: CheckCircle, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
-            { label: 'Active Jobs',     value: stats.activeCount,           Icon: Clock,       color: 'text-amber-600',  bg: 'bg-amber-50',  border: 'border-amber-200' },
-            { label: 'Avg Rating',      value: stats.avgRating ?? '—',      Icon: Star,        color: 'text-rose-600',   bg: 'bg-rose-50',   border: 'border-rose-200' },
-          ].map(({ label, value, Icon, color, bg, border }) => (
-            <div key={label} className={`rounded-2xl border ${border} ${bg} p-5 shadow-sm`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{label}</p>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-white border ${border}`}>
-                  <Icon size={14} className={color} />
-                </div>
-              </div>
-              <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
-              <p className="text-[11px] text-slate-400 mt-1">
-                {label === 'Avg Rating' && reviews.totalCount > 0
-                  ? `${reviews.totalCount} review${reviews.totalCount !== 1 ? 's' : ''}`
-                  : '\u00A0'}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Reviews */}
-        {reviews.items.length > 0 && (
-          <section>
-            <h2 className="text-base font-bold text-slate-900 mb-4">Client Reviews</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-              {/* Rating distribution */}
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-                <div className="text-center mb-5">
-                  <p className="text-4xl font-bold text-slate-900 tabular-nums">{stats.avgRating}</p>
-                  <div className="flex justify-center mt-1">
-                    <StarRow rating={Math.round(Number(stats.avgRating))} size={15} />
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {reviews.totalCount} review{reviews.totalCount !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  {[5,4,3,2,1].map(star => {
-                    const count = ratingDist[star] ?? 0;
-                    const pct = reviews.items.length > 0 ? (count / reviews.items.length) * 100 : 0;
-                    return (
-                      <div key={star} className="flex items-center gap-2 text-xs">
-                        <span className="w-3 text-right text-slate-500">{star}</span>
-                        <Star size={10} className="text-amber-400 fill-amber-400 flex-shrink-0" />
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="w-4 text-right text-slate-400">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Review cards */}
-              <div className="md:col-span-2 space-y-3 max-h-[360px] overflow-y-auto pr-1">
-                {reviews.items.map(r => (
-                  <div key={r.reviewsID} className="rounded-xl border border-slate-100 bg-white p-4 space-y-2 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                          {r.clientName?.[0]?.toUpperCase() ?? '?'}
-                        </div>
-                        <span className="text-xs font-semibold text-slate-700">{r.clientName}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <StarRow rating={r.rating} size={11} />
-                        <span className="text-[10px] text-slate-400">
-                          {r.created_at ? new Date(r.created_at).toLocaleDateString() : ''}
-                        </span>
-                      </div>
-                    </div>
-                    {r.comment && (
-                      <p className="text-xs text-slate-600 leading-relaxed italic">"{r.comment}"</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Completed work */}
-        {completedWork.length > 0 && (
-          <section>
-            <h2 className="text-base font-bold text-slate-900 mb-4">Completed Work</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {completedWork.map(c => (
-                <Link key={c.contractID} to={`/contracts/${c.contractID}`}
-                  className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 hover:shadow-md hover:border-teal-300 transition-all group space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-slate-900 text-sm group-hover:text-teal-700 transition-colors line-clamp-1">
-                      {c.projectTitle || 'Untitled Project'}
-                    </h3>
-                    <span className="flex-shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      Completed
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <Briefcase size={11} className="flex-shrink-0" />
-                    <span>{c.clientName || 'Client'}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-teal-600">{fmt(c.agreedPrice ?? 0)}</span>
-                    <span className="text-slate-400 flex items-center gap-1">
-                      <Calendar size={11} />
-                      {c.end_Date ? new Date(c.end_Date).toLocaleDateString() : '—'}
-                    </span>
-                  </div>
-                </Link>
+          {Array.isArray(fp?.skills) && fp.skills.length > 0 ? (
+            <div className="mt-5 flex flex-wrap gap-2">
+              {fp.skills.map((skill) => (
+                <Badge key={skill} tone="slate">
+                  {skill}
+                </Badge>
               ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <div className="mt-5 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              Add skills to make your profile stronger and help clients understand your expertise faster.
+            </div>
+          )}
+        </div>
+      </Card>
 
-        {/* Empty state */}
-        {completedWork.length === 0 && reviews.items.length === 0 && (
-          <div className="rounded-2xl border-2 border-dashed border-slate-200 p-14 text-center">
-            <Award size={32} className="text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm font-semibold mb-1">Your portfolio is empty</p>
-            <p className="text-slate-400 text-xs mb-5">Complete contracts to build your work history and earn reviews.</p>
-            <Link to="/discover"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors">
-              Find work
-            </Link>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card title="Total earned" icon={DollarSign}>
+          <p className="text-3xl font-bold text-brand-700">
+            {formatMoney(stats.totalEarned)}
+          </p>
+          <p className="mt-1 text-sm text-slate-500">From completed contracts</p>
+        </Card>
+
+        <Card title="Completed jobs" icon={CheckCircle}>
+          <p className="text-3xl font-bold text-indigo-600">{stats.completedCount}</p>
+          <p className="mt-1 text-sm text-slate-500">Delivered successfully</p>
+        </Card>
+
+        <Card title="Active jobs" icon={Clock}>
+          <p className="text-3xl font-bold text-amber-600">{stats.activeCount}</p>
+          <p className="mt-1 text-sm text-slate-500">Currently in progress</p>
+        </Card>
+
+        <Card title="Average rating" icon={Star}>
+          <p className="text-3xl font-bold text-rose-600">{stats.avgRating ?? '—'}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <StarRow rating={Math.round(Number(stats.avgRating || 0))} size={14} />
+            <span className="text-sm text-slate-500">
+              {reviews?.totalCount ?? 0} review{(reviews?.totalCount ?? 0) !== 1 ? 's' : ''}
+            </span>
           </div>
-        )}
-
+        </Card>
       </div>
+
+      {reviewItems.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <div className="xl:col-span-4">
+            <Card title="Rating breakdown" icon={Award}>
+              <div className="mb-6 text-center">
+                <p className="text-4xl font-bold text-slate-900">{stats.avgRating}</p>
+                <div className="mt-2 flex justify-center">
+                  <StarRow rating={Math.round(Number(stats.avgRating || 0))} size={15} />
+                </div>
+                <p className="mt-2 text-sm text-slate-500">
+                  {reviews?.totalCount ?? 0} review{(reviews?.totalCount ?? 0) !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = ratingDist[star] ?? 0;
+                  const pct = reviewItems.length ? (count / reviewItems.length) * 100 : 0;
+
+                  return (
+                    <div key={star} className="flex items-center gap-3 text-sm">
+                      <span className="w-4 text-right text-slate-500">{star}</span>
+                      <Star size={12} className="fill-amber-400 text-amber-400" />
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-amber-400 transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="w-5 text-right text-slate-400">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </div>
+
+          <div className="xl:col-span-8">
+            <Card
+              title="Client reviews"
+              icon={Star}
+              bodyClassName="max-h-[420px] space-y-3 overflow-y-auto"
+              action={<Badge tone="slate">{reviewItems.length} loaded</Badge>}
+            >
+              {reviewItems.map((review) => (
+                <div
+                  key={review.reviewsID}
+                  className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-xs font-bold text-slate-600">
+                        {review.clientName?.[0]?.toUpperCase() ?? 'C'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {review.clientName || 'Client'}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {formatDate(review.created_at)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <StarRow rating={Number(review.rating) || 0} size={12} />
+                  </div>
+
+                  {review.comment ? (
+                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                      “{review.comment}”
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </Card>
+          </div>
+        </div>
+      ) : null}
+
+      {completedWork.length > 0 ? (
+        <Card
+          title="Completed work"
+          icon={Briefcase}
+          action={<Badge tone="brand">{completedWork.length} shown</Badge>}
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {completedWork.map((contract) => (
+              <Link
+                key={contract.contractID}
+                to={`/contracts/${contract.contractID}`}
+                className="group rounded-2xl border border-line bg-surface p-5 transition hover:border-brand-300 hover:shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="line-clamp-1 text-sm font-semibold text-slate-900 transition group-hover:text-brand-700">
+                    {contract.projectTitle || 'Untitled Project'}
+                  </h3>
+                  <Badge tone="sky">Completed</Badge>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+                  <Briefcase size={14} className="shrink-0" />
+                  <span>{contract.clientName || 'Client'}</span>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between text-sm">
+                  <span className="font-bold text-brand-700">
+                    {formatMoney(contract.agreedPrice ?? 0)}
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <Calendar size={13} />
+                    {formatDate(contract.end_Date)}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      ) : null}
+
+      {completedWork.length === 0 && reviewItems.length === 0 ? (
+        <Card title="Portfolio status" icon={UserCircle2}>
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 px-6 py-12 text-center">
+            <Award size={32} className="mx-auto mb-3 text-slate-300" />
+            <p className="text-sm font-semibold text-slate-700">Your portfolio is still growing</p>
+            <p className="mt-2 text-sm text-slate-500">
+              Complete contracts and collect reviews to build stronger proof for future clients.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+              <Button to="/discover" icon={Search}>
+                Find work
+              </Button>
+              <Button to="/profile/edit" variant="soft" icon={Pencil}>
+                Edit profile
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }

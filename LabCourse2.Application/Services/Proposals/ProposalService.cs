@@ -53,13 +53,16 @@ namespace LabCourse2.Application.Services.Proposals
             var client = await GetClientProfileAsync();
 
             if (freelancer is null && client is null)
+            {
                 return Result<PagedResult<ProposalResponse>>
                     .Forbidden("You must have a freelancer or client profile.");
+            }
 
             var userContext = freelancer?.FreelancerID.ToString() ?? client!.ClientID.ToString();
+            var roleContext = freelancer is not null ? "freelancer" : "client";
             var status = query.Status ?? "null";
             var projectId = query.ProjectId?.ToString() ?? "null";
-            var cacheKey = $"proposals_{userContext}_{query.Page}_{query.PageSize}_{status}_{projectId}";
+            var cacheKey = $"proposals_{roleContext}_{userContext}_{query.Page}_{query.PageSize}_{status}_{projectId}_{query.MinBidAmount}_{query.MaxBidAmount}_{query.MinDeliveryDays}_{query.MaxDeliveryDays}_{query.SearchMessage}_{query.SortBy}_{query.SortOrder}";
 
             var cached = await _cacheService.GetAsync<PagedResult<ProposalResponse>>(cacheKey);
             if (cached != null)
@@ -70,7 +73,16 @@ namespace LabCourse2.Application.Services.Proposals
                 .Include(p => p.Project)
                 .AsNoTracking()
                 .AsQueryable();
- 
+
+            if (freelancer is not null)
+            {
+                q = q.Where(p => p.FreelancerId == freelancer.FreelancerID);
+            }
+            else if (client is not null)
+            {
+                q = q.Where(p => p.Project.ClientID == client.ClientID);
+            }
+
             if (!string.IsNullOrWhiteSpace(query.Status))
                 q = q.Where(p => p.Status == query.Status);
 
@@ -78,16 +90,24 @@ namespace LabCourse2.Application.Services.Proposals
                 q = q.Where(p => p.ProjectId == query.ProjectId);
 
             if (query.FreelancerId.HasValue)
-                q = q.Where(p => p.FreelancerId == query.FreelancerId);
- 
+            {
+                if (client is not null)
+                {
+                    q = q.Where(p => p.FreelancerId == query.FreelancerId);
+                }
+                else if (freelancer is not null && query.FreelancerId.Value != freelancer.FreelancerID)
+                {
+                    return Result<PagedResult<ProposalResponse>>
+                        .Forbidden("You can only view your own proposals.");
+                }
+            }
+
             q = q.FilterByBidRange(query.MinBidAmount, query.MaxBidAmount);
- 
             q = q.FilterByDeliveryDays(query.MinDeliveryDays, query.MaxDeliveryDays);
- 
             q = q.SearchProposals(query.SearchMessage);
 
             var totalCount = await q.CountAsync();
- 
+
             q = q.SortProposals(query.SortBy, query.SortOrder);
 
             var items = await q
@@ -96,17 +116,27 @@ namespace LabCourse2.Application.Services.Proposals
                 .Select(p => p.ToResponse())
                 .ToListAsync();
 
-            return Result<PagedResult<ProposalResponse>>.Success(new PagedResult<ProposalResponse>
+            var result = new PagedResult<ProposalResponse>
             {
                 Items = items,
                 TotalCount = totalCount,
                 Page = query.Page,
                 PageSize = query.PageSize
-            });
+            };
+
+            await _cacheService.SetAsync(cacheKey, result);
+
+            return Result<PagedResult<ProposalResponse>>.Success(result);
         }
 
         public async Task<Result<ProposalResponse>> GetByIdAsync(Guid id)
         {
+            var freelancer = await GetFreelancerProfileAsync();
+            var client = await GetClientProfileAsync();
+
+            if (freelancer is null && client is null)
+                return Result<ProposalResponse>.Forbidden("You must have a freelancer or client profile.");
+
             var proposal = await _context.Proposals
                 .Include(p => p.Freelancer).ThenInclude(f => f.User)
                 .Include(p => p.Project)
@@ -116,8 +146,15 @@ namespace LabCourse2.Application.Services.Proposals
             if (proposal is null)
                 return Result<ProposalResponse>.NotFound($"Proposal with ID {id} was not found.");
 
+            var isOwnerFreelancer = freelancer is not null && proposal.FreelancerId == freelancer.FreelancerID;
+            var isOwnerClient = client is not null && proposal.Project.ClientID == client.ClientID;
+
+            if (!isOwnerFreelancer && !isOwnerClient)
+                return Result<ProposalResponse>.Forbidden("You are not allowed to view this proposal.");
+
             return Result<ProposalResponse>.Success(proposal.ToResponse());
         }
+
         public async Task<Result<FileExportResultDto>> ExportProposalsAsync(ProposalQueryParams query, string format)
         {
             var freelancer = await GetFreelancerProfileAsync();
@@ -234,6 +271,7 @@ namespace LabCourse2.Application.Services.Proposals
 
             return Result<FileExportResultDto>.Failure("Unsupported export format. Use csv, excel, or json.");
         }
+
         public async Task<Result<ProposalResponse>> CreateAsync(CreateProposalRequest request)
         {
             var freelancer = await GetFreelancerProfileAsync();
@@ -416,6 +454,8 @@ namespace LabCourse2.Application.Services.Proposals
                     $"Your proposal for project \"{proposal.Project.Title}\" was rejected.");
             }
 
+            await _cacheService.RemoveByPatternAsync("proposals_*");
+
             return Result<ProposalResponse>.Success(proposal.ToResponse());
         }
 
@@ -440,8 +480,11 @@ namespace LabCourse2.Application.Services.Proposals
             _context.Proposals.Remove(proposal);
             await _context.SaveChangesAsync();
 
+            await _cacheService.RemoveByPatternAsync("proposals_*");
+
             return Result<bool>.Success(true);
         }
+
         public async Task<Result<ImportResultDto>> ImportProposalsAsync(IFormFile file, string format)
         {
             var freelancer = await GetFreelancerProfileAsync();
@@ -462,7 +505,6 @@ namespace LabCourse2.Application.Services.Proposals
                     using var stream = file.OpenReadStream();
                     using var reader = new StreamReader(stream);
                     using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-
                     items = csv.GetRecords<ProposalImportDto>().ToList();
                 }
                 else if (format == "json")

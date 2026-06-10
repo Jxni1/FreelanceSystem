@@ -42,14 +42,13 @@ export default function AdminPanelPage() {
         }
       />
 
-      {/* Rreshti i statistikave (kemi hequr Open disputes sipas kërkesës) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Gross marketplace volume" value={stats.grossVolume.value} icon={TrendingUp} iconTone="emerald" delta={stats.grossVolume.delta} deltaDir={stats.grossVolume.deltaDir} />
         <StatCard label="Active users (30d)" value={stats.activeUsers.value} icon={Users} iconTone="sky" delta={stats.activeUsers.delta} deltaDir={stats.activeUsers.deltaDir} />
         <StatCard label="Jobs posted" value={stats.jobsPosted.value} icon={Briefcase} iconTone="violet" delta={stats.jobsPosted.delta} deltaDir={stats.jobsPosted.deltaDir} />
       </div>
 
-      {/* Moderation queue tani zë të gjithë hapësirën (lg:col-span-3) */}
+   
       <div className="grid grid-cols-1 gap-6">
         <Card
           className="lg:col-span-3" 

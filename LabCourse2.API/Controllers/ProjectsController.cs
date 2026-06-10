@@ -25,10 +25,17 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpGet]
-        [AllowAnonymous]   
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll([FromQuery] ProjectQueryParams query)
         {
             var result = await _projectService.GetAllAsync(query);
+            return ToActionResult(result);
+        }
+
+        [HttpGet("my-projects")]
+        public async Task<IActionResult> GetMyProjects([FromQuery] ProjectQueryParams query)
+        {
+            var result = await _projectService.GetMyProjectsAsync(query);
             return ToActionResult(result);
         }
 
@@ -40,7 +47,6 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
-       
         [HttpPost]
         [HasPermission("projects.create")]
         public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
@@ -53,7 +59,6 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
-        
         [HttpPut("{id:guid}")]
         [HasPermission("projects.update")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request)
@@ -66,7 +71,6 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
-        
         [HttpDelete("{id:guid}")]
         [HasPermission("projects.delete")]
         public async Task<IActionResult> Delete(Guid id)

@@ -2,23 +2,44 @@ import { useState, useCallback } from 'react';
 import { projectService } from '../lib/projectService';
 
 export function useProjects() {
-  const [projects, setProjects] = useState({ items: [], totalCount: 0, page: 1, pageSize: 10 });
+  const [projects, setProjects] = useState({
+    items: [],
+    totalCount: 0,
+    page: 1,
+    pageSize: 10,
+  });
+
+  const [myProjects, setMyProjects] = useState({
+    items: [],
+    totalCount: 0,
+    page: 1,
+    pageSize: 10,
+  });
+
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMyProjectsLoading, setIsMyProjectsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const normalizeProjectsPayload = (data, params = {}) => {
-    const items = Array.isArray(data)
-      ? data
-      : Array.isArray(data?.items)
-        ? data.items
-        : [];
+    const source =
+      Array.isArray(data)
+        ? { items: data }
+        : Array.isArray(data?.items)
+          ? data
+          : Array.isArray(data?.data)
+            ? { items: data.data, totalCount: data?.totalCount ?? data.data.length }
+            : Array.isArray(data?.data?.items)
+              ? data.data
+              : { items: [] };
+
+    const items = Array.isArray(source.items) ? source.items : [];
 
     return {
       items,
-      totalCount: data?.totalCount ?? items.length,
-      page: data?.page ?? params.page ?? 1,
-      pageSize: data?.pageSize ?? params.pageSize ?? 10,
+      totalCount: source?.totalCount ?? source?.count ?? items.length,
+      page: source?.page ?? params.page ?? 1,
+      pageSize: source?.pageSize ?? params.pageSize ?? 10,
     };
   };
 
@@ -28,11 +49,29 @@ export function useProjects() {
     try {
       const data = await projectService.getAll(params);
       setProjects(normalizeProjectsPayload(data, params));
+      return data;
     } catch (err) {
       console.error('Failed to fetch projects', err);
       setError(err?.response?.data || 'Failed to load projects.');
+      throw err;
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  const fetchMyProjects = useCallback(async (params = {}) => {
+    setIsMyProjectsLoading(true);
+    setError(null);
+    try {
+      const data = await projectService.getMyProjects(params);
+      setMyProjects(normalizeProjectsPayload(data, params));
+      return data;
+    } catch (err) {
+      console.error('Failed to fetch my projects', err);
+      setError(err?.response?.data || 'Failed to load my projects.');
+      throw err;
+    } finally {
+      setIsMyProjectsLoading(false);
     }
   }, []);
 
@@ -42,9 +81,11 @@ export function useProjects() {
     try {
       const data = await projectService.getById(id);
       setProject(data);
+      return data;
     } catch (err) {
       console.error('Failed to fetch project', err);
       setError(err?.response?.data || 'Failed to load project.');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -97,13 +138,18 @@ export function useProjects() {
 
   return {
     projects,
+    myProjects,
     project,
     isLoading,
+    isMyProjectsLoading,
     error,
     fetchProjects,
+    fetchMyProjects,
     fetchProjectById,
     createProject,
     updateProject,
-    deleteProject
+    deleteProject,
   };
 }
+
+export default useProjects;

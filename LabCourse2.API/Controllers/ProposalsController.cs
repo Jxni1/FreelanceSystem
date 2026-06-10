@@ -62,6 +62,7 @@ namespace LabCourse2.API.Controllers
             var result = await _proposalService.RejectAsync(id);
             return ToActionResult(result);
         }
+
         [HttpGet("export")]
         public async Task<IActionResult> Export([FromQuery] ProposalQueryParams query, [FromQuery] string format = "csv")
         {
@@ -71,7 +72,6 @@ namespace LabCourse2.API.Controllers
                 return ToActionResult(result);
 
             var fileResult = result.Data;
-
             return File(fileResult.Content, fileResult.ContentType, fileResult.FileName);
         }
 
