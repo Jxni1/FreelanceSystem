@@ -36,9 +36,9 @@ namespace LabCourse2.Application.Services.Projects
             var maxBudget = query.MaxBudget?.ToString() ?? "null";
             var sortBy = query.SortBy ?? "createdAt";
             var sortOrder = query.SortOrder ?? "desc";
-            
+
             var cacheKey = $"projects_search_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}_{minBudget}_{maxBudget}_{sortBy}_{sortOrder}";
-            
+
             var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
             if (cached != null)
                 return Result<PagedResult<ProjectResponse>>.Success(cached);
@@ -47,12 +47,6 @@ namespace LabCourse2.Application.Services.Projects
                 .Include(p => p.Category)
                 .AsNoTracking()
                 .AsQueryable();
-
-            var clientProfile = await GetClientProfileAsync();
-            if (clientProfile != null)
-            {
-                q = q.Where(p => p.ClientID == clientProfile.ClientID);
-            }
 
             if (!string.IsNullOrWhiteSpace(query.FullTextSearch))
                 q = q.SearchProjects(query.FullTextSearch, query.SearchIn ?? "title,description");
@@ -90,6 +84,97 @@ namespace LabCourse2.Application.Services.Projects
                 .ToListAsync();
 
             var projectIds = rawItems.Select(p => p.ProjectID).ToList();
+
+            var skillEntries = await _context.ProjectSkills
+                .Where(ps => projectIds.Contains(ps.ProjectID))
+                .Select(ps => new { ps.ProjectID, ps.Skill.Name })
+                .ToListAsync();
+
+            var skillsMap = skillEntries
+                .GroupBy(x => x.ProjectID)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Name).ToList());
+
+            var items = rawItems
+                .Select(p => p.ToResponse(skillsMap.GetValueOrDefault(p.ProjectID)))
+                .ToList();
+
+            var result = new PagedResult<ProjectResponse>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = query.Page,
+                PageSize = query.PageSize
+            };
+
+            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
+            return Result<PagedResult<ProjectResponse>>.Success(result);
+        }
+
+        public async Task<Result<PagedResult<ProjectResponse>>> GetMyProjectsAsync(ProjectQueryParams query)
+        {
+            var clientProfile = await GetClientProfileAsync();
+
+            if (clientProfile is null)
+                return Result<PagedResult<ProjectResponse>>.Forbidden("Only clients can view their own projects.");
+
+            var search = query.Search ?? query.FullTextSearch ?? "null";
+            var categoryId = query.CategoryID?.ToString() ?? "null";
+            var status = query.Status ?? "null";
+            var visibility = query.Visibility ?? "null";
+            var minBudget = query.MinBudget?.ToString() ?? "null";
+            var maxBudget = query.MaxBudget?.ToString() ?? "null";
+            var sortBy = query.SortBy ?? "createdAt";
+            var sortOrder = query.SortOrder ?? "desc";
+
+            var cacheKey = $"my_projects_{clientProfile.ClientID}_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}_{minBudget}_{maxBudget}_{sortBy}_{sortOrder}";
+
+            var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
+            if (cached != null)
+                return Result<PagedResult<ProjectResponse>>.Success(cached);
+
+            var q = _context.Projects
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .Where(p => p.ClientID == clientProfile.ClientID)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query.FullTextSearch))
+                q = q.SearchProjects(query.FullTextSearch, query.SearchIn ?? "title,description");
+            else if (!string.IsNullOrWhiteSpace(query.Search))
+                q = q.Where(p => p.Title.Contains(query.Search));
+
+            if (query.CategoryID.HasValue)
+                q = q.Where(p => p.CategoryID == query.CategoryID);
+
+            if (!string.IsNullOrWhiteSpace(query.Status))
+                q = q.Where(p => p.Status == query.Status);
+
+            if (!string.IsNullOrWhiteSpace(query.Visibility))
+                q = q.Where(p => p.Visibility == query.Visibility);
+
+            q = q.FilterByBudgetRange(query.MinBudget, query.MaxBudget);
+
+            if (!string.IsNullOrWhiteSpace(query.Skill))
+                q = q.Where(p => _context.ProjectSkills
+                    .Any(ps => ps.ProjectID == p.ProjectID &&
+                               ps.Skill.Name.Contains(query.Skill)));
+
+            if (query.SkillNames != null && query.SkillNames.Count > 0)
+                q = q.Where(p => _context.ProjectSkills
+                    .Any(ps => ps.ProjectID == p.ProjectID &&
+                               query.SkillNames.Contains(ps.Skill.Name)));
+
+            var totalCount = await q.CountAsync();
+
+            q = q.SortProjects(query.SortBy, query.SortOrder);
+
+            var rawItems = await q
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync();
+
+            var projectIds = rawItems.Select(p => p.ProjectID).ToList();
+
             var skillEntries = await _context.ProjectSkills
                 .Where(ps => projectIds.Contains(ps.ProjectID))
                 .Select(ps => new { ps.ProjectID, ps.Skill.Name })
@@ -118,7 +203,7 @@ namespace LabCourse2.Application.Services.Projects
         public async Task<Result<ProjectResponse>> GetByIdAsync(Guid id)
         {
             var cacheKey = $"project_{id}";
-            
+
             var cached = await _cacheService.GetAsync<ProjectResponse>(cacheKey);
             if (cached != null)
                 return Result<ProjectResponse>.Success(cached);
@@ -137,7 +222,7 @@ namespace LabCourse2.Application.Services.Projects
                 .ToListAsync();
 
             var response = project.ToResponse(skills);
-            
+
             await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromHours(1));
 
             return Result<ProjectResponse>.Success(response);
@@ -196,7 +281,8 @@ namespace LabCourse2.Application.Services.Projects
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
 
-            await _cacheService.RemoveByPatternAsync("projects_all_*");
+            await _cacheService.RemoveByPatternAsync("projects_search_*");
+            await _cacheService.RemoveByPatternAsync($"my_projects_{client.ClientID}_*");
 
             return Result<ProjectResponse>.Created(created!.ToResponse());
         }
@@ -272,7 +358,8 @@ namespace LabCourse2.Application.Services.Projects
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.ProjectID == project.ProjectID);
 
-            await _cacheService.RemoveByPatternAsync("projects_all_*");
+            await _cacheService.RemoveByPatternAsync("projects_search_*");
+            await _cacheService.RemoveByPatternAsync($"my_projects_{client.ClientID}_*");
             await _cacheService.RemoveAsync($"project_{id}");
 
             return Result<ProjectResponse>.Success(updated!.ToResponse());
@@ -297,7 +384,8 @@ namespace LabCourse2.Application.Services.Projects
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
 
-            await _cacheService.RemoveByPatternAsync("projects_all_*");
+            await _cacheService.RemoveByPatternAsync("projects_search_*");
+            await _cacheService.RemoveByPatternAsync($"my_projects_{client.ClientID}_*");
             await _cacheService.RemoveAsync($"project_{id}");
 
             return Result<bool>.Success(true);

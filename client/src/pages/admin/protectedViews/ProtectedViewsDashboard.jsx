@@ -3,7 +3,7 @@ import { useProtectedViews } from '../../../hooks/useProtectedViews';
 
 const TABS = [
   { key: 'most-viewed', label: 'Most Viewed Projects' },
-  { key: 'view-logs', label: 'View Logs' },
+  // { key: 'view-logs', label: 'View Logs' },
   { key: 'suspicious', label: 'Suspicious Activity' },
 ];
 
@@ -108,7 +108,7 @@ export default function ProtectedViewsDashboard() {
         </>
       )}
 
-      {/* View Logs Tab */}
+      {/* View Logs Tab
       {activeTab === 'view-logs' && !isLoading && (
         <>
           <form onSubmit={handleLoadLogs} className="flex gap-3 mb-4">
@@ -157,7 +157,7 @@ export default function ProtectedViewsDashboard() {
             </>
           )}
         </>
-      )}
+      )} */}
 
       {/* Suspicious Activity Tab */}
       {activeTab === 'suspicious' && !isLoading && (

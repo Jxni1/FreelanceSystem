@@ -1,30 +1,42 @@
 import { apiClient } from './apiClient';
 
+function buildProjectQuery(params = {}) {
+  const urlParams = new URLSearchParams();
+
+  if (params.page) urlParams.append('page', params.page);
+  if (params.pageSize) urlParams.append('pageSize', params.pageSize);
+
+  if (params.search) urlParams.append('search', params.search);
+  if (params.categoryId) urlParams.append('categoryId', params.categoryId);
+  if (params.status) urlParams.append('status', params.status);
+  if (params.visibility) urlParams.append('visibility', params.visibility);
+  if (params.skill) urlParams.append('skill', params.skill);
+
+  if (Array.isArray(params.skillNames)) {
+    params.skillNames.forEach((s) => urlParams.append('skillNames', s));
+  }
+
+  if (params.fullTextSearch) urlParams.append('fullTextSearch', params.fullTextSearch);
+  if (params.searchIn) urlParams.append('searchIn', params.searchIn);
+  if (params.minBudget) urlParams.append('minBudget', params.minBudget);
+  if (params.maxBudget) urlParams.append('maxBudget', params.maxBudget);
+  if (params.sortBy) urlParams.append('sortBy', params.sortBy);
+  if (params.sortOrder) urlParams.append('sortOrder', params.sortOrder);
+
+  const queryString = urlParams.toString();
+  return queryString ? `?${queryString}` : '';
+}
+
 export const projectService = {
   async getAll(params = {}) {
-    const urlParams = new URLSearchParams();
-    if (params.page) urlParams.append('page', params.page);
-    if (params.pageSize) urlParams.append('pageSize', params.pageSize);
-     
-    if (params.search) urlParams.append('search', params.search);
-    if (params.categoryId) urlParams.append('categoryId', params.categoryId);
-    if (params.status) urlParams.append('status', params.status);
-    if (params.visibility) urlParams.append('visibility', params.visibility);
-    if (params.skill) urlParams.append('skill', params.skill);
-    if (Array.isArray(params.skillNames)) {
-      params.skillNames.forEach(s => urlParams.append('skillNames', s));
-    }
+    const query = buildProjectQuery(params);
+    const result = await apiClient.get(`/api/projects${query}`);
+    return result.data;
+  },
 
-    // Advanced search parameters
-    if (params.fullTextSearch) urlParams.append('fullTextSearch', params.fullTextSearch);
-    if (params.searchIn) urlParams.append('searchIn', params.searchIn);
-    if (params.minBudget) urlParams.append('minBudget', params.minBudget);
-    if (params.maxBudget) urlParams.append('maxBudget', params.maxBudget);
-    if (params.sortBy) urlParams.append('sortBy', params.sortBy);
-    if (params.sortOrder) urlParams.append('sortOrder', params.sortOrder);
-
-    const queryString = urlParams.toString();
-    const result = await apiClient.get(`/api/projects${queryString ? `?${queryString}` : ''}`);
+  async getMyProjects(params = {}) {
+    const query = buildProjectQuery(params);
+    const result = await apiClient.get(`/api/projects/my-projects${query}`);
     return result.data;
   },
 
@@ -46,5 +58,7 @@ export const projectService = {
   async delete(id) {
     const result = await apiClient.delete(`/api/projects/${id}`);
     return result.data;
-  }
+  },
 };
+
+export default projectService;
