@@ -58,6 +58,28 @@ namespace LabCourse2.API.Controllers
             var result = await _proposalService.RejectAsync(id);
             return ToActionResult(result);
         }
+        [HttpGet("export")]
+        public async Task<IActionResult> Export([FromQuery] ProposalQueryParams query, [FromQuery] string format = "csv")
+        {
+            var result = await _proposalService.ExportProposalsAsync(query, format);
+
+            if (!result.IsSuccess)
+                return ToActionResult(result);
+
+            var fileResult = result.Data;
+
+            return File(fileResult.Content, fileResult.ContentType, fileResult.FileName);
+        }
+
+        [HttpPost("import")]
+        public async Task<IActionResult> Import([FromForm] IFormFile file, [FromForm] string format = "csv")
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Please upload a file.");
+
+            var result = await _proposalService.ImportProposalsAsync(file, format);
+            return ToActionResult(result);
+        }
 
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)

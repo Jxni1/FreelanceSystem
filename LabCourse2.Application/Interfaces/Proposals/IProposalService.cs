@@ -1,6 +1,9 @@
 using LabCourse2.Application.Common;
+using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.DTOs.Contracts;
 using LabCourse2.Application.DTOs.Proposals;
+using LabCourse2.Application.DTOs.Users;
+using Microsoft.AspNetCore.Http;
 
 namespace LabCourse2.Application.Interfaces.Proposals
 {
@@ -12,5 +15,8 @@ namespace LabCourse2.Application.Interfaces.Proposals
         Task<Result<ContractResponse>> AcceptAsync(Guid proposalId);
         Task<Result<ProposalResponse>> RejectAsync(Guid proposalId);
         Task<Result<bool>> DeleteAsync(Guid id);
+
+        Task<Result<FileExportResultDto>> ExportProposalsAsync(ProposalQueryParams query, string format);
+        Task<Result<ImportResultDto>> ImportProposalsAsync(IFormFile file, string format);
     }
 }
