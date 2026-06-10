@@ -70,5 +70,34 @@ namespace LabCourse2.API.Controllers
             var result = await _categoryService.DeleteAsync(id);
             return ToActionResult(result);
         }
+
+        [HttpGet("export")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Export(
+            [FromQuery] CategoryQueryParams query,
+            [FromQuery] string format = "csv")
+        {
+            var result = await _categoryService.ExportCategoriesAsync(query, format);
+
+            if (!result.IsSuccess)
+                return ToActionResult(result);
+
+            var fileResult = result.Data;
+
+            return File(fileResult.Content, fileResult.ContentType, fileResult.FileName);
+        }
+
+        [HttpPost("import")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Import(
+            [FromForm] IFormFile file,
+            [FromForm] string format = "csv")
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Please upload a file.");
+
+            var result = await _categoryService.ImportCategoriesAsync(file, format);
+            return ToActionResult(result);
+        }
     }
 }

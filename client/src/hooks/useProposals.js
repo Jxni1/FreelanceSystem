@@ -10,7 +10,12 @@ function extractMessage(err) {
 }
 
 export function useProposals() {
-  const [proposals, setProposals] = useState({ items: [], totalCount: 0, page: 1, pageSize: 10 });
+  const [proposals, setProposals] = useState({
+    items: [],
+    totalCount: 0,
+    page: 1,
+    pageSize: 10,
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -96,6 +101,26 @@ export function useProposals() {
     }
   }, []);
 
+  const exportProposals = useCallback(async (params = {}, format = 'csv') => {
+    try {
+      return await proposalService.exportProposals(params, format);
+    } catch (err) {
+      setError(extractMessage(err));
+      throw err;
+    }
+  }, []);
+
+  const importProposals = useCallback(async (file, format = 'csv') => {
+    try {
+      setError(null);
+      return await proposalService.importProposals(file, format);
+    } catch (err) {
+      const message = extractMessage(err);
+      setError(message);
+      throw err;
+    }
+  }, []);
+
   return {
     proposals,
     isLoading,
@@ -105,5 +130,7 @@ export function useProposals() {
     acceptProposal,
     rejectProposal,
     deleteProposal,
+    exportProposals,
+    importProposals,
   };
 }

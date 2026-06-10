@@ -8,6 +8,14 @@ using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Constants;
 using LabCourse2.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using CsvHelper;
+using LabCourse2.Application.DTOs.Auth;
+using LabCourse2.Application.DTOs.Users;
+using Microsoft.AspNetCore.Http;
+using OfficeOpenXml;
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
 using LabCourse2.Application.Utilities;
 
 namespace LabCourse2.Application.Services.Proposals
@@ -110,7 +118,122 @@ namespace LabCourse2.Application.Services.Proposals
 
             return Result<ProposalResponse>.Success(proposal.ToResponse());
         }
+        public async Task<Result<FileExportResultDto>> ExportProposalsAsync(ProposalQueryParams query, string format)
+        {
+            var freelancer = await GetFreelancerProfileAsync();
+            if (freelancer is null)
+                return Result<FileExportResultDto>.Forbidden("Only freelancers can export proposals.");
 
+            format = (format ?? "csv").Trim().ToLowerInvariant();
+
+            var q = _context.Proposals
+                .Include(p => p.Project)
+                .AsNoTracking()
+                .Where(p => p.FreelancerId == freelancer.FreelancerID)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query.Status))
+                q = q.Where(p => p.Status == query.Status);
+
+            if (query.ProjectId.HasValue)
+                q = q.Where(p => p.ProjectId == query.ProjectId.Value);
+
+            q = q.FilterByBidRange(query.MinBidAmount, query.MaxBidAmount);
+            q = q.FilterByDeliveryDays(query.MinDeliveryDays, query.MaxDeliveryDays);
+            q = q.SearchProposals(query.SearchMessage);
+            q = q.SortProposals(query.SortBy, query.SortOrder);
+
+            var items = await q
+                .Select(p => new ProposalExportDto
+                {
+                    ProposalId = p.ProposalId,
+                    ProjectId = p.ProjectId,
+                    ProjectTitle = p.Project.Title,
+                    Message = p.Message,
+                    BidAmount = p.BidAmount,
+                    DeliveryDays = p.DeliveryDays,
+                    Status = p.Status,
+                    CreatedAt = p.Created_at
+                })
+                .ToListAsync();
+
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+
+            if (format == "csv")
+            {
+                using var ms = new MemoryStream();
+                using (var writer = new StreamWriter(ms, Encoding.UTF8, leaveOpen: true))
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    csv.WriteRecords(items);
+                }
+
+                return Result<FileExportResultDto>.Success(new FileExportResultDto
+                {
+                    Content = ms.ToArray(),
+                    ContentType = "text/csv",
+                    FileName = $"proposals_{timestamp}.csv"
+                });
+            }
+
+            if (format == "json")
+            {
+                var bytes = JsonSerializer.SerializeToUtf8Bytes(items, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+                return Result<FileExportResultDto>.Success(new FileExportResultDto
+                {
+                    Content = bytes,
+                    ContentType = "application/json",
+                    FileName = $"proposals_{timestamp}.json"
+                });
+            }
+
+            if (format == "excel" || format == "xlsx")
+            {
+                ExcelPackage.License.SetNonCommercialOrganization("LabCourse2");
+
+                using var package = new ExcelPackage();
+                var sheet = package.Workbook.Worksheets.Add("Proposals");
+
+                sheet.Cells[1, 1].Value = "ProposalId";
+                sheet.Cells[1, 2].Value = "ProjectId";
+                sheet.Cells[1, 3].Value = "ProjectTitle";
+                sheet.Cells[1, 4].Value = "Message";
+                sheet.Cells[1, 5].Value = "BidAmount";
+                sheet.Cells[1, 6].Value = "DeliveryDays";
+                sheet.Cells[1, 7].Value = "Status";
+                sheet.Cells[1, 8].Value = "CreatedAt";
+
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var row = i + 2;
+                    var item = items[i];
+
+                    sheet.Cells[row, 1].Value = item.ProposalId.ToString();
+                    sheet.Cells[row, 2].Value = item.ProjectId.ToString();
+                    sheet.Cells[row, 3].Value = item.ProjectTitle;
+                    sheet.Cells[row, 4].Value = item.Message;
+                    sheet.Cells[row, 5].Value = item.BidAmount;
+                    sheet.Cells[row, 6].Value = item.DeliveryDays;
+                    sheet.Cells[row, 7].Value = item.Status;
+                    sheet.Cells[row, 8].Value = item.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
+                }
+
+                sheet.Cells.AutoFitColumns();
+
+                return Result<FileExportResultDto>.Success(new FileExportResultDto
+                {
+                    Content = package.GetAsByteArray(),
+                    ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    FileName = $"proposals_{timestamp}.xlsx"
+                });
+            }
+
+            return Result<FileExportResultDto>.Failure("Unsupported export format. Use csv, excel, or json.");
+        }
         public async Task<Result<ProposalResponse>> CreateAsync(CreateProposalRequest request)
         {
             var freelancer = await GetFreelancerProfileAsync();
@@ -318,6 +441,181 @@ namespace LabCourse2.Application.Services.Proposals
             await _context.SaveChangesAsync();
 
             return Result<bool>.Success(true);
+        }
+        public async Task<Result<ImportResultDto>> ImportProposalsAsync(IFormFile file, string format)
+        {
+            var freelancer = await GetFreelancerProfileAsync();
+            if (freelancer is null)
+                return Result<ImportResultDto>.Forbidden("Only freelancers can import proposals.");
+
+            if (file == null || file.Length == 0)
+                return Result<ImportResultDto>.Failure("No file was uploaded.");
+
+            format = (format ?? "csv").Trim().ToLowerInvariant();
+
+            List<ProposalImportDto> items;
+
+            try
+            {
+                if (format == "csv")
+                {
+                    using var stream = file.OpenReadStream();
+                    using var reader = new StreamReader(stream);
+                    using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+                    items = csv.GetRecords<ProposalImportDto>().ToList();
+                }
+                else if (format == "json")
+                {
+                    using var stream = file.OpenReadStream();
+                    items = await JsonSerializer.DeserializeAsync<List<ProposalImportDto>>(stream,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        }) ?? new List<ProposalImportDto>();
+                }
+                else if (format == "excel" || format == "xlsx")
+                {
+                    ExcelPackage.License.SetNonCommercialOrganization("LabCourse2");
+
+                    using var stream = file.OpenReadStream();
+                    using var package = new ExcelPackage(stream);
+                    var sheet = package.Workbook.Worksheets.FirstOrDefault();
+
+                    if (sheet == null || sheet.Dimension == null)
+                        return Result<ImportResultDto>.Failure("The Excel file is empty.");
+
+                    items = new List<ProposalImportDto>();
+
+                    for (int row = 2; row <= sheet.Dimension.End.Row; row++)
+                    {
+                        var projectIdValue = sheet.Cells[row, 2].Text?.Trim();
+                        var messageValue = sheet.Cells[row, 4].Text?.Trim();
+                        var bidAmountValue = sheet.Cells[row, 5].Text?.Trim();
+                        var deliveryDaysValue = sheet.Cells[row, 6].Text?.Trim();
+
+                        items.Add(new ProposalImportDto
+                        {
+                            ProjectId = Guid.TryParse(projectIdValue, out var projectId) ? projectId : Guid.Empty,
+                            Message = messageValue ?? string.Empty,
+                            BidAmount = decimal.TryParse(bidAmountValue, out var bidAmount) ? bidAmount : 0,
+                            DeliveryDays = int.TryParse(deliveryDaysValue, out var deliveryDays) ? deliveryDays : 0
+                        });
+                    }
+                }
+                else
+                {
+                    return Result<ImportResultDto>.Failure("Unsupported import format. Use csv, excel, or json.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return Result<ImportResultDto>.Failure($"Failed to read import file: {ex.Message}");
+            }
+
+            var result = new ImportResultDto
+            {
+                TotalRows = items.Count
+            };
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    if (item.ProjectId == Guid.Empty)
+                    {
+                        result.FailedRows++;
+                        result.Errors.Add("ProjectId is required.");
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(item.Message))
+                    {
+                        result.FailedRows++;
+                        result.Errors.Add($"Message is required for project '{item.ProjectId}'.");
+                        continue;
+                    }
+
+                    if (item.BidAmount <= 0)
+                    {
+                        result.FailedRows++;
+                        result.Errors.Add($"BidAmount must be greater than 0 for project '{item.ProjectId}'.");
+                        continue;
+                    }
+
+                    if (item.DeliveryDays <= 0)
+                    {
+                        result.FailedRows++;
+                        result.Errors.Add($"DeliveryDays must be greater than 0 for project '{item.ProjectId}'.");
+                        continue;
+                    }
+
+                    var project = await _context.Projects
+                        .Include(p => p.Client)
+                            .ThenInclude(c => c.User)
+                        .FirstOrDefaultAsync(p => p.ProjectID == item.ProjectId);
+
+                    if (project is null)
+                    {
+                        result.FailedRows++;
+                        result.Errors.Add($"Project with ID '{item.ProjectId}' was not found.");
+                        continue;
+                    }
+
+                    if (project.Status != ProjectStatus.Open)
+                    {
+                        result.FailedRows++;
+                        result.Errors.Add($"Project '{project.Title}' is not open.");
+                        continue;
+                    }
+
+                    var alreadyProposed = await _context.Proposals.AnyAsync(p =>
+                        p.ProjectId == item.ProjectId &&
+                        p.FreelancerId == freelancer.FreelancerID &&
+                        p.Status == ProposalStatus.Pending);
+
+                    if (alreadyProposed)
+                    {
+                        result.FailedRows++;
+                        result.Errors.Add($"You already have a pending proposal for project '{project.Title}'.");
+                        continue;
+                    }
+
+                    var proposal = new Proposal
+                    {
+                        ProposalId = Guid.NewGuid(),
+                        ProjectId = item.ProjectId,
+                        FreelancerId = freelancer.FreelancerID,
+                        Message = item.Message.Trim(),
+                        BidAmount = item.BidAmount,
+                        DeliveryDays = item.DeliveryDays,
+                        Status = ProposalStatus.Pending,
+                        Created_at = DateTime.UtcNow
+                    };
+
+                    await _context.Proposals.AddAsync(proposal);
+                    result.ImportedRows++;
+
+                    if (project.Client?.User?.UserID != null)
+                    {
+                        await _notificationCreator.CreateAsync(
+                            project.Client.User.UserID,
+                            "ProposalSubmitted",
+                            "New proposal received",
+                            $"A new proposal was submitted for your project \"{project.Title}\".");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.FailedRows++;
+                    result.Errors.Add(ex.Message);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await _cacheService.RemoveByPatternAsync("proposals_*");
+
+            return Result<ImportResultDto>.Success(result);
         }
     }
 }
