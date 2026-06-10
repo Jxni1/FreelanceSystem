@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using LabCourse2.Application.DTOs.Reports;
 using LabCourse2.Application.Interfaces.Reports;
+using LabCourse2.API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -81,7 +82,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost("import")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("reports.moderate")]
         public async Task<IActionResult> Import([FromForm] IFormFile file, [FromForm] string format = "csv")
         {
             if (file == null || file.Length == 0)

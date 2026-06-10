@@ -1,11 +1,12 @@
 using LabCourse2.Application.DTOs.AuditLogs;
 using LabCourse2.Application.Interfaces;
+using LabCourse2.API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LabCourse2.API.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [HasPermission("auditlogs.view")]
     public class AuditLogsController : BaseApiController
     {
         private readonly IAuditLogService _auditLogService;

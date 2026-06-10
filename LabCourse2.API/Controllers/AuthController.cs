@@ -1,5 +1,6 @@
 using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.Interfaces;
+using LabCourse2.Domain.Constants;
 using LabCourse2.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,172 +13,175 @@ namespace LabCourse2.API.Controllers
     public class AuthController : BaseApiController
     {
         private readonly IAuthService _authService;
-        private readonly ITokenService _tokenService;
+        private readonly IWebHostEnvironment _env;
         private readonly LabCourse2.Infrastructure.Services.IAuthorizationService _authorizationService;
 
         public AuthController(
             IAuthService authService,
-            ITokenService tokenService,
+            IWebHostEnvironment env,
             LabCourse2.Infrastructure.Services.IAuthorizationService authorizationService)
         {
             _authService = authService;
-            _tokenService = tokenService;
+            _env = env;
             _authorizationService = authorizationService;
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            var result = await _authService.RegisterAsync(request);
+            var result = await _authService.RegisterAsync(request, UserAgent, RemoteIp);
             if (!result.Success)
-                return BadRequest(new { errors = result.Errors });
-            return Ok(result);
+                return BadRequest(new { success = false, errors = result.Errors });
+
+            SetRefreshTokenCookie(result.RefreshToken!);
+            return StatusCode(StatusCodes.Status201Created, new
+            {
+                success = true,
+                accessToken = result.AccessToken
+            });
         }
 
         [HttpPost("register-admin")]
+        [Authorize(Roles = RoleConstants.Admin)]
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterRequest request)
         {
-            var result = await _authService.RegisterAdminAsync(request);
+            var result = await _authService.RegisterAdminAsync(request, UserAgent, RemoteIp);
             if (!result.Success)
-                return BadRequest(new { errors = result.Errors });
-            return Ok(result);
+                return BadRequest(new { success = false, errors = result.Errors });
+
+            return StatusCode(StatusCodes.Status201Created, new
+            {
+                success = true,
+                userId = result.UserId
+            });
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var result = await _authService.LoginAsync(request);
+            var result = await _authService.LoginAsync(request, UserAgent, RemoteIp);
             if (!result.Success)
-                return BadRequest(new { errors = result.Errors });
-            return Ok(result);
+                return Unauthorized(new { success = false, errors = result.Errors });
+
+            SetRefreshTokenCookie(result.RefreshToken!);
+            return Ok(new
+            {
+                success = true,
+                accessToken = result.AccessToken
+            });
         }
 
         [HttpPost("refresh")]
+        [AllowAnonymous]
         public async Task<IActionResult> Refresh()
         {
-            try
-            {
-                var refreshToken = Request.Cookies["refreshToken"];
-                if (string.IsNullOrEmpty(refreshToken))
-                    return Unauthorized(new { message = "No refresh token found" });
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshToken))
+                return Unauthorized(new { success = false, errors = new[] { "No refresh token provided." } });
 
-                var result = await _authService.RefreshTokenAsync(refreshToken);
-                if (!result.Success)
-                    return Unauthorized(new { errors = result.Errors });
-                return Ok(result);
-            }
-            catch (Exception ex)
+            var result = await _authService.RefreshTokenAsync(refreshToken, UserAgent, RemoteIp);
+
+            if (result.IsTheftDetected)
             {
-                return StatusCode(500, new { message = "Error refreshing token", error = ex.Message });
+                ClearRefreshTokenCookie();
+                return Unauthorized(new { success = false, isTheftDetected = true });
             }
+
+            if (!result.Success)
+            {
+                ClearRefreshTokenCookie();
+                return Unauthorized(new { success = false, errors = result.Errors });
+            }
+
+            SetRefreshTokenCookie(result.RefreshToken!);
+            return Ok(new
+            {
+                success = true,
+                accessToken = result.AccessToken
+            });
         }
 
         [HttpGet("me")]
         [Authorize]
         public async Task<IActionResult> GetCurrentUser()
         {
-            try
-            {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                    ?? User.FindFirst("sub")?.Value;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value;
 
-                if (!Guid.TryParse(userIdClaim, out var userId))
-                {
-                    return Unauthorized(new { message = "Invalid user ID in token" });
-                }
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized(new { message = "Invalid user ID in token" });
 
-                var result = await _authService.GetUserProfileAsync(userId);
-                if (result == null)
-                    return NotFound(new { message = "User not found" });
+            var profile = await _authService.GetUserProfileAsync(userId);
+            if (profile is null)
+                return NotFound(new { message = "User not found" });
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error retrieving user", error = ex.Message });
-            }
+            return Ok(profile);
         }
 
         [HttpPost("revoke")]
-        [Authorize]
+        [AllowAnonymous]
         public async Task<IActionResult> Revoke()
         {
-            try
-            {
-                var refreshToken = Request.Cookies["refreshToken"];
-                if (string.IsNullOrEmpty(refreshToken))
-                    return Unauthorized(new { message = "No refresh token found" });
+            var refreshToken = Request.Cookies["refreshToken"];
+            ClearRefreshTokenCookie();
 
-                var result = await _authService.RevokeTokenAsync(refreshToken);
-                if (!result.Success)
-                    return BadRequest(new { errors = result.Errors });
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error revoking token", error = ex.Message });
-            }
+            if (string.IsNullOrEmpty(refreshToken))
+                return NoContent();
+
+            await _authService.RevokeTokenAsync(refreshToken);
+            return NoContent();
         }
 
         [HttpGet("my-permissions")]
         [Authorize]
         public async Task<IActionResult> GetMyPermissions()
         {
-            try
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value;
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized(new { message = "Invalid user ID in token" });
+
+            var roles = (await _authorizationService.GetUserRolesAsync(userId)).ToList();
+            var permissions = (await _authorizationService.GetUserPermissionsAsync(userId)).ToList();
+
+            return Ok(new
             {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                    ?? User.FindFirst("sub")?.Value;
-
-                if (!Guid.TryParse(userIdClaim, out var userId))
-                {
-                    return Unauthorized(new { message = "Invalid user ID in token" });
-                }
-
-                var roles = (await _authorizationService.GetUserRolesAsync(userId)).ToList();
-                var permissions = (await _authorizationService.GetUserPermissionsAsync(userId)).ToList();
-
-                return Ok(new
-                {
-                    roles,
-                    permissions
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error retrieving permissions", error = ex.Message });
-            }
+                roles,
+                permissions
+            });
         }
 
-        
-        [HttpGet("debug/decode-token")]
-        [Authorize]
-        public IActionResult DecodeToken()
+        private void SetRefreshTokenCookie(string token)
         {
-            try
+            var isDev = _env.IsDevelopment();
+            Response.Cookies.Append("refreshToken", token, new CookieOptions
             {
-                var authHeader = Request.Headers["Authorization"].ToString();
-                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
-                    return BadRequest("No Bearer token found");
-
-                var token = authHeader.Substring("Bearer ".Length);
-                
-                
-                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-                var jwtToken = handler.ReadJwtToken(token);
-
-                var claims = jwtToken.Claims.Select(c => new { c.Type, c.Value }).ToList();
-
-                return Ok(new
-                {
-                    tokenExpiry = jwtToken.ValidTo,
-                    claims = claims,
-                    roleClaimsFound = jwtToken.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList()
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+                HttpOnly = true,
+                Secure = true,
+                SameSite = isDev ? SameSiteMode.None : SameSiteMode.Strict,
+                Path = "/api/auth",
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            });
         }
+
+        private void ClearRefreshTokenCookie()
+        {
+            var isDev = _env.IsDevelopment();
+            Response.Cookies.Delete("refreshToken", new CookieOptions
+            {
+                Path = "/api/auth",
+                Secure = true,
+                SameSite = isDev ? SameSiteMode.None : SameSiteMode.Strict,
+            });
+        }
+
+        private string? UserAgent =>
+            Request.Headers.UserAgent.FirstOrDefault();
+
+        private string? RemoteIp =>
+            HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 }

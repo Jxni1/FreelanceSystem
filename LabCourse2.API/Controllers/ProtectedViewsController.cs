@@ -1,5 +1,6 @@
 using LabCourse2.Application.DTOs.ProtectedViews;
 using LabCourse2.Application.Interfaces.ProtectedViews;
+using LabCourse2.API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -38,7 +39,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpGet("most-viewed")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("protectedviews.manage")]
         public async Task<IActionResult> GetMostViewed([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             var result = await _service.GetMostViewedProjectsAsync(page, pageSize);
@@ -46,7 +47,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpGet("suspicious")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("protectedviews.manage")]
         public async Task<IActionResult> GetSuspiciousActivity([FromQuery] ProtectedViewQueryParams query)
         {
             var result = await _service.GetSuspiciousActivityAsync(query);

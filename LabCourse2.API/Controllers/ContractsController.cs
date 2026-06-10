@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using LabCourse2.Application.DTOs.Contracts;
 using LabCourse2.Application.Interfaces.Contracts;
+using LabCourse2.API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,12 +24,8 @@ namespace LabCourse2.API.Controllers
             _updateValidator = updateValidator;
         }
 
-        /// <summary>
-        /// Superadmin only - gets all contracts with filtering
-        /// Use role-based authorization [Authorize(Roles = "SuperAdmin")]
-        /// </summary>
         [HttpGet("all")]
-        [Authorize(Roles = "SuperAdmin")]
+        [HasPermission("contracts.manage")]
         public async Task<IActionResult> GetAll([FromQuery] ContractQueryParams query)
         {
             var result = await _contractService.GetAllAsync(query);
@@ -91,7 +88,7 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
         [HttpGet("export")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("contracts.manage")]
         public async Task<IActionResult> ExportContracts([FromQuery] ContractQueryParams query, [FromQuery] string format = "csv")
         {
             var result = await _contractService.ExportContractsAsync(query, format);
@@ -103,7 +100,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost("import")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("contracts.manage")]
         public async Task<IActionResult> ImportContracts([FromForm] IFormFile file, [FromQuery] string format = "csv")
         {
             if (file == null || file.Length == 0)

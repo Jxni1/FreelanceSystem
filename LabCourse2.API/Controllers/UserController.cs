@@ -1,6 +1,7 @@
 ﻿using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.DTOs.Users;
 using LabCourse2.Application.Interfaces.Users;
+using LabCourse2.API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,7 +29,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpGet("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("users.manage")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _userService.GetUserByIdAsync(id);
@@ -70,7 +71,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("users.manage")]
         public async Task<IActionResult> GetAllUsers([FromQuery] UserQueryParams query)
         {
             var result = await _userService.GetAllUsersAsync(query);
@@ -78,7 +79,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("users.manage")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserByAdminRequest request)
         {
             if (request is null)
@@ -89,7 +90,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("users.manage")]
         public async Task<IActionResult> UpdateUser(Guid id, [FromBody] AdminUpdateUserRequest request)
         {
             if (request is null)
@@ -105,7 +106,7 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
         [HttpGet("export")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("users.manage")]
         public async Task<IActionResult> ExportUsers([FromQuery] UserQueryParams query, [FromQuery] string format = "csv")
         {
             var result = await _userService.ExportUsersAsync(query, format);
@@ -117,7 +118,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost("import")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("users.manage")]
         public async Task<IActionResult> ImportUsers([FromForm] IFormFile file, [FromQuery] string format = "csv")
         {
             if (file == null || file.Length == 0)
@@ -127,7 +128,7 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("users.manage")]
         public async Task<IActionResult> DeleteUser(Guid id)
         {
             var result = await _userService.AdminDeleteUserAsync(id);

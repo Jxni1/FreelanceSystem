@@ -1,6 +1,7 @@
 using FluentValidation;
 using LabCourse2.Application.DTOs.Categories;
 using LabCourse2.Application.Interfaces.Categories;
+using LabCourse2.API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -40,7 +41,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("categories.manage")]
         public async Task<IActionResult> Create([FromBody] CreateCategoryRequest request)
         {
             var validation = await _createValidator.ValidateAsync(request);
@@ -52,7 +53,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("categories.manage")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryRequest request)
         {
             var validation = await _updateValidator.ValidateAsync(request);
@@ -64,7 +65,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("categories.manage")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _categoryService.DeleteAsync(id);
@@ -72,7 +73,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpGet("export")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("categories.manage")]
         public async Task<IActionResult> Export(
             [FromQuery] CategoryQueryParams query,
             [FromQuery] string format = "csv")
@@ -88,7 +89,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost("import")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("categories.manage")]
         public async Task<IActionResult> Import(
             [FromForm] IFormFile file,
             [FromForm] string format = "csv")

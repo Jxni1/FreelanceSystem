@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { freelancerService } from '../../lib/freelancerService';
+import { useAuth } from '../../context/AuthContext';
 
 
 export default function RecommendedProjectsTestPage() {
+  const { accessToken } = useAuth();
   const [freelancers, setFreelancers] = useState([]);
   const [freelancerId, setFreelancerId] = useState('');
   const [projects, setProjects] = useState([]);
@@ -89,10 +91,7 @@ export default function RecommendedProjectsTestPage() {
       setError('');
       setProjects([]);
 
-      const token =
-        localStorage.getItem('token') ||
-        localStorage.getItem('accessToken') ||
-        localStorage.getItem('jwtToken');
+      const token = accessToken;
 
       const url = `https://localhost:7244/api/ai-recommendations/${freelancerId}`;
 

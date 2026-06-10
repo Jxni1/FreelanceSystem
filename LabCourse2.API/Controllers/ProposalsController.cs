@@ -1,4 +1,5 @@
 using FluentValidation;
+using LabCourse2.API.Authorization;
 using LabCourse2.Application.DTOs.Proposals;
 using LabCourse2.Application.Interfaces.Proposals;
 using Microsoft.AspNetCore.Authorization;
@@ -35,6 +36,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost]
+        [HasPermission("proposals.submit")]
         public async Task<IActionResult> Create([FromBody] CreateProposalRequest request)
         {
             var validation = await _createValidator.ValidateAsync(request);
@@ -46,6 +48,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPatch("{id:guid}/accept")]
+        [HasPermission("proposals.review")]
         public async Task<IActionResult> Accept(Guid id)
         {
             var result = await _proposalService.AcceptAsync(id);
@@ -53,6 +56,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPatch("{id:guid}/reject")]
+        [HasPermission("proposals.review")]
         public async Task<IActionResult> Reject(Guid id)
         {
             var result = await _proposalService.RejectAsync(id);

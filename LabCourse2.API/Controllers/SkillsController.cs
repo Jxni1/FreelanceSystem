@@ -1,6 +1,7 @@
 using FluentValidation;
 using LabCourse2.Application.DTOs.Skills;
 using LabCourse2.Application.Interfaces.Skills;
+using LabCourse2.API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -40,7 +41,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("skills.manage")]
         public async Task<IActionResult> Create([FromBody] CreateSkillRequest request)
         {
             var validation = await _createValidator.ValidateAsync(request);
@@ -52,7 +53,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("skills.manage")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSkillRequest request)
         {
             var validation = await _updateValidator.ValidateAsync(request);
@@ -64,7 +65,7 @@ namespace LabCourse2.API.Controllers
         }
 
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [HasPermission("skills.manage")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _skillService.DeleteAsync(id);

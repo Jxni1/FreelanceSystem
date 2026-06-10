@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using LabCourse2.API.Authorization;
 using LabCourse2.Application.DTOs.Projects;
 using LabCourse2.Application.Interfaces.Projects;
 using Microsoft.AspNetCore.Authorization;
@@ -41,7 +42,7 @@ namespace LabCourse2.API.Controllers
 
        
         [HttpPost]
-        [Authorize(Roles = "Client")]
+        [HasPermission("projects.create")]
         public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
         {
             var validation = await _createValidator.ValidateAsync(request);
@@ -54,7 +55,7 @@ namespace LabCourse2.API.Controllers
 
         
         [HttpPut("{id:guid}")]
-        [Authorize(Roles = "Client")]
+        [HasPermission("projects.update")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request)
         {
             var validation = await _updateValidator.ValidateAsync(request);
@@ -67,7 +68,7 @@ namespace LabCourse2.API.Controllers
 
         
         [HttpDelete("{id:guid}")]
-        [Authorize(Roles = "Client")]
+        [HasPermission("projects.delete")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _projectService.DeleteAsync(id);

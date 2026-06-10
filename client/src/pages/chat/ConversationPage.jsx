@@ -184,11 +184,7 @@ export default function ConversationPage() {
   }, [conversation, currentUserId]);
 
   useEffect(() => {
-    const token =
-      accessToken ||
-      localStorage.getItem('accessToken') ||
-      localStorage.getItem('token') ||
-      '';
+    const token = accessToken || '';
 
     if (!token) {
       setConnectionStatus('Connection failed');
