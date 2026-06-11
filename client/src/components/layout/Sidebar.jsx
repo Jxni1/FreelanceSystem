@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   LayoutGrid,
   Briefcase,
@@ -26,7 +26,6 @@ import { useAuthorization } from '../../hooks/useAuthorization';
 import { useProfileContext } from '../../context/ProfileContext';
 import { DEMO_NAV_BADGES } from '../../data/dashboardDemoData';
 import { Avatar } from '../ui/Avatar';
-import { resolveUploadUrl } from '../../lib/media';
 
 const NAV = {
   client: {
@@ -47,8 +46,7 @@ const NAV = {
       {
         label: 'Account',
         items: [
-          { label: 'Billing', icon: CreditCard, to: '/spending' },
-          { label: 'Reports', icon: BarChart2, disabled: true },
+          { label: 'Billing', icon: CreditCard, to: '/spending' }, 
         ],
       },
     ],
@@ -63,6 +61,7 @@ const NAV = {
           { label: 'Dashboard', icon: LayoutGrid, to: '/home', end: true },
           { label: 'Find work', icon: Search, to: '/discover' },
           { label: 'My proposals', icon: Send, to: '/my-work', badgeKey: 'proposals' },
+          { label: 'Portfolio', icon: BarChart2, to: '/portfolio' },
           { label: 'Contracts', icon: FileText, to: '/contracts' },
           { label: 'Messages', icon: MessageSquare, to: '/inbox', badgeKey: 'inbox' },
         ],
@@ -97,8 +96,6 @@ const NAV = {
           { label: 'Audit logs', icon: ScrollText, to: '/admin/audit-logs' },
 
           { label: 'Protected views', icon: Eye, to: '/admin/protected-views' },
-          { label: 'Disputes', icon: Flag, disabled: true, badgeKey: 'disputes' },
-          { label: 'Payouts', icon: Banknote, disabled: true },
           { label: 'Skills', icon: Tag, to: '/admin/skills' },
         ],
       },
@@ -206,9 +203,9 @@ export function Sidebar({ open = false, onClose, inboxUnread = 0 }) {
       >
         <div className="flex items-center gap-2.5 px-5 py-5">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-base font-bold text-white">
-            K
+            FS
           </span>
-          <span className="text-lg font-bold tracking-tight text-slate-900">Knack</span>
+          <span className="text-lg font-bold tracking-tight text-slate-900">Freelancer System</span>
         </div>
 
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-4">
@@ -248,18 +245,11 @@ export function Sidebar({ open = false, onClose, inboxUnread = 0 }) {
           </NavLink>
 
           <div className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2">
-            <Link
-              to="/profile"
-              onClick={onClose}
-              aria-label="Your profile"
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-200"
-            >
-              <Avatar name={displayName} src={resolveUploadUrl(profile?.profilePhoto)} size="sm" />
-              <div className="min-w-0 flex-1 text-left">
-                <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
-                <p className="truncate text-xs text-slate-500">{subtitle}</p>
-              </div>
-            </Link>
+            <Avatar name={displayName} size="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+              <p className="truncate text-xs text-slate-500">{subtitle}</p>
+            </div>
 
             <button
               type="button"

@@ -5,8 +5,6 @@ const PAGE_SIZE = 20;
 
 const ACTION_OPTIONS = [
   'PaymentHeld', 'PaymentReleased', 'PaymentFailed',
-  'MilestoneSubmitted', 'MilestoneApproved', 'MilestoneRejected',
-  'ContractCancelled',
   'UserRoleChanged',
 ];
 
