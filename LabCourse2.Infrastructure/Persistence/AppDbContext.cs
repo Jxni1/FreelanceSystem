@@ -11,7 +11,6 @@ namespace LabCourse2.Infrastructure.Persistence
         public DbSet<User> Users => Set<User>();
         public DbSet<FreelancerProfile> FreelancerProfiles => Set<FreelancerProfile>();
         public DbSet<ClientProfile> ClientProfiles => Set<ClientProfile>();
-        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<Role> Roles => Set<Role>();
         public DbSet<Permission> Permissions => Set<Permission>();
         public DbSet<UserRole> UserRoles => Set<UserRole>();
@@ -144,15 +143,6 @@ namespace LabCourse2.Infrastructure.Persistence
                 e.HasOne(rp => rp.Permission)
                  .WithMany(p => p.RolePermissions)
                  .HasForeignKey(rp => rp.PermissionsID)
-                 .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            modelBuilder.Entity<RefreshToken>(e =>
-            {
-                e.HasKey(r => r.TokenID);
-                e.HasOne(r => r.User)
-                 .WithMany(u => u.RefreshTokens)
-                 .HasForeignKey(r => r.UserID)
                  .OnDelete(DeleteBehavior.Cascade);
             });
 

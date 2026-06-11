@@ -36,6 +36,11 @@ export const milestoneService = {
     return result.data;
   },
 
+  async reject(id, reason) {
+    const result = await apiClient.patch(`/api/milestones/${id}/reject`, { reason });
+    return result.data;
+  },
+
   async delete(id) {
     const result = await apiClient.delete(`/api/milestones/${id}`);
     return result.data;

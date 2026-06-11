@@ -36,7 +36,7 @@ export default function MilestoneSubmitSection({ milestoneId, onSubmitted }) {
         return;
       }
 
-      uploadedFileIds = uploadResult.data.map((file) => file.FilesID || file.filesID);
+      uploadedFileIds = uploadResult.data.map((file) => file.data?.filesID ?? file.data?.FilesID);
     }
 
     const submitResult = await submitMilestone(milestoneId, {

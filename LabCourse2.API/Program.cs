@@ -108,6 +108,7 @@ builder.Services.AddScoped<IAIMatchingExportService, AIMatchingExportService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IRefreshTokenStore, RedisRefreshTokenStore>();
 
 builder.Services.AddScoped<LabCourse2.Infrastructure.Services.IAuthorizationService, LabCourse2.Infrastructure.Services.AuthorizationService>();
 builder.Services.AddScoped<LabCourse2.Infrastructure.Services.IRoleManagementService, LabCourse2.Infrastructure.Services.RoleManagementService>();

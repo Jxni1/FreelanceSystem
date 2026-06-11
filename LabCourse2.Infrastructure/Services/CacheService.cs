@@ -159,4 +159,61 @@ public class CacheService : ICacheService
             _logger.LogError($"[CACHE] PATTERN REMOVE ERROR: {pattern} - {ex.Message}");
         }
     }
+
+    private const string IncrementIfExistsScript =
+        "if redis.call('EXISTS', KEYS[1]) == 1 then return redis.call('INCRBY', KEYS[1], ARGV[1]) else return -1 end";
+
+    public async Task<long?> GetCounterAsync(string key)
+    {
+        try
+        {
+            var db = _connectionMultiplexer.GetDatabase();
+            var value = await db.StringGetAsync($"{_instanceName}{key}");
+
+            if (value.HasValue && long.TryParse((string?)value, out var parsed))
+            {
+                _logger.LogInformation($"[CACHE] COUNTER HIT: {key} = {parsed}");
+                return parsed;
+            }
+
+            _logger.LogInformation($"[CACHE] COUNTER MISS: {key}");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"[CACHE] COUNTER GET ERROR: {key} - {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task SetCounterAsync(string key, long value, TimeSpan? expiration = null)
+    {
+        try
+        {
+            var db = _connectionMultiplexer.GetDatabase();
+            await db.StringSetAsync($"{_instanceName}{key}", value, expiration ?? TimeSpan.FromHours(1));
+            _logger.LogInformation($"[CACHE] COUNTER SET: {key} = {value}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"[CACHE] COUNTER SET ERROR: {key} - {ex.Message}");
+        }
+    }
+
+    public async Task AdjustCounterIfExistsAsync(string key, long delta)
+    {
+        try
+        {
+            var db = _connectionMultiplexer.GetDatabase();
+            await db.ScriptEvaluateAsync(
+                IncrementIfExistsScript,
+                new RedisKey[] { $"{_instanceName}{key}" },
+                new RedisValue[] { delta });
+            _logger.LogInformation($"[CACHE] COUNTER ADJUST: {key} by {delta}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"[CACHE] COUNTER ADJUST ERROR: {key} - {ex.Message}");
+        }
+    }
 }

@@ -5,6 +5,9 @@ import { useProjects } from '../../hooks/useProjects';
 import { apiClient } from '../../lib/apiClient';
 import { useCategories } from '../../hooks/useCategories';
 
+// Sentinel for the "All jobs" filter — shows every open project, ignoring skills.
+const ALL_JOBS = '__all__';
+
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -39,29 +42,30 @@ export default function FreelancerDiscoverPage() {
 
   useEffect(() => {
     if (!skillsLoaded) return;
-    const params = { page, pageSize: 12, status: 'Open', search: search || undefined, categoryId: activeCategory || undefined };
-    if (activeSkill) {
-      params.skillNames = [activeSkill];
-    } else if (mySkills.length > 0) {
-      params.skillNames = mySkills;
-    }
-    fetchProjects(params);
+    fetchProjects(buildParams(page));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skillsLoaded, page, activeSkill, search, activeCategory, mySkills, fetchProjects]);
 
   useEffect(() => {
     fetchCategories({ pageSize: 100 });
   }, [fetchCategories]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setPage(1);
-    const params = { page: 1, pageSize: 12, status: 'Open', search: search || undefined, categoryId: activeCategory || undefined };
-    if (activeSkill) {
+  const buildParams = (targetPage) => {
+    const params = { page: targetPage, pageSize: 12, status: 'Open', search: search || undefined, categoryId: activeCategory || undefined };
+    if (activeSkill === ALL_JOBS) {
+      // No skill filter — show all open jobs.
+    } else if (activeSkill) {
       params.skillNames = [activeSkill];
     } else if (mySkills.length > 0) {
       params.skillNames = mySkills;
     }
-    fetchProjects(params);
+    return params;
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setPage(1);
+    fetchProjects(buildParams(1));
   };
 
   const items = projects?.items ?? [];
@@ -117,6 +121,16 @@ export default function FreelancerDiscoverPage() {
             }`}
           >
             Best matches
+          </button>
+          <button
+            onClick={() => { setActiveSkill(ALL_JOBS); setPage(1); }}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeSkill === ALL_JOBS
+                ? 'bg-slate-900 text-white'
+                : 'bg-white border border-slate-300 text-slate-600 hover:border-slate-400'
+            }`}
+          >
+            All jobs
           </button>
           {mySkills.map(skill => (
             <button

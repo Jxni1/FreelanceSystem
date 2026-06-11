@@ -42,6 +42,9 @@ namespace LabCourse2.Infrastructure.Persistence.Configurations
             builder.Property(m => m.Submission_Note)
                 .HasMaxLength(2000);
 
+            builder.Property(m => m.Rejection_Note)
+                .HasMaxLength(2000);
+
             builder.Property(m => m.ContractID)
                 .IsRequired();
 

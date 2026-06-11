@@ -96,6 +96,13 @@ namespace LabCourse2.API.Controllers
             return ToActionResult(result);
         }
 
+        [HttpPatch("{id:guid}/reject")]
+        public async Task<IActionResult> Reject(Guid id, [FromBody] RejectMilestoneRequest? request)
+        {
+            var result = await _milestoneService.RejectAsync(id, request ?? new RejectMilestoneRequest());
+            return ToActionResult(result);
+        }
+
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {

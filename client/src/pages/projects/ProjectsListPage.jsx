@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProjects } from '../../hooks/useProjects';
 import { useAuthorization } from '../../hooks/useAuthorization';
@@ -6,10 +6,27 @@ import { apiClient } from '../../lib/apiClient';
 import ProjectSearchFilter from '../../components/SearchFilters/ProjectSearchFilter';
 
 export default function ProjectsListPage() {
-  const { projects, isLoading, error, fetchProjects, deleteProject } = useProjects();
+  const {
+    projects,
+    myProjects,
+    isLoading,
+    isMyProjectsLoading,
+    error,
+    fetchProjects,
+    fetchMyProjects,
+    deleteProject,
+  } = useProjects();
   const { isClient } = useAuthorization();
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({});
+
+  const list = isClient ? myProjects : projects;
+  const loading = isClient ? isMyProjectsLoading : isLoading;
+
+  const loadProjects = useCallback(
+    (params) => (isClient ? fetchMyProjects(params) : fetchProjects(params)),
+    [isClient, fetchMyProjects, fetchProjects],
+  );
 
   // reporting state
   const [reportingProjectId, setReportingProjectId] = useState(null);
@@ -23,13 +40,13 @@ export default function ProjectsListPage() {
       pageSize: 10,
       ...filters,
     };
-    fetchProjects(params);
-  }, [fetchProjects, page, filters]);
+    loadProjects(params);
+  }, [loadProjects, page, filters]);
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       await deleteProject(id);
-      fetchProjects({ page, pageSize: 10, ...filters });
+      loadProjects({ page, pageSize: 10, ...filters });
     }
   };
 
@@ -101,7 +118,7 @@ export default function ProjectsListPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-            Projects
+            {isClient ? 'My job posts' : 'Projects'}
           </h1>
         </div>
         {isClient && (
@@ -123,13 +140,13 @@ export default function ProjectsListPage() {
         </div>
       )}
 
-      {isLoading && projects.items.length === 0 ? (
+      {loading && list.items.length === 0 ? (
         <div className="p-8 text-center text-slate-500">Loading projects...</div>
-      ) : projects.items.length === 0 ? (
+      ) : list.items.length === 0 ? (
         <div className="text-center py-16 text-slate-400">No projects found.</div>
       ) : (
         <div className="space-y-4">
-          {projects.items.map((project) => (
+          {list.items.map((project) => (
             <div
               key={project.projectID}
               className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow"
@@ -182,7 +199,7 @@ export default function ProjectsListPage() {
         </div>
       )}
 
-      {projects.totalCount > projects.pageSize && (
+      {list.totalCount > list.pageSize && (
         <div className="flex justify-center gap-2 mt-6">
           <button
             disabled={page === 1}
@@ -193,7 +210,7 @@ export default function ProjectsListPage() {
           </button>
           <span className="px-4 py-2 text-slate-600">Page {page}</span>
           <button
-            disabled={page * projects.pageSize >= projects.totalCount}
+            disabled={page * list.pageSize >= list.totalCount}
             onClick={() => setPage(p => p + 1)}
             className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 disabled:opacity-40"
           >

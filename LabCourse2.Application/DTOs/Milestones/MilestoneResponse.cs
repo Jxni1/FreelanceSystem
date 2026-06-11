@@ -15,6 +15,7 @@ namespace LabCourse2.Application.DTOs.Milestones
         public DateTime? ApprovedAt { get; init; }
         public bool IsOverdue { get; init; }
         public string? SubmissionNote { get; init; }
+        public string? RejectionNote { get; init; }
         public int TotalDeliverables { get; init; }
         public int ApprovedDeliverables { get; init; }
         public bool AllDeliverablesApproved { get; init; }

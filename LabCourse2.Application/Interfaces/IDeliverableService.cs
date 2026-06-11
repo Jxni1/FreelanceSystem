@@ -22,7 +22,7 @@ namespace LabCourse2.Application.Interfaces.Deliverables
         
         Task<Result<DeliverableResponse>> ApproveAsync(Guid deliverableId);
 
-        Task<Result<bool>> RejectAsync(Guid deliverableId);
+        Task<Result<bool>> RejectAsync(Guid deliverableId, RejectDeliverableRequest request);
 
         
         Task<Result<bool>> DeleteAsync(Guid deliverableId);

@@ -21,8 +21,8 @@ export const deliverableService = {
     return result.data;
   },
 
-  async reject(id) {
-    const result = await apiClient.patch(`/api/deliverables/${id}/reject`);
+  async reject(id, reason) {
+    const result = await apiClient.patch(`/api/deliverables/${id}/reject`, { reason });
     return result.data;
   },
 

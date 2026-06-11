@@ -437,6 +437,9 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Property<int>("Order_Index")
                         .HasColumnType("int");
 
+                    b.Property<string>("Rejection_Note")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Submission_Note")
                         .HasColumnType("nvarchar(max)");
 
@@ -732,47 +735,6 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserID");
 
                     b.ToTable("Protected_Views");
-                });
-
-            modelBuilder.Entity("LabCourse2.Domain.Entities.RefreshToken", b =>
-                {
-                    b.Property<Guid>("TokenID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("CreatedFromIp")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("Expires_At")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("FamilyId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("ReplacedByTokenId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("Revoked_At")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Token_Hash")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserAgent")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("TokenID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("LabCourse2.Domain.Entities.Report", b =>
@@ -1392,17 +1354,6 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("LabCourse2.Domain.Entities.RefreshToken", b =>
-                {
-                    b.HasOne("LabCourse2.Domain.Entities.User", "User")
-                        .WithMany("RefreshTokens")
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("LabCourse2.Domain.Entities.Report", b =>
                 {
                     b.HasOne("LabCourse2.Domain.Entities.User", "User")
@@ -1597,8 +1548,6 @@ namespace LabCourse2.Infrastructure.Persistence.Migrations
                     b.Navigation("Notifications");
 
                     b.Navigation("ProtectedViews");
-
-                    b.Navigation("RefreshTokens");
 
                     b.Navigation("Reports");
 

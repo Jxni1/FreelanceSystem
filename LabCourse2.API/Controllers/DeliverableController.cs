@@ -59,9 +59,9 @@ namespace LabCourse2.API.Controllers
 
        
         [HttpPatch("{id:guid}/reject")]
-        public async Task<IActionResult> Reject(Guid id)
+        public async Task<IActionResult> Reject(Guid id, [FromBody] RejectDeliverableRequest? request)
         {
-            var result = await _deliverableService.RejectAsync(id);
+            var result = await _deliverableService.RejectAsync(id, request ?? new RejectDeliverableRequest());
             return ToActionResult(result);
         }
 

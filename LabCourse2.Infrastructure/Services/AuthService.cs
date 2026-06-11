@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation;
 using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.Interfaces;
@@ -14,24 +15,34 @@ namespace LabCourse2.Infrastructure.Services
         private readonly AppDbContext _db;
         private readonly ITokenService _tokenService;
         private readonly IValidator<RegisterRequest> _validator;
+        private readonly IRefreshTokenStore _refreshTokens;
 
-        public AuthService(AppDbContext db, ITokenService tokenService, IValidator<RegisterRequest> validator)
+        public AuthService(AppDbContext db, ITokenService tokenService, IValidator<RegisterRequest> validator, IRefreshTokenStore refreshTokens)
         {
             _db = db;
             _tokenService = tokenService;
             _validator = validator;
+            _refreshTokens = refreshTokens;
         }
 
 
 
-        public Task<AuthResult> RegisterAsync(RegisterRequest request, string? userAgent = null, string? ip = null)
+        public async Task<AuthResult> RegisterAsync(RegisterRequest request, string? userAgent = null, string? ip = null)
         {
             if (!RoleConstants.PublicRoles.Contains(request.Role))
-                return Task.FromResult(AuthResult.Fail(
+                return AuthResult.Fail(
                     $"Role '{request.Role}' cannot self-register. " +
-                    $"Allowed: {string.Join(", ", RoleConstants.PublicRoles)}."));
+                    $"Allowed: {string.Join(", ", RoleConstants.PublicRoles)}.");
 
-            return RegisterCoreAsync(request, userAgent, ip);
+            var registrationSetting = await _db.Settings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Key == "registration_enabled");
+
+            if (registrationSetting is not null &&
+                string.Equals(registrationSetting.Value, "false", StringComparison.OrdinalIgnoreCase))
+                return AuthResult.Fail("Registration is currently disabled.");
+
+            return await RegisterCoreAsync(request, userAgent, ip);
         }
 
         public Task<AuthResult> RegisterAdminAsync(RegisterRequest request, string? userAgent = null, string? ip = null)
@@ -45,6 +56,18 @@ namespace LabCourse2.Infrastructure.Services
             var validation = await _validator.ValidateAsync(request);
             if (!validation.IsValid)
                 return AuthResult.Fail(validation.Errors.Select(e => e.ErrorMessage).ToArray());
+
+            if (request.Role == RoleConstants.Client)
+            {
+                var minBudgetSetting = await _db.Settings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Key == "min_client_budget");
+
+                if (minBudgetSetting is not null &&
+                    decimal.TryParse(minBudgetSetting.Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var minBudget) &&
+                    request.Budget < minBudget)
+                    return AuthResult.Fail($"Clients must register with a minimum budget of {minBudget}.");
+            }
 
             if (await _db.Users.AnyAsync(u => u.Email == request.Email))
                 return AuthResult.Fail("An account with this email already exists.");
@@ -129,20 +152,20 @@ namespace LabCourse2.Infrastructure.Services
                 var rawRefresh = _tokenService.GenerateRefreshToken();
                 var familyId = Guid.NewGuid();
 
-                _db.RefreshTokens.Add(new RefreshToken
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                await _refreshTokens.StoreAsync(new RefreshTokenData
                 {
-                    TokenID = Guid.NewGuid(),
-                    UserID = user.UserID,
-                    Token_Hash = TokenHasher.Hash(rawRefresh),
+                    TokenId = Guid.NewGuid(),
+                    UserId = user.UserID,
+                    TokenHash = TokenHasher.Hash(rawRefresh),
                     FamilyId = familyId,
-                    Expires_At = DateTime.UtcNow.AddDays(7),
-                    Created_At = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    CreatedAt = DateTime.UtcNow,
                     UserAgent = userAgent,
                     CreatedFromIp = ip
                 });
-
-                await _db.SaveChangesAsync();
-                await tx.CommitAsync();
 
                 return AuthResult.Ok(accessToken, rawRefresh, user.UserID, roles, profileType);
             }
@@ -180,18 +203,17 @@ namespace LabCourse2.Infrastructure.Services
             var rawRefresh = _tokenService.GenerateRefreshToken();
             var familyId = Guid.NewGuid();
 
-            _db.RefreshTokens.Add(new RefreshToken
+            await _refreshTokens.StoreAsync(new RefreshTokenData
             {
-                TokenID = Guid.NewGuid(),
-                UserID = user.UserID,
-                Token_Hash = TokenHasher.Hash(rawRefresh),
+                TokenId = Guid.NewGuid(),
+                UserId = user.UserID,
+                TokenHash = TokenHasher.Hash(rawRefresh),
                 FamilyId = familyId,
-                Expires_At = DateTime.UtcNow.AddDays(7),
-                Created_At = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow,
                 UserAgent = userAgent,
                 CreatedFromIp = ip
             });
-            await _db.SaveChangesAsync();
 
             return AuthResult.Ok(accessToken, rawRefresh, user.UserID, roles, profileType);
         }
@@ -201,27 +223,28 @@ namespace LabCourse2.Infrastructure.Services
         {
             var hash = TokenHasher.Hash(rawRefreshToken);
 
-            var stored = await _db.RefreshTokens
-                .Include(t => t.User)
-                    .ThenInclude(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                .Include(t => t.User.FreelancerProfile)
-                .Include(t => t.User.ClientProfile)
-                .FirstOrDefaultAsync(t => t.Token_Hash == hash);
+            var stored = await _refreshTokens.GetAsync(hash);
 
             if (stored is null)
                 return AuthResult.Fail("Invalid refresh token.");
 
-            if (stored.IsConsumed || stored.IsRevoked)
+            if (stored.IsConsumed || stored.IsRevoked || await _refreshTokens.IsFamilyRevokedAsync(stored.FamilyId))
             {
-                await RevokeFamilyAsync(stored.FamilyId);
+                await _refreshTokens.RevokeFamilyAsync(stored.FamilyId);
                 return AuthResult.TheftDetected();
             }
 
             if (stored.IsExpired)
                 return AuthResult.Fail("Refresh token has expired. Please log in again.");
 
-            var user = stored.User;
+            var user = await _db.Users
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .Include(u => u.FreelancerProfile)
+                .Include(u => u.ClientProfile)
+                .FirstOrDefaultAsync(u => u.UserID == stored.UserId);
+
+            if (user is null)
+                return AuthResult.Fail("Invalid refresh token.");
 
             if (!user.Is_Active)
                 return AuthResult.Fail("This account has been deactivated.");
@@ -229,20 +252,20 @@ namespace LabCourse2.Infrastructure.Services
             var newTokenId = Guid.NewGuid();
             var rawRefresh = _tokenService.GenerateRefreshToken();
 
-            stored.ReplacedByTokenId = newTokenId;   
-            _db.RefreshTokens.Add(new RefreshToken
+            stored.ReplacedByTokenId = newTokenId;
+            await _refreshTokens.UpdateAsync(stored);
+
+            await _refreshTokens.StoreAsync(new RefreshTokenData
             {
-                TokenID = newTokenId,
-                UserID = user.UserID,
-                Token_Hash = TokenHasher.Hash(rawRefresh),
-                FamilyId = stored.FamilyId,    
-                Expires_At = DateTime.UtcNow.AddDays(7),
-                Created_At = DateTime.UtcNow,
+                TokenId = newTokenId,
+                UserId = user.UserID,
+                TokenHash = TokenHasher.Hash(rawRefresh),
+                FamilyId = stored.FamilyId,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow,
                 UserAgent = userAgent,
                 CreatedFromIp = ip
             });
-
-            await _db.SaveChangesAsync();
 
             var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
             var profileType = ResolveProfileType(user);
@@ -255,15 +278,15 @@ namespace LabCourse2.Infrastructure.Services
         public async Task<AuthResult> RevokeTokenAsync(string rawRefreshToken)
         {
             var hash = TokenHasher.Hash(rawRefreshToken);
-            var stored = await _db.RefreshTokens.FirstOrDefaultAsync(t => t.Token_Hash == hash);
+            var stored = await _refreshTokens.GetAsync(hash);
 
             if (stored is null || !stored.IsActive)
                 return AuthResult.Fail("Token not found or already inactive.");
 
-            stored.Revoked_At = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            stored.RevokedAt = DateTime.UtcNow;
+            await _refreshTokens.UpdateAsync(stored);
 
-            return AuthResult.Fail(); 
+            return AuthResult.Fail();
         }
 
 
@@ -297,18 +320,6 @@ namespace LabCourse2.Infrastructure.Services
                     Budget = user.ClientProfile.Budget
                 }
             };
-        }
-
-        private async Task RevokeFamilyAsync(Guid familyId)
-        {
-            var family = await _db.RefreshTokens
-                .Where(t => t.FamilyId == familyId && t.Revoked_At == null)
-                .ToListAsync();
-
-            foreach (var t in family)
-                t.Revoked_At = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
         }
 
         private static string ResolveProfileType(User user)

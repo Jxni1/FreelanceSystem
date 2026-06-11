@@ -36,8 +36,12 @@ namespace LabCourse2.Application.Services.Projects
             var maxBudget = query.MaxBudget?.ToString() ?? "null";
             var sortBy = query.SortBy ?? "createdAt";
             var sortOrder = query.SortOrder ?? "desc";
+            var skill = query.Skill ?? "null";
+            var skillNames = (query.SkillNames != null && query.SkillNames.Count > 0)
+                ? string.Join(",", query.SkillNames.OrderBy(s => s))
+                : "null";
 
-            var cacheKey = $"projects_search_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}_{minBudget}_{maxBudget}_{sortBy}_{sortOrder}";
+            var cacheKey = $"projects_search_{query.Page}_{query.PageSize}_{search}_{categoryId}_{status}_{visibility}_{minBudget}_{maxBudget}_{sortBy}_{sortOrder}_{skill}_{skillNames}";
 
             var cached = await _cacheService.GetAsync<PagedResult<ProjectResponse>>(cacheKey);
             if (cached != null)
@@ -380,6 +384,19 @@ namespace LabCourse2.Application.Services.Projects
 
             if (project.ClientID != client.ClientID)
                 return Result<bool>.Forbidden("You do not own this project.");
+
+            var hasContract = await _context.Contracts.AnyAsync(c => c.ProjectID == id);
+            if (hasContract)
+                return Result<bool>.Conflict("This project has one or more contracts and cannot be deleted.");
+
+            var proposals = await _context.Proposals.Where(p => p.ProjectId == id).ToListAsync();
+            _context.Proposals.RemoveRange(proposals);
+
+            var savedProjects = await _context.SavedProjects.Where(s => s.ProjectID == id).ToListAsync();
+            _context.SavedProjects.RemoveRange(savedProjects);
+
+            var protectedViews = await _context.Protected_Views.Where(v => v.ProjectID == id).ToListAsync();
+            _context.Protected_Views.RemoveRange(protectedViews);
 
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();

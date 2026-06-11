@@ -123,6 +123,8 @@ namespace LabCourse2.Application.Services.Deliverables
                 return Result<DeliverableResponse>
                     .NotFound($"File with ID {request.FileID} was not found.");
 
+            milestone.Rejection_Note = null;
+
             var deliverable = request.ToEntity();
             await _context.Deliverables.AddAsync(deliverable);
             await _context.SaveChangesAsync();
@@ -238,7 +240,7 @@ namespace LabCourse2.Application.Services.Deliverables
             return Result<DeliverableResponse>.Success(deliverable.ToResponse());
         }
 
-        public async Task<Result<bool>> RejectAsync(Guid deliverableId)
+        public async Task<Result<bool>> RejectAsync(Guid deliverableId, RejectDeliverableRequest request)
         {
             var client = await GetClientProfileAsync();
             if (client is null)
@@ -260,19 +262,34 @@ namespace LabCourse2.Application.Services.Deliverables
             if (deliverable.Approved_at.HasValue)
                 return Result<bool>.Conflict("Cannot reject an already approved deliverable.");
 
-            var freelancerUserId = deliverable.Milestone.Contract.Freelancer?.User?.UserID;
-            var milestoneTitle = deliverable.Milestone.Title;
+            var milestone = deliverable.Milestone;
+            var freelancerUserId = milestone.Contract.Freelancer?.User?.UserID;
+            var milestoneTitle = milestone.Title;
+            var reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
+
+            milestone.Rejection_Note = reason;
+
+            if (milestone.status == MilestoneStatus.Submitted)
+            {
+                milestone.status = MilestoneStatus.Funded;
+                milestone.Submitted_at = null;
+                milestone.Submission_Note = null;
+            }
 
             _context.Deliverables.Remove(deliverable);
             await _context.SaveChangesAsync();
 
             if (freelancerUserId.HasValue)
             {
+                var message = reason is null
+                    ? $"Your deliverable for milestone \"{milestoneTitle}\" was rejected. You can submit a new one."
+                    : $"Your deliverable for milestone \"{milestoneTitle}\" was rejected: {reason}. You can submit a new one.";
+
                 await _notificationCreator.CreateAsync(
                     freelancerUserId.Value,
                     "DeliverableRejected",
                     "Deliverable rejected",
-                    $"Your deliverable for milestone \"{milestoneTitle}\" was rejected.");
+                    message);
             }
 
             return Result<bool>.Success(true);

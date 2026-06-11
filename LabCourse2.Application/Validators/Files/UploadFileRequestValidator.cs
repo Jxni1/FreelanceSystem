@@ -10,7 +10,8 @@ namespace LabCourse2.Application.Validators.Files
             "Project",
             "Contract",
             "Report",
-            "User"
+            "User",
+            "Milestone"
         };
 
         private static readonly string[] AllowedExtensions =

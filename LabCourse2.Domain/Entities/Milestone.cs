@@ -27,6 +27,8 @@ namespace LabCourse2.Domain.Entities
 
         public string? Submission_Note { get; set; }
 
+        public string? Rejection_Note { get; set; }
+
         public Guid ContractID { get; set; }
         public Contract Contract { get; set; } = null!;
 

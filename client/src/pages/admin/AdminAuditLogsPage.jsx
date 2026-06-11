@@ -4,28 +4,23 @@ import { useAuditLogs } from '../../hooks/useAuditLogs';
 const PAGE_SIZE = 20;
 
 const ACTION_OPTIONS = [
-  'PaymentStatusChanged', 'PaymentReleased',
-  'ProjectDeleted',
-  'ContractCancelled', 'ContractDeleted',
-  'MilestoneDeleted',
-  'UserAccountLocked', 'UserAccountUnlocked',
-  'UserRoleChanged', 'AdminPrivilegesGranted', 'AdminPrivilegesRemoved'
+  'PaymentHeld', 'PaymentReleased', 'PaymentFailed',
+  'MilestoneSubmitted', 'MilestoneApproved', 'MilestoneRejected',
+  'ContractCancelled',
+  'UserRoleChanged',
 ];
 
-const ENTITY_OPTIONS = ['Payment', 'Project', 'Contract', 'Milestone', 'User', 'UserRole'];
+const ENTITY_OPTIONS = ['Payment', 'Contract', 'Milestone', 'User'];
 
 const ACTION_BADGE = {
-  PaymentStatusChanged: 'bg-blue-50 text-blue-700 ring-blue-200',
+  PaymentHeld: 'bg-blue-50 text-blue-700 ring-blue-200',
   PaymentReleased: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  ProjectDeleted: 'bg-rose-50 text-rose-700 ring-rose-200',
+  PaymentFailed: 'bg-rose-50 text-rose-700 ring-rose-200',
+  MilestoneSubmitted: 'bg-amber-50 text-amber-700 ring-amber-200',
+  MilestoneApproved: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  MilestoneRejected: 'bg-rose-50 text-rose-700 ring-rose-200',
   ContractCancelled: 'bg-orange-50 text-orange-700 ring-orange-200',
-  ContractDeleted: 'bg-rose-50 text-rose-700 ring-rose-200',
-  MilestoneDeleted: 'bg-rose-50 text-rose-700 ring-rose-200',
-  UserAccountLocked: 'bg-red-50 text-red-700 ring-red-200',
-  UserAccountUnlocked: 'bg-green-50 text-green-700 ring-green-200',
   UserRoleChanged: 'bg-violet-50 text-violet-700 ring-violet-200',
-  AdminPrivilegesGranted: 'bg-yellow-50 text-yellow-700 ring-yellow-200',
-  AdminPrivilegesRemoved: 'bg-yellow-50 text-yellow-700 ring-yellow-200',
 };
 
 function ActionBadge({ action }) {

@@ -10,7 +10,6 @@ namespace LabCourse2.Application.Common
         DbSet<Permission> Permissions { get; }
         DbSet<UserRole> UserRoles { get; }
         DbSet<RolePermission> RolePermissions { get; }
-        DbSet<RefreshToken> RefreshTokens { get; }
 
         DbSet<FreelancerProfile> FreelancerProfiles { get; }
         DbSet<ClientProfile> ClientProfiles { get; }

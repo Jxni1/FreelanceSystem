@@ -13,6 +13,7 @@ namespace LabCourse2.Application.Interfaces.Milestones
         Task<Result<FundMilestoneResponse>> FundAsync(Guid milestoneId, FundMilestoneRequest request);
         Task<Result<MilestoneResponse>> SubmitAsync(Guid milestoneId, SubmitMilestoneRequest request);
         Task<Result<MilestoneResponse>> ApproveAsync(Guid milestoneId);
+        Task<Result<MilestoneResponse>> RejectAsync(Guid milestoneId, RejectMilestoneRequest request);
         Task<Result<bool>> DeleteAsync(Guid milestoneId);
     }
 }
