@@ -66,11 +66,11 @@ const fetchDeliverablesByMilestone = useCallback(async (milestoneId) => {
     }
   }, []);
 
-  const rejectDeliverable = useCallback(async (id) => {
+  const rejectDeliverable = useCallback(async (id, reason) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await deliverableService.reject(id);
+      const data = await deliverableService.reject(id, reason);
       return { success: true, data };
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to reject deliverable';

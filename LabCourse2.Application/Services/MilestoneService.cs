@@ -1,7 +1,9 @@
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Milestones;
 using LabCourse2.Application.DTOs.Payments;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Milestones;
+using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Interfaces.Payments;
 using LabCourse2.Application.Mappings;
 using LabCourse2.Domain.Constants;
@@ -16,12 +18,21 @@ namespace LabCourse2.Application.Services.Milestones
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
         private readonly IStripeService _stripe;
+        private readonly INotificationCreator _notificationCreator;
+        private readonly IAuditLogService _auditLog;
 
-        public MilestoneService(IAppDbContext context, ICurrentUserService currentUser, IStripeService stripe)
+        public MilestoneService(
+            IAppDbContext context,
+            ICurrentUserService currentUser,
+            IStripeService stripe,
+            INotificationCreator notificationCreator,
+            IAuditLogService auditLog)
         {
             _context = context;
             _currentUser = currentUser;
             _stripe = stripe;
+            _notificationCreator = notificationCreator;
+            _auditLog = auditLog;
         }
 
         private async Task<ClientProfile?> GetClientProfileAsync() =>
@@ -284,10 +295,19 @@ namespace LabCourse2.Application.Services.Milestones
             }
 
             milestone.Submission_Note = request.Note?.Trim();
+            milestone.Rejection_Note = null;
             milestone.status = MilestoneStatus.Submitted;
             milestone.Submitted_at = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            await _auditLog.LogAsync(
+                action: AuditAction.MilestoneSubmitted,
+                entity: "Milestone",
+                oldValue: MilestoneStatus.Funded,
+                newValue: MilestoneStatus.Submitted,
+                entityId: milestone.MilestoneID,
+                userId: _currentUser.UserId);
 
             var updated = await _context.Milestones
                 .Include(m => m.Deliverables)
@@ -368,6 +388,22 @@ namespace LabCourse2.Application.Services.Milestones
 
                 await _context.SaveChangesAsync();
 
+                await _auditLog.LogAsync(
+                    action: AuditAction.PaymentReleased,
+                    entity: "Payment",
+                    oldValue: PaymentStatus.Held,
+                    newValue: $"{PaymentStatus.Released} ({transfer.Amount:0.00})",
+                    entityId: payment.PaymentID,
+                    userId: _currentUser.UserId);
+
+                await _auditLog.LogAsync(
+                    action: AuditAction.MilestoneApproved,
+                    entity: "Milestone",
+                    oldValue: MilestoneStatus.Submitted,
+                    newValue: MilestoneStatus.Approved,
+                    entityId: milestone.MilestoneID,
+                    userId: _currentUser.UserId);
+
                 var allApproved = await _context.Milestones
                     .Where(m => m.ContractID == milestone.ContractID)
                     .AllAsync(m => m.status == MilestoneStatus.Approved);
@@ -390,6 +426,73 @@ namespace LabCourse2.Application.Services.Milestones
             {
                 return Result<MilestoneResponse>.Failure(ex.Message);
             }
+        }
+
+        public async Task<Result<MilestoneResponse>> RejectAsync(Guid milestoneId, RejectMilestoneRequest request)
+        {
+            var client = await GetClientProfileAsync();
+            if (client is null)
+                return Result<MilestoneResponse>.Forbidden("Only clients can reject milestones.");
+
+            var milestone = await _context.Milestones
+                .Include(m => m.Deliverables)
+                .Include(m => m.Contract)
+                    .ThenInclude(c => c.Freelancer)
+                        .ThenInclude(f => f.User)
+                .FirstOrDefaultAsync(m => m.MilestoneID == milestoneId);
+
+            if (milestone is null)
+                return Result<MilestoneResponse>
+                    .NotFound($"Milestone with ID {milestoneId} was not found.");
+
+            if (milestone.Contract.ClientID != client.ClientID)
+                return Result<MilestoneResponse>
+                    .Forbidden("You do not own the contract of this milestone.");
+
+            if (milestone.status != MilestoneStatus.Submitted)
+                return Result<MilestoneResponse>
+                    .Conflict($"Milestone must be in Submitted status to reject. Current status: {milestone.status}.");
+
+            var reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
+
+            if (milestone.Deliverables.Any())
+                _context.Deliverables.RemoveRange(milestone.Deliverables);
+
+            milestone.status = MilestoneStatus.Funded;
+            milestone.Submitted_at = null;
+            milestone.Submission_Note = null;
+            milestone.Rejection_Note = reason;
+
+            await _context.SaveChangesAsync();
+
+            await _auditLog.LogAsync(
+                action: AuditAction.MilestoneRejected,
+                entity: "Milestone",
+                oldValue: MilestoneStatus.Submitted,
+                newValue: reason is null ? MilestoneStatus.Funded : $"{MilestoneStatus.Funded} ({reason})",
+                entityId: milestone.MilestoneID,
+                userId: _currentUser.UserId);
+
+            var freelancerUserId = milestone.Contract.Freelancer?.User?.UserID;
+            if (freelancerUserId.HasValue)
+            {
+                var message = reason is null
+                    ? $"Your submission for milestone \"{milestone.Title}\" was rejected. You can submit again."
+                    : $"Your submission for milestone \"{milestone.Title}\" was rejected: {reason}. You can submit again.";
+
+                await _notificationCreator.CreateAsync(
+                    freelancerUserId.Value,
+                    "MilestoneRejected",
+                    "Submission rejected",
+                    message);
+            }
+
+            var updated = await _context.Milestones
+                .Include(m => m.Deliverables)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.MilestoneID == milestoneId);
+
+            return Result<MilestoneResponse>.Success(updated!.ToResponse());
         }
 
         public async Task<Result<bool>> DeleteAsync(Guid milestoneId)

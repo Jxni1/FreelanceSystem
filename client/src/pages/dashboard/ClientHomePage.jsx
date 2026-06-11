@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Plus,
   Briefcase,
@@ -9,40 +9,40 @@ import {
   Clock3,
   FileText,
   Heart,
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useClientDashboard } from '../../hooks/useClientDashboard';
-import { useFavoriteFreelancers } from '../../hooks/useFavoriteFreelancers';
-import { PageHeading } from '../../components/ui/PageHeading';
-import { StatCard } from '../../components/ui/StatCard';
-import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
-import { Avatar } from '../../components/ui/Avatar';
-import { RatingStars } from '../../components/ui/RatingStars';
-import { Button } from '../../components/ui/Button';
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { useClientDashboard } from "../../hooks/useClientDashboard";
+import { useFavoriteFreelancers } from "../../hooks/useFavoriteFreelancers";
+import { PageHeading } from "../../components/ui/PageHeading";
+import { StatCard } from "../../components/ui/StatCard";
+import { Card } from "../../components/ui/Card";
+import { Badge } from "../../components/ui/Badge";
+import { Avatar } from "../../components/ui/Avatar";
+import { RatingStars } from "../../components/ui/RatingStars";
+import { Button } from "../../components/ui/Button";
 
 const STATUS_TONE = {
-  Receiving: 'emerald',
-  Shortlisting: 'amber',
-  Interviewing: 'blue',
-  Open: 'emerald',
-  InProgress: 'sky',
-  Completed: 'slate',
-  Active: 'violet',
-  Ongoing: 'violet',
-  Closed: 'slate',
+  Receiving: "emerald",
+  Shortlisting: "amber",
+  Interviewing: "blue",
+  Open: "emerald",
+  InProgress: "sky",
+  Completed: "slate",
+  Active: "violet",
+  Ongoing: "violet",
+  Closed: "slate",
 };
 
 const ATTENTION_TONE_CLASS = {
-  brand: 'bg-brand-50 text-brand-700 ring-brand-200',
-  sky: 'bg-sky-50 text-sky-700 ring-sky-200',
-  emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  violet: 'bg-violet-50 text-violet-700 ring-violet-200',
-  amber: 'bg-amber-50 text-amber-700 ring-amber-200',
+  brand: "bg-brand-50 text-brand-700 ring-brand-200",
+  sky: "bg-sky-50 text-sky-700 ring-sky-200",
+  emerald: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  violet: "bg-violet-50 text-violet-700 ring-violet-200",
+  amber: "bg-amber-50 text-amber-700 ring-amber-200",
 };
 
 export default function ClientHomePage() {
-  const [talentView, setTalentView] = useState('recommended');
+  const [talentView, setTalentView] = useState("recommended");
 
   const {
     firstName,
@@ -71,7 +71,9 @@ export default function ClientHomePage() {
   }, [fetchFavorites]);
 
   const favoritePreview = Array.isArray(favorites) ? favorites.slice(0, 3) : [];
-  const myProjectsPreview = Array.isArray(myProjects) ? myProjects.slice(0, 3) : [];
+  const myProjectsPreview = Array.isArray(myProjects)
+    ? myProjects.slice(0, 3)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -91,7 +93,6 @@ export default function ClientHomePage() {
           value={stats.jobPosts.value}
           icon={Briefcase}
           iconTone="brand"
-          delta={stats.jobPosts.delta}
           deltaDir={stats.jobPosts.deltaDir}
         />
         <StatCard
@@ -99,7 +100,6 @@ export default function ClientHomePage() {
           value={stats.proposals.value}
           icon={Send}
           iconTone="sky"
-          delta={stats.proposals.delta}
           deltaDir={stats.proposals.deltaDir}
         />
         <StatCard
@@ -107,7 +107,6 @@ export default function ClientHomePage() {
           value={stats.activeContracts.value}
           icon={Users}
           iconTone="violet"
-          delta={stats.activeContracts.delta}
           deltaDir={stats.activeContracts.deltaDir}
         />
         <StatCard
@@ -115,7 +114,6 @@ export default function ClientHomePage() {
           value={stats.completedContracts.value}
           icon={ShieldCheck}
           iconTone="brand"
-          delta={stats.completedContracts.delta}
           deltaDir={stats.completedContracts.deltaDir}
         />
       </div>
@@ -138,14 +136,19 @@ export default function ClientHomePage() {
                     <div className="flex items-center gap-2">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${
-                          ATTENTION_TONE_CLASS[item.tone] ?? ATTENTION_TONE_CLASS.brand
+                          ATTENTION_TONE_CLASS[item.tone] ??
+                          ATTENTION_TONE_CLASS.brand
                         }`}
                       >
                         Action
                       </span>
-                      <p className="font-semibold text-slate-900">{item.title}</p>
+                      <p className="font-semibold text-slate-900">
+                        {item.title}
+                      </p>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {item.description}
+                    </p>
                   </div>
                   <div className="shrink-0">
                     <Button to={item.to} variant="outline" size="sm">
@@ -168,10 +171,15 @@ export default function ClientHomePage() {
               {recentActivity.map((item) => (
                 <li key={item.id} className="px-5 py-4">
                   <div className="flex items-center gap-2">
-                    <Badge tone={item.tone ?? 'slate'}>{item.label}</Badge>
+                    <Badge tone={item.tone ?? "slate"}>{item.label}</Badge>
                   </div>
                   <p className="mt-2 text-sm text-slate-700">{item.text}</p>
-                  <Button to={item.to} variant="link" size="link" className="mt-2">
+                  <Button
+                    to={item.to}
+                    variant="link"
+                    size="link"
+                    className="mt-2"
+                  >
                     Open
                   </Button>
                 </li>
@@ -207,8 +215,10 @@ export default function ClientHomePage() {
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-semibold text-slate-900">{post.title}</p>
-                        <Badge tone={STATUS_TONE[post.status] ?? 'slate'}>
+                        <p className="truncate font-semibold text-slate-900">
+                          {post.title}
+                        </p>
+                        <Badge tone={STATUS_TONE[post.status] ?? "slate"}>
                           {post.status}
                         </Badge>
                       </div>
@@ -223,14 +233,21 @@ export default function ClientHomePage() {
                       ) : null}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="font-semibold text-slate-900">{post.budget || '—'}</p>
+                      <p className="font-semibold text-slate-900">
+                        {post.budget || "—"}
+                      </p>
                     </div>
                   </li>
                 ))}
               </ul>
 
               <div className="border-t border-line px-5 py-4">
-                <Button to="/projects/new" variant="outline" size="sm" icon={Plus}>
+                <Button
+                  to="/projects/new"
+                  variant="outline"
+                  size="sm"
+                  icon={Plus}
+                >
                   New job post
                 </Button>
               </div>
@@ -262,8 +279,10 @@ export default function ClientHomePage() {
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-semibold text-slate-900">{post.title}</p>
-                        <Badge tone={STATUS_TONE[post.status] ?? 'slate'}>
+                        <p className="truncate font-semibold text-slate-900">
+                          {post.title}
+                        </p>
+                        <Badge tone={STATUS_TONE[post.status] ?? "slate"}>
                           {post.status}
                         </Badge>
                       </div>
@@ -279,7 +298,9 @@ export default function ClientHomePage() {
                     </div>
 
                     <div className="shrink-0 text-right">
-                      <p className="font-semibold text-slate-900">{post.budget || '—'}</p>
+                      <p className="font-semibold text-slate-900">
+                        {post.budget || "—"}
+                      </p>
                       {post.id ? (
                         <Link
                           to={`/projects/${post.id}`}
@@ -301,14 +322,14 @@ export default function ClientHomePage() {
 
           <Card
             title={
-              talentView === 'recommended'
-                ? 'Recommended talent'
-                : 'Favorite freelancers'
+              talentView === "recommended"
+                ? "Recommended talent"
+                : "Favorite freelancers"
             }
-            icon={talentView === 'recommended' ? Users : Heart}
+            icon={talentView === "recommended" ? Users : Heart}
             bodyClassName="p-0"
             action={
-              talentView === 'recommended' ? (
+              talentView === "recommended" ? (
                 <Button to="/freelancers" variant="link" size="link">
                   Browse all
                 </Button>
@@ -319,10 +340,13 @@ export default function ClientHomePage() {
               )
             }
           >
-            {talentView === 'recommended' ? (
+            {talentView === "recommended" ? (
               <ul className="divide-y divide-line">
                 {talent.map((person) => (
-                  <li key={person.id} className="flex items-center gap-3 px-5 py-4">
+                  <li
+                    key={person.id}
+                    className="flex items-center gap-3 px-5 py-4"
+                  >
                     <Avatar name={person.name} size="md" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
@@ -337,11 +361,15 @@ export default function ClientHomePage() {
                         ) : null}
                       </div>
                       <p className="text-xs text-slate-500">{person.role}</p>
-                      <RatingStars rating={person.rating} size="sm" className="mt-0.5" />
+                      <RatingStars
+                        rating={person.rating}
+                        size="sm"
+                        className="mt-0.5"
+                      />
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-sm font-semibold text-slate-900">
-                        {person.rate || 'View profile'}
+                        {person.rate || "View profile"}
                       </p>
                       <Button
                         to="/freelancers"
@@ -377,7 +405,10 @@ export default function ClientHomePage() {
                     person.favoriteFreelancerID;
 
                   return (
-                    <li key={personKey} className="flex items-center gap-3 px-5 py-4">
+                    <li
+                      key={personKey}
+                      className="flex items-center gap-3 px-5 py-4"
+                    >
                       <Avatar name={person.name} size="md" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
@@ -392,7 +423,7 @@ export default function ClientHomePage() {
                           ) : null}
                         </div>
                         <p className="text-xs text-slate-500">
-                          {person.role || person.profession || 'Freelancer'}
+                          {person.role || person.profession || "Freelancer"}
                         </p>
                         <RatingStars
                           rating={person.rating ?? person.averageRating ?? 0}
@@ -404,7 +435,9 @@ export default function ClientHomePage() {
                       <div className="shrink-0 text-right">
                         <p className="text-sm font-semibold text-slate-900">
                           {person.rate ||
-                            (person.hourlyRate ? `$${person.hourlyRate}/hr` : 'Saved')}
+                            (person.hourlyRate
+                              ? `$${person.hourlyRate}/hr`
+                              : "Saved")}
                         </p>
                         <Button
                           to="/favorite-freelancers"
@@ -437,29 +470,29 @@ export default function ClientHomePage() {
               <div className="flex items-center justify-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setTalentView('recommended')}
+                  onClick={() => setTalentView("recommended")}
                   aria-label="Show recommended talent"
                   className={`h-2.5 w-2.5 rounded-full transition-all ${
-                    talentView === 'recommended'
-                      ? 'bg-brand-600 ring-4 ring-brand-100'
-                      : 'bg-slate-300 hover:bg-slate-400'
+                    talentView === "recommended"
+                      ? "bg-brand-600 ring-4 ring-brand-100"
+                      : "bg-slate-300 hover:bg-slate-400"
                   }`}
                 />
                 <button
                   type="button"
-                  onClick={() => setTalentView('favorites')}
+                  onClick={() => setTalentView("favorites")}
                   aria-label="Show favorite freelancers"
                   className={`h-2.5 w-2.5 rounded-full transition-all ${
-                    talentView === 'favorites'
-                      ? 'bg-brand-600 ring-4 ring-brand-100'
-                      : 'bg-slate-300 hover:bg-slate-400'
+                    talentView === "favorites"
+                      ? "bg-brand-600 ring-4 ring-brand-100"
+                      : "bg-slate-300 hover:bg-slate-400"
                   }`}
                 />
               </div>
             </div>
           </Card>
 
-          <div className="rounded-2xl bg-brand-900 p-5 text-white shadow-sm">
+          {/* <div className="rounded-2xl bg-brand-900 p-5 text-white shadow-sm">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-brand-200" aria-hidden="true" />
               <h2 className="text-sm font-semibold">Escrow protection</h2>
@@ -471,7 +504,7 @@ export default function ClientHomePage() {
             <Button to="/spending" variant="inverse" className="mt-4">
               Manage escrow
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -501,16 +534,22 @@ export default function ClientHomePage() {
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate font-semibold text-slate-900">{hire.title}</p>
-                      <Badge tone={STATUS_TONE[hire.status] ?? 'slate'}>
+                      <p className="truncate font-semibold text-slate-900">
+                        {hire.title}
+                      </p>
+                      <Badge tone={STATUS_TONE[hire.status] ?? "slate"}>
                         {hire.status}
                       </Badge>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">{hire.freelancerName}</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {hire.freelancerName}
+                    </p>
                   </div>
 
                   <div className="shrink-0 text-right">
-                    <p className="font-semibold text-slate-900">{hire.amount || '—'}</p>
+                    <p className="font-semibold text-slate-900">
+                      {hire.amount || "—"}
+                    </p>
 
                     {contractId ? (
                       <Link

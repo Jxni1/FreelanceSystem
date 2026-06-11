@@ -1,5 +1,6 @@
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Emails;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Emails;
 using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Domain.Entities;
@@ -11,6 +12,7 @@ namespace LabCourse2.Application.Services.Notifications
     {
         private readonly IAppDbContext _context;
         private readonly IEmailQueue _emailQueue;
+        private readonly ICacheService _cacheService;
 
         private static readonly HashSet<string> EmailableTypes = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -23,10 +25,11 @@ namespace LabCourse2.Application.Services.Notifications
             "ReviewReceived"
         };
 
-        public NotificationCreator(IAppDbContext context, IEmailQueue emailQueue)
+        public NotificationCreator(IAppDbContext context, IEmailQueue emailQueue, ICacheService cacheService)
         {
             _context = context;
             _emailQueue = emailQueue;
+            _cacheService = cacheService;
         }
 
         public async Task CreateAsync(Guid userId, string type, string title, string message)
@@ -44,6 +47,9 @@ namespace LabCourse2.Application.Services.Notifications
 
             await _context.Notifications.AddAsync(notification);
             await _context.SaveChangesAsync();
+
+            await _cacheService.AdjustCounterIfExistsAsync(
+                NotificationCacheKeys.UnreadCount(userId), 1);
 
             await QueueEmailsAsync(new[] { userId }, type, title, message);
         }
@@ -69,6 +75,10 @@ namespace LabCourse2.Application.Services.Notifications
 
             await _context.Notifications.AddRangeAsync(notifications);
             await _context.SaveChangesAsync();
+
+            foreach (var userId in distinctIds)
+                await _cacheService.AdjustCounterIfExistsAsync(
+                    NotificationCacheKeys.UnreadCount(userId), 1);
 
             await QueueEmailsAsync(distinctIds, type, title, message);
         }

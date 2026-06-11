@@ -27,6 +27,8 @@ namespace LabCourse2.Application.Mappings
 
                 SubmissionNote = milestone.Submission_Note,
 
+                RejectionNote = milestone.Rejection_Note,
+
                 TotalDeliverables = milestone.Deliverables?.Count ?? 0,
 
                 ApprovedDeliverables = milestone.Deliverables?

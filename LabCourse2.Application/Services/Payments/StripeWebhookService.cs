@@ -1,5 +1,6 @@
 using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Payments;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Payments;
 using LabCourse2.Domain.Constants;
 using LabCourse2.Domain.Entities;
@@ -10,11 +11,19 @@ namespace LabCourse2.Application.Services.Payments
     public class StripeWebhookService : IStripeWebhookService
     {
         private readonly IAppDbContext _context;
+        private readonly IAuditLogService _auditLog;
 
-        public StripeWebhookService(IAppDbContext context)
+        public StripeWebhookService(IAppDbContext context, IAuditLogService auditLog)
         {
             _context = context;
+            _auditLog = auditLog;
         }
+
+        private async Task<Guid> GetClientUserIdAsync(Guid contractId, CancellationToken ct) =>
+            await _context.Contracts
+                .Where(c => c.ContractID == contractId)
+                .Select(c => c.Client.UserID)
+                .FirstOrDefaultAsync(ct);
 
         public async Task HandleAsync(StripeWebhookEvent webhookEvent, CancellationToken cancellationToken = default)
         {
@@ -62,6 +71,16 @@ namespace LabCourse2.Application.Services.Payments
             if (!string.IsNullOrEmpty(e.PaymentIntentId))
                 payment.StripePaymentIntentId = e.PaymentIntentId;
 
+            var heldByUserId = await GetClientUserIdAsync(payment.ContractID, ct);
+            if (heldByUserId != Guid.Empty)
+                await _auditLog.LogAsync(
+                    action: AuditAction.PaymentHeld,
+                    entity: "Payment",
+                    oldValue: PaymentStatus.RequiresPayment,
+                    newValue: $"{PaymentStatus.Held} ({payment.Amount:0.00})",
+                    entityId: payment.PaymentID,
+                    userId: heldByUserId);
+
             var milestone = await _context.Milestones
                 .FirstOrDefaultAsync(m => m.MilestoneID == payment.MilestoneID, ct);
 
@@ -105,7 +124,19 @@ namespace LabCourse2.Application.Services.Payments
                 return;
 
             if (payment.Status == PaymentStatus.RequiresPayment)
+            {
                 payment.Status = PaymentStatus.Failed;
+
+                var failedByUserId = await GetClientUserIdAsync(payment.ContractID, ct);
+                if (failedByUserId != Guid.Empty)
+                    await _auditLog.LogAsync(
+                        action: AuditAction.PaymentFailed,
+                        entity: "Payment",
+                        oldValue: PaymentStatus.RequiresPayment,
+                        newValue: PaymentStatus.Failed,
+                        entityId: payment.PaymentID,
+                        userId: failedByUserId);
+            }
 
             var milestone = await _context.Milestones
                 .FirstOrDefaultAsync(m => m.MilestoneID == payment.MilestoneID, ct);

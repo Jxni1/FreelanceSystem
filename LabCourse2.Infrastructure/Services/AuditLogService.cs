@@ -47,10 +47,8 @@ namespace LabCourse2.Infrastructure.Services
 
                 await _context.SaveChangesAsync();
             }
-            catch (Exception ex)
+            catch
             {
-                // TEMP: remove after debugging
-                throw;
             }
         }
 

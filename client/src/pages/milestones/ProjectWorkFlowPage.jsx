@@ -67,6 +67,7 @@ export default function ProjectWorkflowPage() {
     deleteMilestone,
     fundMilestone,
     approveMilestone,
+    rejectMilestone,
   } = useMilestones();
 
   const [contractId, setContractId] = useState(null);
@@ -87,6 +88,9 @@ export default function ProjectWorkflowPage() {
     amount: '',
     dueDate: '',
   });
+
+  const [rejectingMilestoneId, setRejectingMilestoneId] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
 
   const [reviewForm, setReviewForm] = useState({ comment: '', rating: 5 });
   const [reviewState, setReviewState] = useState({
@@ -273,6 +277,36 @@ export default function ProjectWorkflowPage() {
         return;
       }
 
+      await refreshMilestones();
+      if (contractId) await fetchContractById(contractId);
+    } finally {
+      setActionLoadingKey('');
+    }
+  };
+
+  const startReject = (milestoneId) => {
+    setRejectingMilestoneId(milestoneId);
+    setRejectReason('');
+  };
+
+  const cancelReject = () => {
+    setRejectingMilestoneId('');
+    setRejectReason('');
+  };
+
+  const handleReject = async (milestoneId) => {
+    setActionLoadingKey(`reject-${milestoneId}`);
+    setWorkflowError(null);
+
+    try {
+      const res = await rejectMilestone(milestoneId, rejectReason.trim() || undefined);
+
+      if (!res?.success) {
+        setWorkflowError(res?.error || 'Failed to reject submission.');
+        return;
+      }
+
+      cancelReject();
       await refreshMilestones();
       if (contractId) await fetchContractById(contractId);
     } finally {
@@ -748,7 +782,19 @@ export default function ProjectWorkflowPage() {
                   )}
 
                   {m.status === 'Funded' && (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="space-y-4">
+                      {m.rejectionNote && (
+                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">
+                            Changes requested
+                          </p>
+                          <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-rose-800">
+                            {m.rejectionNote}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       {isFreelancer ? (
                         <MilestoneSubmitSection
                           milestoneId={m.milestoneID}
@@ -766,6 +812,7 @@ export default function ProjectWorkflowPage() {
                           </p>
                         </div>
                       )}
+                      </div>
                     </div>
                   )}
 
@@ -796,17 +843,68 @@ export default function ProjectWorkflowPage() {
                       )}
 
                       {isClient ? (
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => handleApprove(m.milestoneID)}
-                            disabled={actionLoadingKey === `approve-${m.milestoneID}`}
-                            className={actionBtn('bg-emerald-600 text-white hover:bg-emerald-700')}
-                          >
-                            {actionLoadingKey === `approve-${m.milestoneID}`
-                              ? 'Approving...'
-                              : 'Approve & release payment'}
-                          </button>
+                        <div className="space-y-3">
+                          {rejectingMilestoneId === m.milestoneID && (
+                            <div className="rounded-2xl border border-rose-200 bg-white/70 p-4">
+                              <label className="mb-1.5 block text-sm font-medium text-rose-900">
+                                Reason for requesting changes
+                              </label>
+                              <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                rows={3}
+                                placeholder="Let the freelancer know what needs to change..."
+                                className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+                              />
+                              <p className="mt-1.5 text-xs text-rose-700/80">
+                                The submission is returned to the freelancer for a new attempt. Escrow funds stay held.
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {rejectingMilestoneId === m.milestoneID ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={cancelReject}
+                                  className={actionBtn('border border-slate-300 bg-white text-slate-700 hover:bg-slate-50')}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReject(m.milestoneID)}
+                                  disabled={actionLoadingKey === `reject-${m.milestoneID}`}
+                                  className={actionBtn('bg-rose-600 text-white hover:bg-rose-700')}
+                                >
+                                  {actionLoadingKey === `reject-${m.milestoneID}`
+                                    ? 'Rejecting...'
+                                    : 'Confirm rejection'}
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startReject(m.milestoneID)}
+                                  className={actionBtn('border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100')}
+                                >
+                                  Request changes
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApprove(m.milestoneID)}
+                                  disabled={actionLoadingKey === `approve-${m.milestoneID}`}
+                                  className={actionBtn('bg-emerald-600 text-white hover:bg-emerald-700')}
+                                >
+                                  {actionLoadingKey === `approve-${m.milestoneID}`
+                                    ? 'Approving...'
+                                    : 'Approve & release payment'}
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <p className="text-sm font-medium text-amber-800">

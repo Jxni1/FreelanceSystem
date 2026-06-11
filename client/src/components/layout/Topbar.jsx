@@ -6,6 +6,7 @@ import { useProfileContext } from '../../context/ProfileContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
+import { resolveUploadUrl } from '../../lib/media';
 
 const ROLE_META = {
   client: { search: 'Search talent, jobs, contracts...', workspace: 'Client workspace' },
@@ -207,7 +208,13 @@ export function Topbar({ onMenu, inboxUnread = 0 }) {
           ) : null}
         </div>
 
-        <Avatar name={displayName} size="md" />
+        <Link
+          to="/profile"
+          aria-label="Your profile"
+          className="rounded-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        >
+          <Avatar name={displayName} src={resolveUploadUrl(profile?.profilePhoto)} size="md" />
+        </Link>
       </div>
     </header>
   );

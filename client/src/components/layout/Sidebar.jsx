@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import {
   LayoutGrid,
   Briefcase,
@@ -26,6 +26,7 @@ import { useAuthorization } from '../../hooks/useAuthorization';
 import { useProfileContext } from '../../context/ProfileContext';
 import { DEMO_NAV_BADGES } from '../../data/dashboardDemoData';
 import { Avatar } from '../ui/Avatar';
+import { resolveUploadUrl } from '../../lib/media';
 
 const NAV = {
   client: {
@@ -247,11 +248,18 @@ export function Sidebar({ open = false, onClose, inboxUnread = 0 }) {
           </NavLink>
 
           <div className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2">
-            <Avatar name={displayName} size="sm" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
-              <p className="truncate text-xs text-slate-500">{subtitle}</p>
-            </div>
+            <Link
+              to="/profile"
+              onClick={onClose}
+              aria-label="Your profile"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              <Avatar name={displayName} src={resolveUploadUrl(profile?.profilePhoto)} size="sm" />
+              <div className="min-w-0 flex-1 text-left">
+                <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+                <p className="truncate text-xs text-slate-500">{subtitle}</p>
+              </div>
+            </Link>
 
             <button
               type="button"

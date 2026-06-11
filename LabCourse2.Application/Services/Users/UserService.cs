@@ -5,6 +5,7 @@ using LabCourse2.Application.DTOs.Auth;
 using LabCourse2.Application.DTOs.Users;
 using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Users;
+using LabCourse2.Domain.Constants;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
@@ -733,12 +734,12 @@ namespace LabCourse2.Application.Services.User
             await _db.SaveChangesAsync();
 
             await _auditLog.LogAsync(
-                action: "UserRoleChanged",
+                action: AuditAction.UserRoleChanged,
                 entity: "User",
                 oldValue: oldRoles,
                 newValue: newRoles,
                 entityId: userId,
-                userId: UserId  // the admin performing the action
+                userId: UserId
             );
 
             var updatedUser = await _db.Users

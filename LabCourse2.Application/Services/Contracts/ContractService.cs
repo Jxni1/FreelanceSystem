@@ -7,6 +7,7 @@ using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Contracts;
 using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Mappings;
+using LabCourse2.Domain.Constants;
 using LabCourse2.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -24,17 +25,20 @@ namespace LabCourse2.Application.Services.Contracts
         private readonly ICurrentUserService _currentUser;
         private readonly INotificationCreator _notificationCreator;
         private readonly ICacheService _cacheService;
+        private readonly IAuditLogService _auditLog;
 
         public ContractService(
             IAppDbContext context,
             ICurrentUserService currentUser,
             INotificationCreator notificationCreator,
-            ICacheService cacheService)
+            ICacheService cacheService,
+            IAuditLogService auditLog)
         {
             _context = context;
             _currentUser = currentUser;
             _notificationCreator = notificationCreator;
             _cacheService = cacheService;
+            _auditLog = auditLog;
         }
 
         private async Task<ClientProfile?> GetClientProfileAsync() =>
@@ -288,8 +292,19 @@ namespace LabCourse2.Application.Services.Contracts
             if (contract.ClientID != client.ClientID)
                 return Result<ContractResponse>.Forbidden("You do not own this contract.");
 
+            var oldStatus = contract.Status;
+
             contract.ApplyUpdate(request);
             await _context.SaveChangesAsync();
+
+            if (contract.Status == ContractStatus.Cancelled && oldStatus != ContractStatus.Cancelled)
+                await _auditLog.LogAsync(
+                    action: AuditAction.ContractCancelled,
+                    entity: "Contract",
+                    oldValue: oldStatus,
+                    newValue: ContractStatus.Cancelled,
+                    entityId: contract.ContractID,
+                    userId: _currentUser.UserId);
 
             var updated = await _context.Contracts
                 .Include(c => c.Client).ThenInclude(c => c.User)

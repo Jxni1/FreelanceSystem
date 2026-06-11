@@ -118,6 +118,22 @@ export function useMilestones() {
     }
   }, []);
 
+  const rejectMilestone = useCallback(async (id, reason) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await milestoneService.reject(id, reason);
+      return { success: true, data: result };
+    } catch (err) {
+      const raw = err?.response?.data;
+      const message = typeof raw === 'string' ? raw : raw?.message || (Array.isArray(raw) ? raw.join(' ') : 'Failed to reject milestone.');
+      setError(message);
+      return { success: false, error: message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const deleteMilestone = useCallback(async (id) => {
     setIsLoading(true);
     setError(null);
@@ -145,6 +161,7 @@ export function useMilestones() {
     fundMilestone,
     submitMilestone,
     approveMilestone,
+    rejectMilestone,
     deleteMilestone,
   };
 }

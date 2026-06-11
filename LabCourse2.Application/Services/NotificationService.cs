@@ -1,5 +1,6 @@
 ﻿using LabCourse2.Application.Common;
 using LabCourse2.Application.DTOs.Notifications;
+using LabCourse2.Application.Interfaces;
 using LabCourse2.Application.Interfaces.Notifications;
 using LabCourse2.Application.Mappings;
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +11,13 @@ namespace LabCourse2.Application.Services.Notifications
     {
         private readonly IAppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly ICacheService _cacheService;
 
-        public NotificationService(IAppDbContext context, ICurrentUserService currentUser)
+        public NotificationService(IAppDbContext context, ICurrentUserService currentUser, ICacheService cacheService)
         {
             _context = context;
             _currentUser = currentUser;
+            _cacheService = cacheService;
         }
 
         public async Task<Result<PagedResult<NotificationResponse>>> GetAllAsync(NotificationQueryParams query)
@@ -82,6 +85,9 @@ namespace LabCourse2.Application.Services.Notifications
                 .AsNoTracking()
                 .FirstOrDefaultAsync(n => n.NotificationID == notification.NotificationID);
 
+            await _cacheService.AdjustCounterIfExistsAsync(
+                NotificationCacheKeys.UnreadCount(notification.UserID), 1);
+
             return Result<NotificationResponse>.Created(created!.ToResponse());
         }
 
@@ -93,8 +99,15 @@ namespace LabCourse2.Application.Services.Notifications
             if (notification is null)
                 return Result<NotificationResponse>.NotFound($"Notification with ID {id} was not found.");
 
+            var wasRead = notification.IsRead;
+
             notification.ApplyUpdate(request);
             await _context.SaveChangesAsync();
+
+            if (wasRead != notification.IsRead)
+                await _cacheService.AdjustCounterIfExistsAsync(
+                    NotificationCacheKeys.UnreadCount(notification.UserID),
+                    notification.IsRead ? -1 : 1);
 
             var updated = await _context.Notifications
                 .AsNoTracking()
@@ -111,17 +124,31 @@ namespace LabCourse2.Application.Services.Notifications
             if (notification is null)
                 return Result<bool>.NotFound($"Notification with ID {id} was not found.");
 
+            var wasUnread = !notification.IsRead;
+
             _context.Notifications.Remove(notification);
             await _context.SaveChangesAsync();
+
+            if (wasUnread)
+                await _cacheService.AdjustCounterIfExistsAsync(
+                    NotificationCacheKeys.UnreadCount(notification.UserID), -1);
 
             return Result<bool>.Success(true);
         }
 
         public async Task<Result<int>> GetUnreadCountAsync()
         {
+            var key = NotificationCacheKeys.UnreadCount(_currentUser.UserId);
+
+            var cached = await _cacheService.GetCounterAsync(key);
+            if (cached.HasValue)
+                return Result<int>.Success((int)cached.Value);
+
             var count = await _context.Notifications
                 .AsNoTracking()
                 .CountAsync(n => n.UserID == _currentUser.UserId && !n.IsRead);
+
+            await _cacheService.SetCounterAsync(key, count, NotificationCacheKeys.UnreadCountTtl);
 
             return Result<int>.Success(count);
         }
@@ -138,6 +165,9 @@ namespace LabCourse2.Application.Services.Notifications
             {
                 notification.IsRead = true;
                 await _context.SaveChangesAsync();
+
+                await _cacheService.AdjustCounterIfExistsAsync(
+                    NotificationCacheKeys.UnreadCount(notification.UserID), -1);
             }
 
             return Result<bool>.Success(true);
@@ -155,6 +185,9 @@ namespace LabCourse2.Application.Services.Notifications
             {
                 notification.IsRead = false;
                 await _context.SaveChangesAsync();
+
+                await _cacheService.AdjustCounterIfExistsAsync(
+                    NotificationCacheKeys.UnreadCount(notification.UserID), 1);
             }
 
             return Result<bool>.Success(true);
@@ -166,13 +199,17 @@ namespace LabCourse2.Application.Services.Notifications
                 .Where(n => n.UserID == _currentUser.UserId && !n.IsRead)
                 .ToListAsync();
 
-            if (!notifications.Any())
-                return Result<bool>.Success(true);
+            if (notifications.Any())
+            {
+                foreach (var notification in notifications)
+                    notification.IsRead = true;
 
-            foreach (var notification in notifications)
-                notification.IsRead = true;
+                await _context.SaveChangesAsync();
+            }
 
-            await _context.SaveChangesAsync();
+            await _cacheService.SetCounterAsync(
+                NotificationCacheKeys.UnreadCount(_currentUser.UserId), 0, NotificationCacheKeys.UnreadCountTtl);
+
             return Result<bool>.Success(true);
         }
 
