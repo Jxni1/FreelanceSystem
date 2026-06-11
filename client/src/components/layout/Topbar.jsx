@@ -6,13 +6,12 @@ import { useProfileContext } from '../../context/ProfileContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
-import { resolveUploadUrl } from '../../lib/media';
 
-const ROLE_META = {
-  client: { search: 'Search talent, jobs, contracts...', workspace: 'Client workspace' },
-  freelancer: { search: 'Search jobs, skills, clients...', workspace: 'Freelancer workspace' },
-  admin: { search: 'Search users, jobs, tickets...', workspace: 'Admin workspace' },
-};
+// const ROLE_META = {
+//   client: { search: 'Search talent, jobs, contracts...', workspace: 'Client workspace' },
+//   freelancer: { search: 'Search jobs, skills, clients...', workspace: 'Freelancer workspace' },
+//   admin: { search: 'Search users, jobs, tickets...', workspace: 'Admin workspace' },
+// };
 
 export function Topbar({ onMenu, inboxUnread = 0 }) {
   const navigate = useNavigate();
@@ -33,8 +32,8 @@ export function Topbar({ onMenu, inboxUnread = 0 }) {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
-  const role = isAdmin ? 'admin' : isFreelancer ? 'freelancer' : 'client';
-  const meta = ROLE_META[role];
+  // const role = isAdmin ? 'admin' : isFreelancer ? 'freelancer' : 'client';
+  // const meta = ROLE_META[role];
 
   const fullName = profile ? `${profile.name ?? ''} ${profile.surname ?? ''}`.trim() : '';
   const displayName = fullName || profile?.username || '';
@@ -88,21 +87,21 @@ export function Topbar({ onMenu, inboxUnread = 0 }) {
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
 
-      <label className="relative w-full max-w-md flex-1">
+      {/* <label className="relative w-full max-w-md flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
         <input
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={meta.search}
+          placeholder="Search..."
           className="h-10 w-full rounded-xl border border-line bg-white pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
         />
-      </label>
+      </label> */}
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        <Badge tone="brand" className="hidden sm:inline-flex">
+        {/* <Badge tone="brand" className="hidden sm:inline-flex">
           {meta.workspace}
-        </Badge>
+        </Badge> */}
 
         <Link
           to="/inbox"
@@ -208,13 +207,7 @@ export function Topbar({ onMenu, inboxUnread = 0 }) {
           ) : null}
         </div>
 
-        <Link
-          to="/profile"
-          aria-label="Your profile"
-          className="rounded-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-200"
-        >
-          <Avatar name={displayName} src={resolveUploadUrl(profile?.profilePhoto)} size="md" />
-        </Link>
+        <Avatar name={displayName} size="md" />
       </div>
     </header>
   );
